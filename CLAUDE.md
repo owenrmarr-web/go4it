@@ -101,29 +101,32 @@ src/
 
 ---
 
-## Current Session State (as of 2026-02-03)
+## Deployment (live as of 2026-02-03)
 
-### Uncommitted changes (ready to commit)
-The previous session migrated the DB driver from `better-sqlite3` to `libsql`. Code changes are done and correct in:
-- `package.json` — swapped deps
-- `package-lock.json` — updated lock
-- `prisma/seed.ts` — uses LibSQL adapter
-- `src/lib/prisma.ts` — uses LibSQL adapter
-
-### Launch checklist
-- [ ] Commit the LibSQL migration
-- [ ] Run `next build` to verify clean compile
-- [ ] Create free Turso account → get DATABASE_URL + TURSO_AUTH_TOKEN
-- [ ] Deploy to Vercel (connect repo, set env vars)
-- [ ] Seed the Turso DB (`npx prisma db push` then seed script)
-- [ ] Point go4it.live domain (Squarespace DNS) → Vercel
-
-### Env vars needed in production (Vercel)
-| Var | Value |
+| What | Where |
 |---|---|
-| `DATABASE_URL` | Turso DB URL (e.g. `libsql://...`) |
-| `TURSO_AUTH_TOKEN` | Turso auth token |
-| `AUTH_SECRET` | Generate a new one for prod (`openssl rand -hex 32`) |
+| Production URL | https://go4it.live |
+| Vercel URL | https://go4it-alpha.vercel.app |
+| GitHub repo | https://github.com/owenrmarr-web/go4it |
+| Database | Turso (LibSQL) — `libsql://go4it-owenrmarr.aws-us-west-2.turso.io` |
+| DNS | A record `@` → `216.198.79.1` (set in Squarespace, verified on Vercel) |
+
+### How deploys work
+- Push to `main` on GitHub → Vercel auto-builds and deploys
+- Env vars (DATABASE_URL, TURSO_AUTH_TOKEN, AUTH_SECRET) are set in Vercel dashboard
+- `postinstall` script in package.json runs `prisma generate` on every build
+
+### Seeding the DB
+Prisma CLI can't connect to Turso directly (`libsql://` scheme not supported by CLI).
+Use the seed script directly — it uses the LibSQL adapter at runtime:
+```
+npx tsx prisma/seed.ts
+```
+This reads DATABASE_URL + TURSO_AUTH_TOKEN from `.env`.
+
+### Known warnings (non-blocking)
+- `middleware.ts` deprecated in Next.js 16 — should become `proxy.ts` eventually
+- `node-domexception` deprecation — transitive dep, harmless
 
 ---
 
