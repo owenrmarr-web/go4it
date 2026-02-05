@@ -4,6 +4,33 @@
   --font-sans: var(--font-inter);
 }
 
+:root {
+  --theme-primary: #9333ea;
+  --theme-secondary: #ec4899;
+  --theme-accent: #f97316;
+  --theme-gradient: linear-gradient(to right, #f97316, #ec4899, #9333ea);
+}
+
 .gradient-brand {
-  background: linear-gradient(135deg, #f97316, #ec4899, #9333ea);
+  background: linear-gradient(135deg, var(--theme-accent), var(--theme-secondary), var(--theme-primary));
+}
+
+.text-theme-primary {
+  color: var(--theme-primary);
+}
+
+.text-theme-secondary {
+  color: var(--theme-secondary);
+}
+
+.text-theme-accent {
+  color: var(--theme-accent);
+}
+
+.bg-theme-primary {
+  background-color: var(--theme-primary);
+}
+
+.border-theme-primary {
+  border-color: var(--theme-primary);
 }

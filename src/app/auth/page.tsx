@@ -3,6 +3,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { COUNTRIES, USE_CASE_OPTIONS } from "@/lib/constants";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -12,10 +13,25 @@ export default function AuthPage() {
     name: "",
     email: "",
     password: "",
+    companyName: "",
+    state: "",
+    country: "",
+    useCases: [] as string[],
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const toggleUseCase = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      useCases: prev.useCases.includes(value)
+        ? prev.useCases.filter((v) => v !== value)
+        : [...prev.useCases, value],
+    }));
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -41,7 +57,15 @@ export default function AuthPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          companyName: formData.companyName || null,
+          state: formData.state || null,
+          country: formData.country || null,
+          useCases: formData.useCases.length > 0 ? formData.useCases : null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -88,25 +112,99 @@ export default function AuthPage() {
           className="mt-6 space-y-4"
         >
           {mode === "signup" && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
-                placeholder="Your name"
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                  placeholder="Your name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Company Name{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  name="companyName"
+                  value={formData.companyName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                  placeholder="Your business name"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Country <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    name="country"
+                    value={formData.country}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700 bg-white"
+                  >
+                    <option value="">Select...</option>
+                    {COUNTRIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    State / Province
+                  </label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                    placeholder="e.g. California"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  What tools are you looking for?
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {USE_CASE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => toggleUseCase(opt.value)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        formData.useCases.includes(opt.value)
+                          ? "bg-purple-600 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+              Email <span className="text-red-400">*</span>
             </label>
             <input
               type="email"
@@ -121,7 +219,7 @@ export default function AuthPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
+              Password <span className="text-red-400">*</span>
             </label>
             <input
               type="password"

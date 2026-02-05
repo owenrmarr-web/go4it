@@ -14,9 +14,16 @@ model User {
   password      String?
   emailVerified DateTime?
   image         String?
+  companyName   String?
+  state         String?
+  country       String?
+  useCases      String?   // JSON array of selected use cases
+  logo          String?   // Base64 encoded logo image
+  themeColors   String?   // JSON object with extracted colors { primary, secondary, accent }
   accounts      Account[]
   sessions      Session[]
   interactions  UserInteraction[]
+  organizations OrganizationMember[]
   createdAt     DateTime  @default(now())
 }
 
@@ -82,4 +89,63 @@ model UserInteraction {
   app  App  @relation(fields: [appId],  references: [id], onDelete: Cascade)
 
   @@unique([userId, appId, type])
+}
+
+// ============================================
+// Organization & Team Models
+// ============================================
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique // e.g., "zenith" for zenith.go4it.live
+  logo        String?  // Base64 for now, will move to object storage later
+  themeColors String?  // JSON: { primary, secondary, accent }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     OrganizationMember[]
+  invitations Invitation[]
+}
+
+enum OrgRole {
+  OWNER  // Full control, can delete org, transfer ownership
+  ADMIN  // Can manage members, apps, billing
+  MEMBER // Can use deployed apps
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrgRole      @default(MEMBER)
+  joinedAt       DateTime     @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+model Invitation {
+  id             String           @id @default(cuid())
+  organizationId String
+  email          String
+  role           OrgRole          @default(MEMBER)
+  token          String           @unique @default(cuid())
+  status         InvitationStatus @default(PENDING)
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([token])
 }
