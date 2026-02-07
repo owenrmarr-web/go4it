@@ -28,6 +28,45 @@ interface Invitation {
   createdAt: string;
 }
 
+interface OrgAppMember {
+  id: string;
+  userId: string;
+  user: { id: string; name: string; email: string; image: string | null };
+}
+
+interface OrgApp {
+  id: string;
+  appId: string;
+  status: string;
+  flyUrl: string | null;
+  addedAt: string;
+  deployedAt: string | null;
+  app: {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    icon: string;
+  };
+  members: OrgAppMember[];
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  ADDED: "Not deployed",
+  DEPLOYING: "Deploying...",
+  RUNNING: "Running",
+  STOPPED: "Stopped",
+  FAILED: "Failed",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  ADDED: "bg-gray-100 text-gray-600",
+  DEPLOYING: "bg-yellow-100 text-yellow-700",
+  RUNNING: "bg-green-100 text-green-700",
+  STOPPED: "bg-orange-100 text-orange-700",
+  FAILED: "bg-red-100 text-red-700",
+};
+
 interface Organization {
   id: string;
   name: string;
@@ -71,9 +110,14 @@ export default function OrgAdminPage({
   const [formData, setFormData] = useState({ name: "" });
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [themeColors, setThemeColors] = useState<ThemeColors | null>(null);
-  const [activeTab, setActiveTab] = useState<"settings" | "members">(
-    "settings"
+  const [activeTab, setActiveTab] = useState<"apps" | "settings" | "members">(
+    "apps"
   );
+  const [orgApps, setOrgApps] = useState<OrgApp[]>([]);
+  const [orgAppsLoading, setOrgAppsLoading] = useState(true);
+  const [configuringAppId, setConfiguringAppId] = useState<string | null>(null);
+  const [savingMembers, setSavingMembers] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
@@ -87,6 +131,7 @@ export default function OrgAdminPage({
   useEffect(() => {
     fetchOrganization();
     fetchInvitations();
+    fetchOrgApps();
   }, [slug]);
 
   const fetchInvitations = async () => {
@@ -98,6 +143,128 @@ export default function OrgAdminPage({
       }
     } catch {
       // Silently fail - invitations are not critical
+    }
+  };
+
+  const fetchOrgApps = async () => {
+    setOrgAppsLoading(true);
+    try {
+      const res = await fetch(`/api/organizations/${slug}/apps`);
+      if (res.ok) {
+        const data = await res.json();
+        setOrgApps(data);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setOrgAppsLoading(false);
+    }
+  };
+
+  const handleConfigureApp = (orgApp: OrgApp) => {
+    setConfiguringAppId(orgApp.id);
+    setSelectedMembers(new Set(orgApp.members.map((m) => m.userId)));
+  };
+
+  const handleSelectAllMembers = () => {
+    if (!org) return;
+    if (selectedMembers.size === org.members.length) {
+      setSelectedMembers(new Set());
+    } else {
+      setSelectedMembers(new Set(org.members.map((m) => m.user.id)));
+    }
+  };
+
+  const handleToggleMember = (userId: string) => {
+    setSelectedMembers((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const handleSaveAppMembers = async () => {
+    const orgApp = orgApps.find((a) => a.id === configuringAppId);
+    if (!orgApp) return;
+
+    setSavingMembers(true);
+    try {
+      const res = await fetch(
+        `/api/organizations/${slug}/apps/${orgApp.appId}/members`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userIds: Array.from(selectedMembers) }),
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save");
+      }
+
+      toast.success("Team access updated!");
+      setConfiguringAppId(null);
+      fetchOrgApps();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save";
+      toast.error(message);
+    } finally {
+      setSavingMembers(false);
+    }
+  };
+
+  const handleRemoveApp = async (appId: string, appTitle: string) => {
+    if (!confirm(`Remove ${appTitle} from this organization?`)) return;
+
+    try {
+      const res = await fetch(`/api/organizations/${slug}/apps`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to remove app");
+      }
+
+      toast.success(`${appTitle} removed`);
+      fetchOrgApps();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to remove app";
+      toast.error(message);
+    }
+  };
+
+  const handleDeleteOrg = async () => {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${org?.name}"? This will remove all apps and members. This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/organizations/${slug}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete organization");
+      }
+
+      toast.success("Organization deleted");
+      router.push("/account");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete organization";
+      toast.error(message);
     }
   };
 
@@ -358,14 +525,14 @@ export default function OrgAdminPage({
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
           <button
-            onClick={() => setActiveTab("settings")}
+            onClick={() => setActiveTab("apps")}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === "settings"
+              activeTab === "apps"
                 ? "bg-white shadow-sm text-gray-900"
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            Settings
+            Apps
           </button>
           <button
             onClick={() => setActiveTab("members")}
@@ -377,9 +544,188 @@ export default function OrgAdminPage({
           >
             Team Members
           </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "settings"
+                ? "bg-white shadow-sm text-gray-900"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Settings
+          </button>
         </div>
 
+        {activeTab === "apps" && (
+          <div className="space-y-4">
+            {orgAppsLoading ? (
+              <div className="flex justify-center py-10 bg-white rounded-2xl shadow-sm">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+              </div>
+            ) : orgApps.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+                <p className="text-gray-400 mb-2">
+                  No apps added yet
+                </p>
+                <p className="text-sm text-gray-400">
+                  Browse the marketplace and click &quot;+&nbsp;Add&quot; to add apps to this organization.
+                </p>
+              </div>
+            ) : (
+              orgApps.map((orgApp) => (
+                <div
+                  key={orgApp.id}
+                  className="bg-white rounded-2xl shadow-sm overflow-hidden"
+                >
+                  <div className="p-5 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl">{orgApp.app.icon}</span>
+                      <div>
+                        <h3 className="font-bold text-gray-900">
+                          {orgApp.app.title}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {orgApp.app.category}
+                          {orgApp.members.length > 0 && (
+                            <span className="ml-2">
+                              · {orgApp.members.length} team member
+                              {orgApp.members.length !== 1 && "s"}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          STATUS_COLORS[orgApp.status] || "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {STATUS_LABELS[orgApp.status] || orgApp.status}
+                      </span>
+
+                      {canManage && (
+                        <>
+                          <button
+                            onClick={() => handleConfigureApp(orgApp)}
+                            className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                          >
+                            Configure
+                          </button>
+                          {orgApp.status === "ADDED" && (
+                            <button
+                              className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+                              onClick={() =>
+                                toast("Fly.io deployment coming soon!")
+                              }
+                            >
+                              Launch
+                            </button>
+                          )}
+                          <button
+                            onClick={() =>
+                              handleRemoveApp(orgApp.appId, orgApp.app.title)
+                            }
+                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                            title="Remove app"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              className="w-5 h-5"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M6 18 18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Member config panel (expanded) */}
+                  {configuringAppId === orgApp.id && org && (
+                    <div className="border-t border-gray-100 px-5 py-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-medium text-gray-700">
+                          Team Access
+                        </p>
+                        <button
+                          onClick={handleSelectAllMembers}
+                          className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                        >
+                          {selectedMembers.size === org.members.length
+                            ? "Deselect All"
+                            : "Select All"}
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {org.members.map((member) => (
+                          <label
+                            key={member.id}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedMembers.has(member.user.id)}
+                              onChange={() =>
+                                handleToggleMember(member.user.id)
+                              }
+                              className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-400"
+                            />
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-sm font-semibold">
+                              {member.user.name?.[0]?.toUpperCase() || "?"}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {member.user.name}
+                              </p>
+                              <p className="text-xs text-gray-500 truncate">
+                                {member.user.email}
+                              </p>
+                            </div>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                ROLE_COLORS[member.role]
+                              }`}
+                            >
+                              {ROLE_LABELS[member.role]}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <button
+                          onClick={handleSaveAppMembers}
+                          disabled={savingMembers}
+                          className="gradient-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+                        >
+                          {savingMembers ? "Saving..." : "Save Access"}
+                        </button>
+                        <button
+                          onClick={() => setConfiguringAppId(null)}
+                          className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {activeTab === "settings" && (
+          <>
           <div className="bg-white rounded-2xl shadow-sm p-6 space-y-6">
             {/* Organization Name */}
             <div>
@@ -512,6 +858,25 @@ export default function OrgAdminPage({
               </div>
             )}
           </div>
+
+          {/* Danger Zone */}
+          {isOwner && (
+            <div className="mt-6 bg-white rounded-2xl shadow-sm p-6 border border-red-200">
+              <h3 className="text-sm font-semibold text-red-600 uppercase tracking-wide mb-2">
+                Danger Zone
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Permanently delete this organization, all its apps, and remove all members. This action cannot be undone.
+              </p>
+              <button
+                onClick={handleDeleteOrg}
+                className="px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                Delete Organization
+              </button>
+            </div>
+          )}
+          </>
         )}
 
         {activeTab === "members" && (

@@ -1,14 +1,23 @@
 "use client";
+import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import type { App } from "@/types";
 
+export interface UserOrg {
+  id: string;
+  name: string;
+  slug: string;
+  role: string;
+  appIds: string[];
+}
+
 interface AppCardProps {
   app: App;
   isHearted: boolean;
-  isStarred: boolean;
   onToggleHeart: () => void;
-  onToggleStar: () => void;
+  orgs: UserOrg[];
+  onAddToOrg: (orgSlug: string, appId: string) => void;
 }
 
 const categoryColors: Record<string, string> = {
@@ -31,11 +40,25 @@ const categoryColors: Record<string, string> = {
 export default function AppCard({
   app,
   isHearted,
-  isStarred,
   onToggleHeart,
-  onToggleStar,
+  orgs,
+  onAddToOrg,
 }: AppCardProps) {
   const { data: session } = useSession();
+  const [showOrgPicker, setShowOrgPicker] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!showOrgPicker) return;
+    const handleClick = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowOrgPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showOrgPicker]);
 
   const handleHeart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -46,15 +69,47 @@ export default function AppCard({
     onToggleHeart();
   };
 
-  const handleStar = (e: React.MouseEvent) => {
+  const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!session) {
-      toast("Please log in to save apps to your account.");
+      toast("Please log in to add apps to your account.");
       return;
     }
-    onToggleStar();
+
+    if (orgs.length === 0) {
+      toast("Create an organization first to add apps.", {
+        action: {
+          label: "Create Org",
+          onClick: () => (window.location.href = "/org/new"),
+        },
+      });
+      return;
+    }
+
+    if (orgs.length === 1) {
+      const org = orgs[0];
+      if (org.appIds.includes(app.id)) {
+        toast(`${app.title} is already in ${org.name}`);
+        return;
+      }
+      onAddToOrg(org.slug, app.id);
+      return;
+    }
+
+    // Multiple orgs — show picker
+    setShowOrgPicker(!showOrgPicker);
   };
 
+  const handleOrgSelect = (org: UserOrg) => {
+    setShowOrgPicker(false);
+    if (org.appIds.includes(app.id)) {
+      toast(`${app.title} is already in ${org.name}`);
+      return;
+    }
+    onAddToOrg(org.slug, app.id);
+  };
+
+  const isAddedToAny = orgs.some((org) => org.appIds.includes(app.id));
   const badgeColor =
     categoryColors[app.category] || "bg-gray-100 text-gray-700";
 
@@ -82,8 +137,8 @@ export default function AppCard({
         </p>
       </div>
 
-      {/* Heart + Star buttons — invisible until hover */}
-      <div className="px-5 pb-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+      {/* Heart + Add buttons — invisible until hover */}
+      <div className="px-5 pb-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 relative">
         <button
           onClick={handleHeart}
           className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -94,16 +149,52 @@ export default function AppCard({
         >
           {isHearted ? "♥" : "♡"} {isHearted ? "Saved" : "Save"}
         </button>
-        <button
-          onClick={handleStar}
-          className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            isStarred
-              ? "bg-purple-100 text-purple-600"
-              : "bg-gray-100 text-gray-600 hover:bg-purple-50 hover:text-purple-500"
-          }`}
-        >
-          {isStarred ? "★" : "☆"} Deploy
-        </button>
+        <div className="relative flex-1" ref={pickerRef}>
+          <button
+            onClick={handleAdd}
+            className={`w-full flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              isAddedToAny
+                ? "bg-purple-100 text-purple-600"
+                : "bg-gray-100 text-gray-600 hover:bg-purple-50 hover:text-purple-500"
+            }`}
+          >
+            {isAddedToAny ? "✓" : "+"} {isAddedToAny ? "Added" : "Add"}
+          </button>
+
+          {/* Org picker dropdown */}
+          {showOrgPicker && (
+            <div className="absolute bottom-full mb-1 left-0 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+              <p className="px-3 py-1.5 text-xs font-medium text-gray-400 uppercase">
+                Add to...
+              </p>
+              {orgs.map((org) => {
+                const alreadyAdded = org.appIds.includes(app.id);
+                return (
+                  <button
+                    key={org.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOrgSelect(org);
+                    }}
+                    disabled={alreadyAdded}
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                      alreadyAdded
+                        ? "text-gray-400 cursor-default"
+                        : "text-gray-700 hover:bg-purple-50"
+                    }`}
+                  >
+                    {org.name}
+                    {alreadyAdded && (
+                      <span className="ml-1 text-xs text-gray-400">
+                        (added)
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -25,6 +25,7 @@ model User {
   interactions  UserInteraction[]
   organizations OrganizationMember[]
   generatedApps GeneratedApp[]
+  orgAppMembers OrgAppMember[]
   createdAt     DateTime  @default(now())
 }
 
@@ -73,6 +74,7 @@ model App {
   createdAt       DateTime          @default(now())
   interactions    UserInteraction[]
   generatedApp    GeneratedApp?
+  orgApps         OrgApp[]
 }
 
 enum InteractionType {
@@ -135,6 +137,7 @@ model Organization {
 
   members     OrganizationMember[]
   invitations Invitation[]
+  apps        OrgApp[]
 }
 
 enum OrgRole {
@@ -154,6 +157,47 @@ model OrganizationMember {
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, userId])
+}
+
+// ============================================
+// Org App Deployment Models
+// ============================================
+
+enum DeployStatus {
+  ADDED      // Added to org, not yet deployed
+  DEPLOYING  // Currently being deployed to Fly.io
+  RUNNING    // Live on Fly.io
+  STOPPED    // Stopped / scaled to zero
+  FAILED     // Deploy failed
+}
+
+model OrgApp {
+  id             String       @id @default(cuid())
+  organizationId String
+  appId          String
+  status         DeployStatus @default(ADDED)
+  flyAppId       String?      // Fly.io app ID once deployed
+  flyUrl         String?      // e.g., zenith-space-leadflow.fly.dev
+  addedAt        DateTime     @default(now())
+  deployedAt     DateTime?
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  app          App            @relation(fields: [appId], references: [id], onDelete: Cascade)
+  members      OrgAppMember[]
+
+  @@unique([organizationId, appId])
+}
+
+model OrgAppMember {
+  id       String   @id @default(cuid())
+  orgAppId String
+  userId   String
+  addedAt  DateTime @default(now())
+
+  orgApp OrgApp @relation(fields: [orgAppId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgAppId, userId])
 }
 
 enum InvitationStatus {

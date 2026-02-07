@@ -1,28 +1,21 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
+import { toast } from "sonner";
 import Link from "next/link";
 import Header from "@/components/Header";
-import AppCard from "@/components/AppCard";
+import AppCard, { type UserOrg } from "@/components/AppCard";
 import { useInteractions } from "@/hooks/useInteractions";
 import type { App } from "@/types";
 
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  logo: string | null;
-  role: string;
-  _count?: { members: number };
-}
-
 export default function AccountPage() {
+  const { data: session } = useSession();
   const [allApps, setAllApps] = useState<App[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [orgs, setOrgs] = useState<UserOrg[]>([]);
   const [orgsLoading, setOrgsLoading] = useState(true);
-  const { hearted, starred, toggle, loading: interactionsLoading } =
-    useInteractions();
+  const { hearted, toggle, loading: interactionsLoading } = useInteractions();
 
   useEffect(() => {
     fetch("/api/apps")
@@ -35,8 +28,8 @@ export default function AccountPage() {
 
     fetch("/api/organizations")
       .then((r) => r.json())
-      .then((data: Organization[]) => {
-        setOrganizations(data);
+      .then((data: UserOrg[]) => {
+        if (Array.isArray(data)) setOrgs(data);
         setOrgsLoading(false);
       })
       .catch(() => setOrgsLoading(false));
@@ -48,9 +41,45 @@ export default function AccountPage() {
     () => allApps.filter((app) => hearted.has(app.id)),
     [allApps, hearted]
   );
-  const starredApps = useMemo(
-    () => allApps.filter((app) => starred.has(app.id)),
-    [allApps, starred]
+
+  const handleAddToOrg = useCallback(
+    async (orgSlug: string, appId: string) => {
+      try {
+        const res = await fetch(`/api/organizations/${orgSlug}/apps`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ appId }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to add app");
+        }
+
+        const result = await res.json();
+        const orgName = orgs.find((o) => o.slug === orgSlug)?.name || orgSlug;
+
+        setOrgs((prev) =>
+          prev.map((org) =>
+            org.slug === orgSlug
+              ? { ...org, appIds: [...org.appIds, appId] }
+              : org
+          )
+        );
+
+        toast.success(`${result.app?.title || "App"} added to ${orgName}`, {
+          action: {
+            label: "Go to Org",
+            onClick: () => (window.location.href = `/org/${orgSlug}/admin`),
+          },
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to add app";
+        toast.error(message);
+      }
+    },
+    [orgs]
   );
 
   const handleSignOut = async () => {
@@ -64,7 +93,7 @@ export default function AccountPage() {
         {/* Header row */}
         <div className="flex items-center justify-between mb-10">
           <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900">
-            My Apps
+            My Account
           </h1>
           <button
             onClick={handleSignOut}
@@ -105,10 +134,10 @@ export default function AccountPage() {
             <div className="flex justify-center py-10 bg-white rounded-xl shadow-sm">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
             </div>
-          ) : organizations.length === 0 ? (
+          ) : orgs.length === 0 ? (
             <div className="text-center py-10 bg-white rounded-xl shadow-sm">
               <p className="text-gray-400 mb-4">
-                Create an organization to deploy apps for your team
+                Create an organization to add and deploy apps for your team
               </p>
               <Link
                 href="/org/new"
@@ -119,29 +148,27 @@ export default function AccountPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {organizations.map((org) => (
+              {orgs.map((org) => (
                 <Link
                   key={org.id}
                   href={`/org/${org.slug}/admin`}
                   className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-shadow flex items-center gap-4"
                 >
-                  {org.logo ? (
-                    <img
-                      src={org.logo}
-                      alt={org.name}
-                      className="w-12 h-12 rounded-lg object-contain border border-gray-200"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-lg">
-                      {org.name[0]?.toUpperCase()}
-                    </div>
-                  )}
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-lg">
+                    {org.name[0]?.toUpperCase()}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900 truncate">
                       {org.name}
                     </p>
                     <p className="text-sm text-gray-500">
                       {org.slug}.go4it.live
+                      {org.appIds.length > 0 && (
+                        <span>
+                          {" "}· {org.appIds.length} app
+                          {org.appIds.length !== 1 && "s"}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <span className="text-xs font-medium text-gray-400 uppercase">
@@ -158,62 +185,32 @@ export default function AccountPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
           </div>
         ) : (
-          <>
-            {/* Saved (Hearts) */}
-            <section className="mb-12">
-              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <span className="text-pink-500">♥</span> Saved Apps
-              </h2>
-              {heartedApps.length === 0 ? (
-                <div className="text-center py-10 bg-white rounded-xl shadow-sm">
-                  <p className="text-gray-400">
-                    Heart apps from the marketplace to save them here!
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {heartedApps.map((app) => (
-                    <AppCard
-                      key={app.id}
-                      app={app}
-                      isHearted={hearted.has(app.id)}
-                      isStarred={starred.has(app.id)}
-                      onToggleHeart={() => toggle(app.id, "HEART")}
-                      onToggleStar={() => toggle(app.id, "STAR")}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* Deployed (Stars) */}
-            <section>
-              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <span className="text-purple-500">★</span> Deployed Apps
-              </h2>
-              {starredApps.length === 0 ? (
-                <div className="text-center py-10 bg-white rounded-xl shadow-sm">
-                  <p className="text-gray-400">
-                    Star apps from the marketplace to deploy them for your
-                    business!
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {starredApps.map((app) => (
-                    <AppCard
-                      key={app.id}
-                      app={app}
-                      isHearted={hearted.has(app.id)}
-                      isStarred={starred.has(app.id)}
-                      onToggleHeart={() => toggle(app.id, "HEART")}
-                      onToggleStar={() => toggle(app.id, "STAR")}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          </>
+          /* Saved (Hearts) */
+          <section>
+            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <span className="text-pink-500">♥</span> Saved Apps
+            </h2>
+            {heartedApps.length === 0 ? (
+              <div className="text-center py-10 bg-white rounded-xl shadow-sm">
+                <p className="text-gray-400">
+                  Save apps from the marketplace to come back to them later!
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {heartedApps.map((app) => (
+                  <AppCard
+                    key={app.id}
+                    app={app}
+                    isHearted={hearted.has(app.id)}
+                    onToggleHeart={() => toggle(app.id, "HEART")}
+                    orgs={orgs}
+                    onAddToOrg={handleAddToOrg}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
         )}
       </main>
     </div>

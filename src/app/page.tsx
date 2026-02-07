@@ -1,16 +1,20 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import Header from "@/components/Header";
 import SearchBar from "@/components/SearchBar";
-import AppCard from "@/components/AppCard";
+import AppCard, { type UserOrg } from "@/components/AppCard";
 import { useInteractions } from "@/hooks/useInteractions";
 import type { App } from "@/types";
 
 export default function Home() {
+  const { data: session } = useSession();
   const [apps, setApps] = useState<App[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const { hearted, starred, toggle } = useInteractions();
+  const [orgs, setOrgs] = useState<UserOrg[]>([]);
+  const { hearted, toggle } = useInteractions();
 
   useEffect(() => {
     fetch("/api/apps")
@@ -21,6 +25,63 @@ export default function Home() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  // Fetch user's orgs (with appIds) when logged in
+  useEffect(() => {
+    if (!session) {
+      setOrgs([]);
+      return;
+    }
+    fetch("/api/organizations")
+      .then((r) => r.json())
+      .then((data: UserOrg[]) => {
+        if (Array.isArray(data)) setOrgs(data);
+      })
+      .catch(() => {});
+  }, [session]);
+
+  const handleAddToOrg = useCallback(
+    async (orgSlug: string, appId: string) => {
+      try {
+        const res = await fetch(`/api/organizations/${orgSlug}/apps`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ appId }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to add app");
+        }
+
+        const result = await res.json();
+        const orgName =
+          orgs.find((o) => o.slug === orgSlug)?.name || orgSlug;
+
+        // Update local org state so the button shows "Added"
+        setOrgs((prev) =>
+          prev.map((org) =>
+            org.slug === orgSlug
+              ? { ...org, appIds: [...org.appIds, appId] }
+              : org
+          )
+        );
+
+        toast.success(`${result.app?.title || "App"} added to ${orgName}`, {
+          action: {
+            label: "Go to Org",
+            onClick: () =>
+              (window.location.href = `/org/${orgSlug}/admin`),
+          },
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to add app";
+        toast.error(message);
+      }
+    },
+    [orgs]
+  );
 
   const filteredApps = useMemo(() => {
     if (!search.trim()) return apps;
@@ -86,9 +147,9 @@ export default function Home() {
                 key={app.id}
                 app={app}
                 isHearted={hearted.has(app.id)}
-                isStarred={starred.has(app.id)}
                 onToggleHeart={() => toggle(app.id, "HEART")}
-                onToggleStar={() => toggle(app.id, "STAR")}
+                orgs={orgs}
+                onAddToOrg={handleAddToOrg}
               />
             ))}
           </div>

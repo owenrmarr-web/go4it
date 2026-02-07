@@ -12,7 +12,11 @@ export async function GET() {
   const memberships = await prisma.organizationMember.findMany({
     where: { userId: session.user.id },
     include: {
-      organization: true,
+      organization: {
+        include: {
+          apps: { select: { appId: true } },
+        },
+      },
     },
     orderBy: { joinedAt: "desc" },
   });
@@ -24,6 +28,7 @@ export async function GET() {
     themeColors: m.organization.themeColors
       ? JSON.parse(m.organization.themeColors)
       : null,
+    appIds: m.organization.apps.map((a) => a.appId),
   }));
 
   return NextResponse.json(organizations);

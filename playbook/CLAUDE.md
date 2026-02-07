@@ -217,6 +217,40 @@ AUTH_SECRET="generate-a-secret-here"
 6. The app must be fully self-contained — no external API calls, no external databases, no third-party services
 7. Use `sonner` for toast notifications on user actions (save, delete, error, etc.)
 
+## Team Member Provisioning (Required)
+
+When a GO4IT organization deploys this app, team members need accounts. Include a `prisma/provision-users.ts` script that reads the `GO4IT_TEAM_MEMBERS` environment variable (JSON array of `{name, email}` objects) and creates User records with a default password.
+
+`prisma/provision-users.ts`:
+```typescript
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+
+const prisma = new PrismaClient();
+
+async function main() {
+  const raw = process.env.GO4IT_TEAM_MEMBERS;
+  if (!raw) { console.log("No GO4IT_TEAM_MEMBERS set, skipping."); return; }
+
+  const members: { name: string; email: string }[] = JSON.parse(raw);
+  const password = await bcrypt.hash("go4it2026", 12);
+
+  for (const member of members) {
+    await prisma.user.upsert({
+      where: { email: member.email },
+      update: { name: member.name },
+      create: { email: member.email, name: member.name, password },
+    });
+    console.log(`Provisioned: ${member.name} (${member.email})`);
+  }
+  console.log(`Done — ${members.length} users provisioned.`);
+}
+
+main().finally(() => prisma.$disconnect());
+```
+
+The deployment pipeline sets `GO4IT_TEAM_MEMBERS` and runs this script after `prisma db push`. Users log in with their GO4IT email and the default password `go4it2026`.
+
 ## What NOT to Do
 
 - Do NOT use any external APIs or services (no Stripe, no SendGrid, no external DBs)

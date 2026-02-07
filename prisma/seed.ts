@@ -154,6 +154,15 @@ const apps = [
     author: "GO4IT Labs",
     tags: JSON.stringify(["real-estate", "property", "tenants"]),
   },
+  {
+    title: "M&A Deal Tracker",
+    description:
+      "Track acquisition targets, manage deal pipelines across stages from outreach to closing, and monitor portfolio performance with activity logs.",
+    category: "CRM / Sales",
+    icon: "🤝",
+    author: "GO4IT Community",
+    tags: JSON.stringify(["m-and-a", "deals", "pipeline", "acquisitions"]),
+  },
 ];
 
 async function main() {
