@@ -1,13 +1,32 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import GenerationProgress from "@/components/GenerationProgress";
+import { useGeneration } from "@/components/GenerationContext";
 
-type PageState = "input" | "generating" | "complete" | "error";
+type PageState = "input" | "generating" | "complete" | "refine" | "publish" | "error";
+
+const APP_CATEGORIES = [
+  "CRM / Sales",
+  "Project Management",
+  "Invoicing / Finance",
+  "Internal Chat",
+  "HR / People",
+  "Inventory",
+  "Scheduling / Bookings",
+  "Customer Support",
+  "Marketing / Analytics",
+  "Business Planning",
+  "Compliance / Legal",
+  "Document Management",
+  "Other",
+];
+
+const APP_ICONS = ["🚀", "💬", "📊", "📋", "💰", "👥", "📦", "📅", "🎯", "🛠️", "📈", "🏢"];
 
 const PROMPT_SUGGESTIONS = [
   "A CRM for a law firm to track cases, clients, and billing",
@@ -19,14 +38,28 @@ const PROMPT_SUGGESTIONS = [
 export default function CreatePage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const gen = useGeneration();
+
+  // Derive pageState from global generation context
+  const derivePageState = (): PageState => {
+    if (gen.stage === "idle") return "input";
+    if (gen.stage === "complete") return "complete";
+    if (gen.stage === "failed") return "error";
+    return "generating";
+  };
+
+  // Local-only UI states (refine/publish are transient UI modes, not generation states)
+  const [localView, setLocalView] = useState<"default" | "refine" | "publish">("default");
   const [prompt, setPrompt] = useState("");
-  const [pageState, setPageState] = useState<PageState>("input");
-  const [generationId, setGenerationId] = useState<string | null>(null);
-  const [result, setResult] = useState<{
-    title?: string;
-    description?: string;
-  } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [iterationPrompt, setIterationPrompt] = useState("");
+  const [publishTitle, setPublishTitle] = useState("");
+  const [publishDescription, setPublishDescription] = useState("");
+  const [publishCategory, setPublishCategory] = useState(APP_CATEGORIES[0]);
+  const [publishIcon, setPublishIcon] = useState(APP_ICONS[0]);
+  const [publishIsPublic, setPublishIsPublic] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+
+  const pageState = localView === "default" ? derivePageState() : localView;
 
   const handleGenerate = async () => {
     if (!session?.user) {
@@ -54,32 +87,80 @@ export default function CreatePage() {
       }
 
       const { id } = await res.json();
-      setGenerationId(id);
-      setPageState("generating");
+      gen.startGeneration(id);
+      setLocalView("default");
     } catch {
       toast.error("Failed to connect to the server.");
     }
   };
 
-  const handleComplete = useCallback(
-    (data: { title?: string; description?: string }) => {
-      setResult(data);
-      setPageState("complete");
-    },
-    []
-  );
+  const handleIterate = async () => {
+    if (!gen.generationId || iterationPrompt.trim().length < 10) return;
 
-  const handleError = useCallback((errorMsg: string) => {
-    setError(errorMsg);
-    setPageState("error");
-  }, []);
+    try {
+      const res = await fetch(`/api/generate/${gen.generationId}/iterate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: iterationPrompt.trim() }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to start refinement.");
+        return;
+      }
+
+      setIterationPrompt("");
+      gen.incrementIteration();
+      setLocalView("default");
+    } catch {
+      toast.error("Failed to connect to the server.");
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!gen.generationId || publishTitle.trim().length < 2) return;
+
+    setPublishing(true);
+    try {
+      const res = await fetch(`/api/generate/${gen.generationId}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: publishTitle.trim(),
+          description: publishDescription.trim(),
+          category: publishCategory,
+          icon: publishIcon,
+          isPublic: publishIsPublic,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to publish.");
+        return;
+      }
+
+      gen.setPublished();
+      toast.success("Published to the marketplace!");
+      setLocalView("default");
+    } catch {
+      toast.error("Failed to connect to the server.");
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   const handleStartOver = () => {
-    setPageState("input");
-    setGenerationId(null);
-    setResult(null);
-    setError(null);
+    gen.reset();
+    setLocalView("default");
     setPrompt("");
+    setIterationPrompt("");
+    setPublishTitle("");
+    setPublishDescription("");
+    setPublishCategory(APP_CATEGORIES[0]);
+    setPublishIcon(APP_ICONS[0]);
+    setPublishIsPublic(true);
   };
 
   return (
@@ -89,7 +170,7 @@ export default function CreatePage() {
         {/* Input State */}
         {pageState === "input" && (
           <div className="max-w-2xl w-full">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-center bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-center gradient-brand-text">
               Create Your App
             </h1>
             <p className="mt-4 text-center text-gray-600 text-lg max-w-xl mx-auto">
@@ -142,50 +223,237 @@ export default function CreatePage() {
         )}
 
         {/* Generating State */}
-        {pageState === "generating" && generationId && (
+        {pageState === "generating" && gen.generationId && (
           <div className="max-w-2xl w-full text-center">
-            <h1 className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent mb-10">
-              Building Your App
+            <h1 className="text-3xl md:text-4xl font-extrabold gradient-brand-text mb-10">
+              {gen.iterationCount > 0 ? "Refining Your App" : "Building Your App"}
             </h1>
             <GenerationProgress
-              generationId={generationId}
-              onComplete={handleComplete}
-              onError={handleError}
+              isIteration={gen.iterationCount > 0}
             />
           </div>
         )}
 
         {/* Complete State */}
-        {pageState === "complete" && result && (
+        {pageState === "complete" && (
           <div className="max-w-lg w-full text-center">
-            <div className="text-6xl mb-4">🎉</div>
+            <div className="text-6xl mb-4">
+              {gen.iterationCount > 0 ? "✨" : "🎉"}
+            </div>
             <h1 className="text-3xl font-extrabold text-gray-900">
-              {result.title || "Your App"} is Ready!
+              {gen.title || "Your App"} is Ready!
             </h1>
-            {result.description && (
+            {gen.description && (
               <p className="mt-3 text-gray-600 leading-relaxed">
-                {result.description}
+                {gen.description}
               </p>
             )}
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+              {!gen.published ? (
+                <button
+                  onClick={() => {
+                    setPublishTitle(gen.title || "");
+                    setPublishDescription(gen.description || "");
+                    setLocalView("publish");
+                  }}
+                  className="gradient-brand text-white px-6 py-2.5 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Publish to Marketplace
+                </button>
+              ) : (
+                <button
+                  onClick={() => router.push("/")}
+                  className="gradient-brand text-white px-6 py-2.5 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+                >
+                  View in Marketplace
+                </button>
+              )}
+              <button
+                onClick={() => setLocalView("refine")}
+                className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-colors"
+              >
+                Refine with Follow-Up
+              </button>
               <button
                 onClick={handleStartOver}
                 className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-colors"
               >
                 Create Another
               </button>
+            </div>
+            {gen.published && (
+              <p className="mt-3 text-sm text-green-600 font-medium">
+                Published to the marketplace!
+              </p>
+            )}
+            {gen.iterationCount > 0 && (
+              <p className="mt-3 text-sm text-gray-400">
+                Refined {gen.iterationCount} time
+                {gen.iterationCount !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Refine State */}
+        {pageState === "refine" && gen.generationId && (
+          <div className="max-w-2xl w-full">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-center gradient-brand-text">
+              Refine {gen.title || "Your App"}
+            </h1>
+            <p className="mt-4 text-center text-gray-600 text-lg max-w-xl mx-auto">
+              Describe what you&apos;d like to change. The AI remembers
+              everything about your app.
+            </p>
+
+            <textarea
+              value={iterationPrompt}
+              onChange={(e) => setIterationPrompt(e.target.value)}
+              placeholder="e.g. Add a dark mode toggle, change the dashboard layout to show charts..."
+              rows={4}
+              className="mt-8 w-full px-5 py-4 rounded-xl border border-gray-200 shadow-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent text-base"
+            />
+
+            <div className="mt-3 flex justify-between text-sm text-gray-400">
+              <span>Iteration #{gen.iterationCount + 1}</span>
+              <span>{iterationPrompt.length}/5000</span>
+            </div>
+
+            <div className="mt-4 flex gap-3 justify-center">
               <button
-                disabled
-                className="gradient-brand text-white px-6 py-2.5 rounded-xl font-semibold opacity-50 cursor-not-allowed"
-                title="Coming soon"
+                onClick={() => setLocalView("default")}
+                className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-colors"
               >
-                Publish to Marketplace
+                Back
+              </button>
+              <button
+                onClick={handleIterate}
+                disabled={iterationPrompt.trim().length < 10}
+                className="gradient-brand text-white px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Refine
               </button>
             </div>
-            <p className="mt-4 text-xs text-gray-400">
-              Your app has been generated in the apps/ directory. Run it locally
-              with <code className="bg-gray-100 px-1 rounded">npm run dev</code>
+          </div>
+        )}
+
+        {/* Publish State */}
+        {pageState === "publish" && gen.generationId && (
+          <div className="max-w-lg w-full">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-center gradient-brand-text">
+              Publish to Marketplace
+            </h1>
+            <p className="mt-4 text-center text-gray-600 max-w-md mx-auto">
+              Share your app with the GO4IT community. Fill in the details below.
             </p>
+
+            <div className="mt-8 space-y-5">
+              {/* Icon picker */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Icon
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {APP_ICONS.map((icon) => (
+                    <button
+                      key={icon}
+                      onClick={() => setPublishIcon(icon)}
+                      className={`w-11 h-11 rounded-lg text-xl flex items-center justify-center transition-all ${
+                        publishIcon === icon
+                          ? "ring-2 ring-purple-500 bg-purple-50 scale-110"
+                          : "bg-gray-100 hover:bg-gray-200"
+                      }`}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  App Name
+                </label>
+                <input
+                  type="text"
+                  value={publishTitle}
+                  onChange={(e) => setPublishTitle(e.target.value)}
+                  placeholder="e.g. TeamChat Pro"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={publishDescription}
+                  onChange={(e) => setPublishDescription(e.target.value)}
+                  placeholder="What does your app do?"
+                  rows={3}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category
+                </label>
+                <select
+                  value={publishCategory}
+                  onChange={(e) => setPublishCategory(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent bg-white"
+                >
+                  {APP_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Visibility */}
+              <div className="flex items-center gap-3">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={publishIsPublic}
+                    onChange={(e) => setPublishIsPublic(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600" />
+                </label>
+                <span className="text-sm text-gray-700">
+                  {publishIsPublic
+                    ? "Public — visible to everyone"
+                    : "Private — only you can see it"}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-8 flex gap-3 justify-center">
+              <button
+                onClick={() => setLocalView("default")}
+                className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={
+                  publishing ||
+                  publishTitle.trim().length < 2 ||
+                  publishDescription.trim().length < 10
+                }
+                className="gradient-brand text-white px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {publishing ? "Publishing..." : "Publish"}
+              </button>
+            </div>
           </div>
         )}
 
@@ -194,17 +462,25 @@ export default function CreatePage() {
           <div className="max-w-lg w-full text-center">
             <div className="text-6xl mb-4">😔</div>
             <h1 className="text-3xl font-extrabold text-gray-900">
-              Generation Failed
+              {gen.iterationCount > 0 ? "Refinement Failed" : "Generation Failed"}
             </h1>
             <p className="mt-3 text-gray-600 leading-relaxed">
-              {error || "Something went wrong while building your app."}
+              {gen.error || "Something went wrong while building your app."}
             </p>
-            <div className="mt-8">
+            <div className="mt-8 flex gap-3 justify-center">
+              {gen.iterationCount > 0 && (
+                <button
+                  onClick={() => setLocalView("refine")}
+                  className="gradient-brand text-white px-8 py-2.5 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Try Refining Again
+                </button>
+              )}
               <button
                 onClick={handleStartOver}
-                className="gradient-brand text-white px-8 py-2.5 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+                className="px-8 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-colors"
               >
-                Try Again
+                {gen.iterationCount > 0 ? "Start Over" : "Try Again"}
               </button>
             </div>
           </div>

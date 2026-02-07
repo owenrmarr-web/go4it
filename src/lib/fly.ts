@@ -169,15 +169,19 @@ exec node server.js
 `;
 }
 
-function generateDeployDockerfile(): string {
+function generateDeployDockerfile(isPrisma7: boolean): string {
+  const prismaConfigCopy = isPrisma7 ? "\nCOPY prisma.config.ts ./" : "";
+  const prismaConfigCopyRunner = isPrisma7
+    ? "\nCOPY --from=builder /app/prisma.config.ts ./"
+    : "";
+
   return `FROM node:20-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
 # Copy prisma schema + config BEFORE npm ci so postinstall "prisma generate" works
-COPY prisma ./prisma
-COPY prisma.config.ts ./
-RUN npm ci
+COPY prisma ./prisma${prismaConfigCopy}
+RUN npm ci --legacy-peer-deps
 
 COPY . .
 # Provide a dummy DATABASE_URL at build time so Next.js can collect page data
@@ -198,8 +202,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 
 # Copy prisma schema, config, and scripts
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./
+COPY --from=builder /app/prisma ./prisma${prismaConfigCopyRunner}
 
 # Copy startup script
 COPY start.sh ./
@@ -266,6 +269,27 @@ export async function deployApp(
       }
     }
 
+    // Detect Prisma version from package.json (needed before generating deployment files)
+    const pkgPath = path.join(sourceDir, "package.json");
+    let isPrisma7 = false;
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+        const prismaVersion =
+          pkg.devDependencies?.prisma ||
+          pkg.dependencies?.prisma ||
+          pkg.dependencies?.["@prisma/client"] ||
+          "";
+        // ^7, ~7, 7.x, >=7, latest all indicate Prisma 7+
+        isPrisma7 = /^[\^~>=]*7|^latest$/i.test(prismaVersion);
+      } catch {
+        // If we can't read package.json, assume Prisma 7 (existing behavior)
+        isPrisma7 = true;
+      }
+    }
+
+    console.log(`[Deploy ${orgAppId}] Detected Prisma ${isPrisma7 ? "7+" : "6 or earlier"}`);
+
     // Write deployment files into source directory
     writeFileSync(
       path.join(sourceDir, "fly.toml"),
@@ -277,7 +301,7 @@ export async function deployApp(
     );
     writeFileSync(
       path.join(sourceDir, "Dockerfile.fly"),
-      generateDeployDockerfile()
+      generateDeployDockerfile(isPrisma7)
     );
     writeFileSync(
       path.join(sourceDir, ".dockerignore"),
@@ -296,13 +320,44 @@ export async function deployApp(
       unlinkSync(seedPath);
     }
 
-    // Replace prisma.ts with LibSQL adapter client
-    // Uses node:20-slim (Debian) where LibSQL native bindings work (unlike Alpine/musl)
-    const prismaClientPath = path.join(sourceDir, "src", "lib", "prisma.ts");
-    if (existsSync(prismaClientPath)) {
-      writeFileSync(
-        prismaClientPath,
-        `import { PrismaLibSql } from "@prisma/adapter-libsql";
+    if (isPrisma7) {
+      // Prisma 7 requires the LibSQL adapter — rewrite prisma.ts and provision-users.ts
+      // Also add @prisma/adapter-libsql + @libsql/client to dependencies if missing
+      const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+      let depsChanged = false;
+      if (!pkg.dependencies?.["@prisma/adapter-libsql"]) {
+        pkg.dependencies = pkg.dependencies || {};
+        pkg.dependencies["@prisma/adapter-libsql"] = "^7.0.0";
+        depsChanged = true;
+      }
+      if (!pkg.dependencies?.["@libsql/client"]) {
+        pkg.dependencies = pkg.dependencies || {};
+        pkg.dependencies["@libsql/client"] = "^0.14.0";
+        depsChanged = true;
+      }
+      if (depsChanged) {
+        writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+        // Regenerate lock file since we added dependencies
+        const lockPath = path.join(sourceDir, "package-lock.json");
+        if (existsSync(lockPath)) {
+          unlinkSync(lockPath);
+        }
+        const lockResult = await runCommand(
+          "npm",
+          ["install", "--package-lock-only", "--legacy-peer-deps"],
+          { cwd: sourceDir }
+        );
+        if (lockResult.code !== 0) {
+          console.warn(`[Deploy ${orgAppId}] Lock regen warning: ${lockResult.stderr}`);
+        }
+      }
+
+      // Replace prisma.ts with LibSQL adapter client
+      const prismaClientPath = path.join(sourceDir, "src", "lib", "prisma.ts");
+      if (existsSync(prismaClientPath)) {
+        writeFileSync(
+          prismaClientPath,
+          `import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
@@ -315,15 +370,15 @@ if (!globalForPrisma.prisma) {
 export const prisma = globalForPrisma.prisma;
 export default prisma;
 `
-      );
-    }
+        );
+      }
 
-    // Rewrite provision-users.ts to use LibSQL adapter (Prisma 7 requires adapter)
-    const provisionPath = path.join(sourceDir, "prisma", "provision-users.ts");
-    if (existsSync(provisionPath)) {
-      writeFileSync(
-        provisionPath,
-        `import { PrismaLibSql } from "@prisma/adapter-libsql";
+      // Rewrite provision-users.ts to use LibSQL adapter
+      const provisionPath = path.join(sourceDir, "prisma", "provision-users.ts");
+      if (existsSync(provisionPath)) {
+        writeFileSync(
+          provisionPath,
+          `import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -350,31 +405,33 @@ async function main() {
 
 main().finally(() => prisma.$disconnect());
 `
+        );
+      }
+
+      // Prisma 7: url property is NOT allowed in schema.prisma — must be in prisma.config.ts
+      const schemaPath = path.join(sourceDir, "prisma", "schema.prisma");
+      if (existsSync(schemaPath)) {
+        let schema = readFileSync(schemaPath, "utf-8");
+        // Remove url line if present (Prisma 7 rejects it)
+        schema = schema.replace(/^\s*url\s*=\s*env\(.*\)\s*$/m, "");
+        writeFileSync(schemaPath, schema);
+      }
+
+      // Delete the old prisma/prisma.config.ts if it exists (wrong location)
+      const oldPrismaConfigPath = path.join(
+        sourceDir,
+        "prisma",
+        "prisma.config.ts"
       );
-    }
+      if (existsSync(oldPrismaConfigPath)) {
+        unlinkSync(oldPrismaConfigPath);
+      }
 
-    // Prisma 7: url property is NOT allowed in schema.prisma — must be in prisma.config.ts
-    // Ensure schema.prisma does NOT have a url property
-    const schemaPath = path.join(sourceDir, "prisma", "schema.prisma");
-    if (existsSync(schemaPath)) {
-      let schema = readFileSync(schemaPath, "utf-8");
-      // Remove url line if present (Prisma 7 rejects it)
-      schema = schema.replace(/^\s*url\s*=\s*env\(.*\)\s*$/m, "");
-      writeFileSync(schemaPath, schema);
-    }
-
-    // Delete the old prisma/prisma.config.ts if it exists (wrong location)
-    const oldPrismaConfigPath = path.join(sourceDir, "prisma", "prisma.config.ts");
-    if (existsSync(oldPrismaConfigPath)) {
-      unlinkSync(oldPrismaConfigPath);
-    }
-
-    // Write prisma.config.ts at project root (where Prisma 7 CLI expects it)
-    // Uses @ts-nocheck to avoid TypeScript errors during next build
-    const prismaConfigPath = path.join(sourceDir, "prisma.config.ts");
-    writeFileSync(
-      prismaConfigPath,
-      `// @ts-nocheck
+      // Write prisma.config.ts at project root (where Prisma 7 CLI expects it)
+      const prismaConfigPath = path.join(sourceDir, "prisma.config.ts");
+      writeFileSync(
+        prismaConfigPath,
+        `// @ts-nocheck
 import { defineConfig } from "prisma/config";
 
 export default defineConfig({
@@ -383,7 +440,22 @@ export default defineConfig({
   },
 });
 `
-    );
+      );
+    } else {
+      // Prisma 6 or earlier: ensure schema.prisma has url = env("DATABASE_URL")
+      const schemaPath = path.join(sourceDir, "prisma", "schema.prisma");
+      if (existsSync(schemaPath)) {
+        let schema = readFileSync(schemaPath, "utf-8");
+        // If url line is missing from datasource block, add it back
+        if (!/url\s*=/.test(schema)) {
+          schema = schema.replace(
+            /(datasource\s+\w+\s*\{[^}]*provider\s*=\s*"[^"]*")/,
+            '$1\n  url      = env("DATABASE_URL")'
+          );
+          writeFileSync(schemaPath, schema);
+        }
+      }
+    }
 
     // ---- Stage: Creating ----
     updateDeployProgress(orgAppId, "creating");

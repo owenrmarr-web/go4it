@@ -101,6 +101,11 @@ Add this to `globals.css`:
 }
 ```
 
+**IMPORTANT: Tailwind CSS v4 `@theme` restrictions:**
+- `@theme` blocks may ONLY contain flat CSS custom properties (e.g. `--color-primary: #fff;`) or `@keyframes` declarations
+- Do NOT use nested selectors, wildcard properties (`--color-*`), or `@dark` blocks inside `@theme`
+- Dark mode works automatically via the `dark:` variant — just add `class` strategy to the html element and use `dark:bg-gray-900` etc. No `@theme` configuration is needed for dark mode.
+
 ## Authentication Setup
 
 Use NextAuth v5 with the credentials provider:
@@ -138,7 +143,7 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 FROM base AS builder
 WORKDIR /app

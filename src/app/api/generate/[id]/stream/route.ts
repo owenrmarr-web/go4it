@@ -31,12 +31,51 @@ export async function GET(
   const stream = new ReadableStream({
     start(controller) {
       let lastStage = "";
+      let pendingPolls = 0;
 
-      const interval = setInterval(() => {
-        const progress = getProgress(id);
+      const interval = setInterval(async () => {
+        let progress = getProgress(id);
 
-        // Only send updates when stage changes
-        if (progress.stage !== lastStage) {
+        // If in-memory store shows pending for too long, check DB
+        // (handles HMR wiping the in-memory store during dev)
+        if (progress.stage === "pending") {
+          pendingPolls++;
+          if (pendingPolls >= 3) {
+            try {
+              const dbApp = await prisma.generatedApp.findUnique({
+                where: { id },
+                select: { status: true, title: true, description: true, error: true },
+              });
+              if (dbApp?.status === "GENERATING") {
+                progress = {
+                  stage: "coding",
+                  message: "Building your app (this may take a few minutes)...",
+                };
+              } else if (dbApp?.status === "COMPLETE") {
+                progress = {
+                  stage: "complete",
+                  message: "Your app is ready!",
+                  title: dbApp.title ?? undefined,
+                  description: dbApp.description ?? undefined,
+                };
+              } else if (dbApp?.status === "FAILED") {
+                progress = {
+                  stage: "failed",
+                  message: "Something went wrong.",
+                  error: dbApp.error ?? undefined,
+                };
+              }
+            } catch {
+              // DB check failed, continue with in-memory
+            }
+          }
+        } else {
+          pendingPolls = 0;
+        }
+
+        // Send update when stage changes, or periodically during DB fallback
+        // to keep the connection alive
+        if (progress.stage !== lastStage || pendingPolls > 0) {
           lastStage = progress.stage;
           const data = JSON.stringify(progress);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));

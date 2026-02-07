@@ -1,5 +1,5 @@
 import { spawn, ChildProcess } from "child_process";
-import { readFileSync, mkdirSync, writeFileSync, existsSync } from "fs";
+import { readFileSync, readdirSync, mkdirSync, writeFileSync, existsSync } from "fs";
 import path from "path";
 import prisma from "./prisma";
 
@@ -71,6 +71,114 @@ function getPlaybookPath(): string {
   return path.join(getProjectRoot(), "playbook", "CLAUDE.md");
 }
 
+// Shared CLI runner used by both startGeneration and startIteration
+function runClaudeCLI(
+  generationId: string,
+  workspaceDir: string,
+  cliArgs: string[],
+  onComplete: (meta: { title: string; description: string }) => Promise<void>,
+  onError: (errorMsg: string) => Promise<void>
+) {
+  console.log(`[Generator ${generationId}] Spawning CLI in ${workspaceDir}`);
+  console.log(`[Generator ${generationId}] Args: npx ${cliArgs.join(" ").slice(0, 200)}...`);
+  console.log(`[Generator ${generationId}] ANTHROPIC_API_KEY set: ${!!process.env.ANTHROPIC_API_KEY}`);
+
+  const child = spawn("/usr/local/bin/npx", cliArgs, {
+    cwd: workspaceDir,
+    env: {
+      ...process.env,
+      ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  processStore.set(generationId, child);
+
+  let stderrBuffer = "";
+  let stdoutBuffer = "";
+  let eventCount = 0;
+
+  child.stdout.on("data", (data: Buffer) => {
+    const text = data.toString();
+    stdoutBuffer += text;
+    const lines = text.split("\n").filter((l) => l.trim());
+
+    for (const line of lines) {
+      try {
+        const event = JSON.parse(line);
+        eventCount++;
+        handleStreamEvent(generationId, event);
+      } catch {
+        checkForStageMarkers(generationId, line);
+      }
+    }
+  });
+
+  child.stderr.on("data", (data: Buffer) => {
+    const text = data.toString();
+    stderrBuffer += text;
+    // Log stderr lines as they arrive
+    if (text.trim()) {
+      console.log(`[Generator ${generationId}] stderr: ${text.trim().slice(0, 500)}`);
+    }
+  });
+
+  child.on("close", async (code) => {
+    processStore.delete(generationId);
+
+    // List workspace files for debugging
+    try {
+      const files = readdirSync(workspaceDir);
+      console.log(`[Generator ${generationId}] Exit code: ${code}, events: ${eventCount}, workspace files: ${files.length} (${files.slice(0, 10).join(", ")})`);
+    } catch {
+      console.log(`[Generator ${generationId}] Exit code: ${code}, events: ${eventCount}, workspace dir read failed`);
+    }
+
+    if (code === 0) {
+      const appMeta = extractAppMetadata(workspaceDir);
+      console.log(`[Generator ${generationId}] Complete: title="${appMeta.title}", description="${appMeta.description?.slice(0, 100)}"`);
+      updateProgress(generationId, "complete", {
+        title: appMeta.title,
+        description: appMeta.description,
+      });
+      await onComplete(appMeta);
+    } else {
+      const errorMsg = stderrBuffer.trim() || stdoutBuffer.trim() || `Process exited with code ${code}`;
+      console.error(`[Generator ${generationId}] Failed with code ${code}`);
+      console.error(`[Generator ${generationId}] stderr:`, stderrBuffer.slice(0, 2000));
+      console.error(`[Generator ${generationId}] stdout:`, stdoutBuffer.slice(0, 2000));
+      updateProgress(generationId, "failed", { error: errorMsg });
+      await onError(errorMsg);
+    }
+  });
+
+  child.on("error", async (err) => {
+    processStore.delete(generationId);
+    console.error(`[Generator ${generationId}] Spawn error:`, err.message);
+    updateProgress(generationId, "failed", { error: err.message });
+    await onError(err.message);
+  });
+}
+
+function buildCLIArgs(prompt: string, useContinue: boolean): string[] {
+  const args = [
+    "--yes",
+    "@anthropic-ai/claude-code",
+    "-p",
+    prompt,
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--dangerously-skip-permissions",
+    "--model",
+    process.env.CLAUDE_MODEL || "sonnet",
+  ];
+  if (useContinue) {
+    args.splice(4, 0, "--continue"); // Insert after prompt
+  }
+  return args;
+}
+
 export async function startGeneration(
   generationId: string,
   prompt: string
@@ -92,70 +200,11 @@ export async function startGeneration(
 
   updateProgress(generationId, "pending");
 
-  // Spawn Claude Code CLI
-  const child = spawn(
-    "npx",
-    [
-      "--yes",
-      "@anthropic-ai/claude-code",
-      "-p",
-      prompt,
-      "--output-format",
-      "stream-json",
-      "--verbose",
-      "--dangerously-skip-permissions",
-      "--model",
-      process.env.CLAUDE_MODEL || "sonnet",
-    ],
-    {
-      cwd: workspaceDir,
-      env: {
-        ...process.env,
-        // Ensure Claude Code can find the API key
-        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    }
-  );
-
-  processStore.set(generationId, child);
-
-  let stderrBuffer = "";
-  let stdoutBuffer = "";
-
-  // Parse stdout for stream-json events
-  child.stdout.on("data", (data: Buffer) => {
-    const text = data.toString();
-    stdoutBuffer += text;
-    const lines = text.split("\n").filter((l) => l.trim());
-
-    for (const line of lines) {
-      try {
-        const event = JSON.parse(line);
-        handleStreamEvent(generationId, event);
-      } catch {
-        // Not JSON — check for raw stage markers in text
-        checkForStageMarkers(generationId, line);
-      }
-    }
-  });
-
-  child.stderr.on("data", (data: Buffer) => {
-    stderrBuffer += data.toString();
-  });
-
-  child.on("close", async (code) => {
-    processStore.delete(generationId);
-
-    if (code === 0) {
-      // Extract title from generated package.json if available
-      const appMeta = extractAppMetadata(workspaceDir);
-
-      updateProgress(generationId, "complete", {
-        title: appMeta.title,
-        description: appMeta.description,
-      });
-
+  runClaudeCLI(
+    generationId,
+    workspaceDir,
+    buildCLIArgs(prompt, false),
+    async (appMeta) => {
       await prisma.generatedApp.update({
         where: { id: generationId },
         data: {
@@ -164,13 +213,8 @@ export async function startGeneration(
           description: appMeta.description,
         },
       });
-    } else {
-      const errorMsg = stderrBuffer.trim() || stdoutBuffer.trim() || `Process exited with code ${code}`;
-      console.error(`[Generator ${generationId}] Failed with code ${code}`);
-      console.error(`[Generator ${generationId}] stderr:`, stderrBuffer);
-      console.error(`[Generator ${generationId}] stdout:`, stdoutBuffer.slice(0, 2000));
-      updateProgress(generationId, "failed", { error: errorMsg });
-
+    },
+    async (errorMsg) => {
       await prisma.generatedApp.update({
         where: { id: generationId },
         data: {
@@ -179,25 +223,67 @@ export async function startGeneration(
         },
       });
     }
+  );
+}
+
+export async function startIteration(
+  generationId: string,
+  iterationId: string,
+  prompt: string
+): Promise<void> {
+  const generatedApp = await prisma.generatedApp.findUnique({
+    where: { id: generationId },
+    select: { sourceDir: true },
   });
 
-  child.on("error", async (err) => {
-    processStore.delete(generationId);
-    updateProgress(generationId, "failed", { error: err.message });
+  if (!generatedApp?.sourceDir) {
+    throw new Error(`No sourceDir found for generation ${generationId}`);
+  }
 
-    await prisma.generatedApp.update({
-      where: { id: generationId },
-      data: {
-        status: "FAILED",
-        error: err.message.slice(0, 1000),
-      },
-    });
+  const workspaceDir = generatedApp.sourceDir;
+
+  await prisma.appIteration.update({
+    where: { id: iterationId },
+    data: { status: "GENERATING" },
   });
+
+  updateProgress(generationId, "pending");
+
+  runClaudeCLI(
+    generationId,
+    workspaceDir,
+    buildCLIArgs(prompt, true),
+    async (appMeta) => {
+      await prisma.appIteration.update({
+        where: { id: iterationId },
+        data: { status: "COMPLETE" },
+      });
+      await prisma.generatedApp.update({
+        where: { id: generationId },
+        data: {
+          status: "COMPLETE",
+          title: appMeta.title,
+          description: appMeta.description,
+        },
+      });
+    },
+    async (errorMsg) => {
+      await prisma.appIteration.update({
+        where: { id: iterationId },
+        data: { status: "FAILED", error: errorMsg.slice(0, 1000) },
+      });
+      await prisma.generatedApp.update({
+        where: { id: generationId },
+        data: {
+          status: "FAILED",
+          error: errorMsg.slice(0, 1000),
+        },
+      });
+    }
+  );
 }
 
 function handleStreamEvent(generationId: string, event: Record<string, unknown>) {
-  // stream-json events have different types
-  // Look for text content containing stage markers
   if (event.type === "assistant" && event.message) {
     const msg = event.message as Record<string, unknown>;
     if (msg.content && Array.isArray(msg.content)) {
@@ -212,7 +298,6 @@ function handleStreamEvent(generationId: string, event: Record<string, unknown>)
     }
   }
 
-  // Also check result events
   if (event.type === "result" && event.result) {
     const result = event.result as string;
     checkForStageMarkers(generationId, result);
@@ -234,7 +319,6 @@ function extractAppMetadata(workspaceDir: string): {
   title: string;
   description: string;
 } {
-  // Try to read package.json for app name
   const pkgPath = path.join(workspaceDir, "package.json");
   let title = "Generated App";
   let description = "";
@@ -243,7 +327,6 @@ function extractAppMetadata(workspaceDir: string): {
     try {
       const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
       if (pkg.name) {
-        // Convert package name to title case: "leadflow-crm" -> "Leadflow Crm"
         title = pkg.name
           .replace(/[-_]/g, " ")
           .replace(/\b\w/g, (c: string) => c.toUpperCase());

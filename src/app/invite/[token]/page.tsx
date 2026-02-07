@@ -139,7 +139,7 @@ export default function InvitePage({
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/">
-            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent inline-block">
+            <h1 className="text-3xl font-extrabold gradient-brand-text inline-block">
               GO4IT
             </h1>
           </Link>

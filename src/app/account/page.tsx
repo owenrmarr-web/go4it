@@ -9,13 +9,133 @@ import AppCard, { type UserOrg } from "@/components/AppCard";
 import { useInteractions } from "@/hooks/useInteractions";
 import type { App } from "@/types";
 
+interface OrgData {
+  id: string;
+  name: string;
+  slug: string;
+  logo: string | null;
+}
+
+interface OrgAppMember {
+  id: string;
+  userId: string;
+  user: { id: string; name: string; email: string; image: string | null };
+}
+
+interface OrgApp {
+  id: string;
+  appId: string;
+  status: string;
+  flyUrl: string | null;
+  addedAt: string;
+  deployedAt: string | null;
+  app: {
+    id: string;
+    title: string;
+    description: string;
+    icon: string;
+    category: string;
+  };
+  members: OrgAppMember[];
+}
+
+interface Member {
+  id: string;
+  role: "OWNER" | "ADMIN" | "MEMBER";
+  joinedAt: string;
+  user: { id: string; name: string; email: string; image: string | null };
+}
+
+interface Invitation {
+  id: string;
+  email: string;
+  role: "OWNER" | "ADMIN" | "MEMBER";
+  expiresAt: string;
+  createdAt: string;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  ADDED: "bg-gray-100 text-gray-600",
+  DEPLOYING: "bg-yellow-100 text-yellow-700",
+  RUNNING: "bg-green-100 text-green-700",
+  STOPPED: "bg-orange-100 text-orange-700",
+  FAILED: "bg-red-100 text-red-700",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  ADDED: "Not deployed",
+  DEPLOYING: "Deploying...",
+  RUNNING: "Live",
+  STOPPED: "Stopped",
+  FAILED: "Failed",
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  OWNER: "Owner",
+  ADMIN: "Admin",
+  MEMBER: "Member",
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  OWNER: "bg-purple-100 text-purple-700",
+  ADMIN: "bg-blue-100 text-blue-700",
+  MEMBER: "bg-gray-100 text-gray-700",
+};
+
 export default function AccountPage() {
   const { data: session } = useSession();
   const [allApps, setAllApps] = useState<App[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
-  const [orgs, setOrgs] = useState<UserOrg[]>([]);
-  const [orgsLoading, setOrgsLoading] = useState(true);
+  const [org, setOrg] = useState<OrgData | null>(null);
+  const [orgApps, setOrgApps] = useState<OrgApp[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [orgLoading, setOrgLoading] = useState(true);
   const { hearted, toggle, loading: interactionsLoading } = useInteractions();
+
+  // App management state
+  const [configuringAppId, setConfiguringAppId] = useState<string | null>(null);
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(
+    new Set()
+  );
+  const [savingMembers, setSavingMembers] = useState(false);
+  const [deployingAppId, setDeployingAppId] = useState<string | null>(null);
+  const [deployMessage, setDeployMessage] = useState("");
+
+  // Invite state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
+  const [sendingInvite, setSendingInvite] = useState(false);
+
+  // For AppCard — build a UserOrg array from the single org
+  const orgs: UserOrg[] = useMemo(() => {
+    if (!org) return [];
+    return [
+      {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        role: "OWNER",
+        appIds: orgApps.map((a) => a.appId),
+      },
+    ];
+  }, [org, orgApps]);
+
+  const fetchOrgData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/account/org");
+      const data = await res.json();
+      setOrg(data.org || null);
+      setOrgApps(data.apps || []);
+      setMembers(data.members || []);
+      setInvitations(data.invitations || []);
+    } catch {
+      // silent
+    } finally {
+      setOrgLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/apps")
@@ -26,21 +146,17 @@ export default function AccountPage() {
       })
       .catch(() => setAppsLoading(false));
 
-    fetch("/api/organizations")
-      .then((r) => r.json())
-      .then((data: UserOrg[]) => {
-        if (Array.isArray(data)) setOrgs(data);
-        setOrgsLoading(false);
-      })
-      .catch(() => setOrgsLoading(false));
-  }, []);
+    fetchOrgData();
+  }, [fetchOrgData]);
 
-  const loading = appsLoading || interactionsLoading || orgsLoading;
+  const loading = appsLoading || interactionsLoading || orgLoading;
 
   const heartedApps = useMemo(
     () => allApps.filter((app) => hearted.has(app.id)),
     [allApps, hearted]
   );
+
+  // ─── App management handlers ────────────────────────────
 
   const handleAddToOrg = useCallback(
     async (orgSlug: string, appId: string) => {
@@ -56,31 +172,269 @@ export default function AccountPage() {
           throw new Error(data.error || "Failed to add app");
         }
 
-        const result = await res.json();
-        const orgName = orgs.find((o) => o.slug === orgSlug)?.name || orgSlug;
-
-        setOrgs((prev) =>
-          prev.map((org) =>
-            org.slug === orgSlug
-              ? { ...org, appIds: [...org.appIds, appId] }
-              : org
-          )
-        );
-
-        toast.success(`${result.app?.title || "App"} added to ${orgName}`, {
-          action: {
-            label: "Go to Org",
-            onClick: () => (window.location.href = `/org/${orgSlug}/admin`),
-          },
-        });
+        toast.success("App added!");
+        fetchOrgData();
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to add app";
         toast.error(message);
       }
     },
-    [orgs]
+    [fetchOrgData]
   );
+
+  const handleConfigureApp = (orgApp: OrgApp) => {
+    setConfiguringAppId(orgApp.id);
+    setSelectedMembers(new Set(orgApp.members.map((m) => m.userId)));
+  };
+
+  const handleSelectAllMembers = () => {
+    if (selectedMembers.size === members.length) {
+      setSelectedMembers(new Set());
+    } else {
+      setSelectedMembers(new Set(members.map((m) => m.user.id)));
+    }
+  };
+
+  const handleToggleMember = (userId: string) => {
+    setSelectedMembers((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const handleSaveAppMembers = async () => {
+    const orgApp = orgApps.find((a) => a.id === configuringAppId);
+    if (!orgApp || !org) return;
+
+    setSavingMembers(true);
+    try {
+      const res = await fetch(
+        `/api/organizations/${org.slug}/apps/${orgApp.appId}/members`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userIds: Array.from(selectedMembers) }),
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save");
+      }
+
+      toast.success("Team access updated!");
+      setConfiguringAppId(null);
+      fetchOrgData();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save";
+      toast.error(message);
+    } finally {
+      setSavingMembers(false);
+    }
+  };
+
+  const handleRemoveApp = async (appId: string, appTitle: string) => {
+    if (!org || !confirm(`Remove ${appTitle}?`)) return;
+
+    try {
+      const res = await fetch(`/api/organizations/${org.slug}/apps`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to remove app");
+      }
+
+      toast.success(`${appTitle} removed`);
+      fetchOrgData();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to remove app";
+      toast.error(message);
+    }
+  };
+
+  const handleLaunchApp = async (orgApp: OrgApp) => {
+    if (!org) return;
+    if (orgApp.members.length === 0) {
+      toast.error("Configure team access before launching");
+      return;
+    }
+
+    setDeployingAppId(orgApp.appId);
+    setDeployMessage("Starting deployment...");
+
+    try {
+      const res = await fetch(
+        `/api/organizations/${org.slug}/apps/${orgApp.appId}/deploy`,
+        { method: "POST" }
+      );
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to start deployment");
+      }
+
+      const eventSource = new EventSource(
+        `/api/organizations/${org.slug}/apps/${orgApp.appId}/deploy/stream`
+      );
+
+      eventSource.onmessage = (event) => {
+        try {
+          const progress = JSON.parse(event.data);
+          setDeployMessage(progress.message);
+
+          if (progress.stage === "running") {
+            eventSource.close();
+            setDeployingAppId(null);
+            toast.success("App deployed successfully!", {
+              action: progress.flyUrl
+                ? {
+                    label: "Visit",
+                    onClick: () => window.open(progress.flyUrl, "_blank"),
+                  }
+                : undefined,
+            });
+            fetchOrgData();
+          } else if (progress.stage === "failed") {
+            eventSource.close();
+            setDeployingAppId(null);
+            toast.error(progress.error || "Deployment failed");
+            fetchOrgData();
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+        setDeployingAppId(null);
+        fetchOrgData();
+      };
+    } catch (err) {
+      setDeployingAppId(null);
+      const message =
+        err instanceof Error ? err.message : "Failed to deploy";
+      toast.error(message);
+      fetchOrgData();
+    }
+  };
+
+  // ─── Team management handlers ───────────────────────────
+
+  const handleSendInvite = async () => {
+    if (!org || !inviteEmail.trim()) {
+      toast.error("Please enter an email address");
+      return;
+    }
+
+    setSendingInvite(true);
+    try {
+      const res = await fetch(
+        `/api/organizations/${org.slug}/invitations`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send invitation");
+
+      toast.success(`Invitation sent to ${inviteEmail}`);
+      setInviteEmail("");
+      setInviteRole("MEMBER");
+      setShowInviteModal(false);
+      fetchOrgData();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to send invitation";
+      toast.error(message);
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
+  const handleCancelInvite = async (invitationId: string) => {
+    if (!org) return;
+    try {
+      const res = await fetch(
+        `/api/organizations/${org.slug}/invitations`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ invitationId }),
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to cancel invitation");
+      }
+
+      toast.success("Invitation cancelled");
+      fetchOrgData();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to cancel invitation";
+      toast.error(message);
+    }
+  };
+
+  const handleRoleChange = async (memberId: string, newRole: string) => {
+    if (!org) return;
+    try {
+      const res = await fetch(`/api/organizations/${org.slug}/members`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId, role: newRole }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update role");
+      }
+
+      toast.success("Role updated!");
+      fetchOrgData();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update role";
+      toast.error(message);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!org || !confirm(`Remove ${memberName} from the team?`)) return;
+
+    try {
+      const res = await fetch(`/api/organizations/${org.slug}/members`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to remove member");
+      }
+
+      toast.success("Member removed");
+      fetchOrgData();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to remove member";
+      toast.error(message);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut({ redirect: true, redirectTo: "/" });
@@ -89,130 +443,482 @@ export default function AccountPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <main className="max-w-7xl mx-auto px-4 pt-28 pb-16">
+      <main className="max-w-5xl mx-auto px-4 pt-28 pb-16">
         {/* Header row */}
         <div className="flex items-center justify-between mb-10">
           <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900">
             My Account
           </h1>
-          <button
-            onClick={handleSignOut}
-            className="text-sm text-gray-500 hover:text-red-500 transition-colors border border-gray-200 hover:border-red-300 px-4 py-2 rounded-lg"
-          >
-            Sign Out
-          </button>
-        </div>
-
-        {/* Organizations Section */}
-        <section className="mb-12">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-5 h-5 text-purple-500"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
-                />
-              </svg>
-              My Organizations
-            </h2>
+          <div className="flex items-center gap-2">
             <Link
-              href="/org/new"
-              className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors"
+              href="/account/settings"
+              className="text-sm text-gray-500 hover:text-purple-600 transition-colors border border-gray-200 hover:border-purple-300 px-4 py-2 rounded-lg"
             >
-              + Create Organization
+              Account Settings
             </Link>
+            <button
+              onClick={handleSignOut}
+              className="text-sm text-gray-500 hover:text-red-500 transition-colors border border-gray-200 hover:border-red-300 px-4 py-2 rounded-lg"
+            >
+              Sign Out
+            </button>
           </div>
-          {orgsLoading ? (
-            <div className="flex justify-center py-10 bg-white rounded-xl shadow-sm">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
-            </div>
-          ) : orgs.length === 0 ? (
-            <div className="text-center py-10 bg-white rounded-xl shadow-sm">
-              <p className="text-gray-400 mb-4">
-                Create an organization to add and deploy apps for your team
-              </p>
-              <Link
-                href="/org/new"
-                className="inline-block gradient-brand text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
-              >
-                Create Organization
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {orgs.map((org) => (
-                <Link
-                  key={org.id}
-                  href={`/org/${org.slug}/admin`}
-                  className="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-shadow flex items-center gap-4"
-                >
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-lg">
-                    {org.name[0]?.toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">
-                      {org.name}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {org.slug}.go4it.live
-                      {org.appIds.length > 0 && (
-                        <span>
-                          {" "}· {org.appIds.length} app
-                          {org.appIds.length !== 1 && "s"}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <span className="text-xs font-medium text-gray-400 uppercase">
-                    {org.role}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+        </div>
 
         {loading ? (
           <div className="flex justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
           </div>
         ) : (
-          /* Saved (Hearts) */
-          <section>
-            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <span className="text-pink-500">♥</span> Saved Apps
-            </h2>
-            {heartedApps.length === 0 ? (
-              <div className="text-center py-10 bg-white rounded-xl shadow-sm">
-                <p className="text-gray-400">
-                  Save apps from the marketplace to come back to them later!
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {heartedApps.map((app) => (
-                  <AppCard
-                    key={app.id}
-                    app={app}
-                    isHearted={hearted.has(app.id)}
-                    onToggleHeart={() => toggle(app.id, "HEART")}
-                    orgs={orgs}
-                    onAddToOrg={handleAddToOrg}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+          <>
+            {/* ── My Apps ──────────────────────────────────── */}
+            <section className="mb-12">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">My Apps</h2>
+
+              {!org ? (
+                <div className="text-center py-10 bg-white rounded-xl shadow-sm">
+                  <p className="text-gray-400 mb-4">
+                    Add your company name in settings to start deploying apps
+                    for your team.
+                  </p>
+                  <Link
+                    href="/account/settings"
+                    className="inline-block gradient-brand text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    Set Up Company
+                  </Link>
+                </div>
+              ) : orgApps.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-xl shadow-sm">
+                  <p className="text-gray-400 mb-4">
+                    Add apps from the marketplace to deploy them for your team.
+                  </p>
+                  <Link
+                    href="/"
+                    className="inline-block gradient-brand text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    Browse Marketplace
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {orgApps.map((orgApp) => (
+                    <div
+                      key={orgApp.id}
+                      className="bg-white rounded-2xl shadow-sm overflow-hidden"
+                    >
+                      <div className="p-5 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <span className="text-3xl">{orgApp.app.icon}</span>
+                          <div>
+                            <h3 className="font-bold text-gray-900">
+                              {orgApp.app.title}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              {orgApp.app.category}
+                              {orgApp.members.length > 0 && (
+                                <span className="ml-2">
+                                  · {orgApp.members.length} team member
+                                  {orgApp.members.length !== 1 && "s"}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          {deployingAppId === orgApp.appId ? (
+                            <div className="flex items-center gap-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600" />
+                              <span className="text-xs text-purple-600 font-medium max-w-48 truncate">
+                                {deployMessage}
+                              </span>
+                            </div>
+                          ) : (
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                                STATUS_COLORS[orgApp.status] ||
+                                "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {STATUS_LABELS[orgApp.status] || orgApp.status}
+                            </span>
+                          )}
+
+                          {orgApp.status === "RUNNING" && orgApp.flyUrl && (
+                            <a
+                              href={orgApp.flyUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 text-sm font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+                            >
+                              Visit
+                            </a>
+                          )}
+
+                          {deployingAppId !== orgApp.appId && (
+                            <>
+                              <button
+                                onClick={() => handleConfigureApp(orgApp)}
+                                className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                              >
+                                Configure
+                              </button>
+                              {(orgApp.status === "ADDED" ||
+                                orgApp.status === "FAILED") && (
+                                <button
+                                  className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+                                  onClick={() => handleLaunchApp(orgApp)}
+                                >
+                                  {orgApp.status === "FAILED"
+                                    ? "Retry"
+                                    : "Launch"}
+                                </button>
+                              )}
+                              <button
+                                onClick={() =>
+                                  handleRemoveApp(
+                                    orgApp.appId,
+                                    orgApp.app.title
+                                  )
+                                }
+                                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                                title="Remove app"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth={1.5}
+                                  stroke="currentColor"
+                                  className="w-5 h-5"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M6 18 18 6M6 6l12 12"
+                                  />
+                                </svg>
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Team access config panel */}
+                      {configuringAppId === orgApp.id && (
+                        <div className="border-t border-gray-100 px-5 py-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-sm font-medium text-gray-700">
+                              Team Access
+                            </p>
+                            <button
+                              onClick={handleSelectAllMembers}
+                              className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                            >
+                              {selectedMembers.size === members.length
+                                ? "Deselect All"
+                                : "Select All"}
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {members.map((member) => (
+                              <label
+                                key={member.id}
+                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-white cursor-pointer transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedMembers.has(member.user.id)}
+                                  onChange={() =>
+                                    handleToggleMember(member.user.id)
+                                  }
+                                  className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-400"
+                                />
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-sm font-semibold">
+                                  {member.user.name?.[0]?.toUpperCase() || "?"}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {member.user.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500 truncate">
+                                    {member.user.email}
+                                  </p>
+                                </div>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    ROLE_COLORS[member.role]
+                                  }`}
+                                >
+                                  {ROLE_LABELS[member.role]}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                          <div className="flex gap-2 mt-4">
+                            <button
+                              onClick={handleSaveAppMembers}
+                              disabled={savingMembers}
+                              className="gradient-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+                            >
+                              {savingMembers ? "Saving..." : "Save Access"}
+                            </button>
+                            <button
+                              onClick={() => setConfiguringAppId(null)}
+                              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* ── Team Members ─────────────────────────────── */}
+            <section className="mb-12">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">
+                Team Members
+              </h2>
+
+              {!org ? (
+                <div className="text-center py-10 bg-white rounded-xl shadow-sm">
+                  <p className="text-gray-400">
+                    Set up your company to invite team members.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  {/* Header bar with count + invite */}
+                  <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <p className="text-sm text-gray-600">
+                      {members.length} team member
+                      {members.length !== 1 && "s"}
+                      {invitations.length > 0 &&
+                        ` · ${invitations.length} pending`}
+                    </p>
+                    <button
+                      onClick={() => setShowInviteModal(true)}
+                      className="px-4 py-2 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                    >
+                      + Invite Member
+                    </button>
+                  </div>
+
+                  {/* Pending invitations */}
+                  {invitations.length > 0 && (
+                    <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
+                      <p className="text-xs font-medium text-gray-500 uppercase mb-2">
+                        Pending Invitations
+                      </p>
+                      <div className="space-y-2">
+                        {invitations.map((invite) => (
+                          <div
+                            key={invite.id}
+                            className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-200"
+                          >
+                            <div>
+                              <p className="text-sm font-medium text-gray-700">
+                                {invite.email}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Invited as {ROLE_LABELS[invite.role]} · Expires{" "}
+                                {new Date(invite.expiresAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleCancelInvite(invite.id)}
+                              className="text-xs text-red-500 hover:text-red-700"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Members list */}
+                  <div className="divide-y divide-gray-100">
+                    {members.map((member) => {
+                      const isOnlyOwner =
+                        member.role === "OWNER" &&
+                        members.filter((m) => m.role === "OWNER").length === 1;
+                      return (
+                        <div
+                          key={member.id}
+                          className="px-6 py-4 flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
+                              {member.user.name?.[0]?.toUpperCase() || "?"}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {member.user.name}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {member.user.email}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            {!isOnlyOwner ? (
+                              <>
+                                <select
+                                  value={member.role}
+                                  onChange={(e) =>
+                                    handleRoleChange(
+                                      member.id,
+                                      e.target.value
+                                    )
+                                  }
+                                  className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                >
+                                  <option value="OWNER">Owner</option>
+                                  <option value="ADMIN">Admin</option>
+                                  <option value="MEMBER">Member</option>
+                                </select>
+                                <button
+                                  onClick={() =>
+                                    handleRemoveMember(
+                                      member.id,
+                                      member.user.name
+                                    )
+                                  }
+                                  className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                                  title="Remove member"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.5}
+                                    stroke="currentColor"
+                                    className="w-5 h-5"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M6 18 18 6M6 6l12 12"
+                                    />
+                                  </svg>
+                                </button>
+                              </>
+                            ) : (
+                              <span
+                                className={`px-3 py-1 rounded-full text-sm font-medium ${ROLE_COLORS[member.role]}`}
+                              >
+                                {ROLE_LABELS[member.role]}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* ── Saved Apps ───────────────────────────────── */}
+            <section>
+              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <span className="text-pink-500">&hearts;</span> Saved Apps
+              </h2>
+              {heartedApps.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-xl shadow-sm">
+                  <p className="text-gray-400">
+                    Save apps from the marketplace to come back to them later!
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {heartedApps.map((app) => (
+                    <AppCard
+                      key={app.id}
+                      app={app}
+                      isHearted={hearted.has(app.id)}
+                      onToggleHeart={() => toggle(app.id, "HEART")}
+                      orgs={orgs}
+                      onAddToOrg={handleAddToOrg}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
         )}
       </main>
+
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Invite Team Member
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="colleague@company.com"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Role
+                </label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) =>
+                    setInviteRole(e.target.value as "ADMIN" | "MEMBER")
+                  }
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700 bg-white"
+                >
+                  <option value="MEMBER">Member - Can use apps</option>
+                  <option value="ADMIN">
+                    Admin - Can manage team &amp; apps
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowInviteModal(false);
+                  setInviteEmail("");
+                  setInviteRole("MEMBER");
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendInvite}
+                disabled={sendingInvite || !inviteEmail.trim()}
+                className="flex-1 gradient-brand text-white px-4 py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+              >
+                {sendingInvite ? "Sending..." : "Send Invite"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

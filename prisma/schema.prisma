@@ -26,6 +26,7 @@ model User {
   organizations OrganizationMember[]
   generatedApps GeneratedApp[]
   orgAppMembers OrgAppMember[]
+  isAdmin       Boolean   @default(false)
   createdAt     DateTime  @default(now())
 }
 
@@ -107,19 +108,36 @@ enum GenerationStatus {
 }
 
 model GeneratedApp {
-  id          String           @id @default(cuid())
-  prompt      String
-  title       String?
-  description String?
-  sourceDir   String?
-  status      GenerationStatus @default(PENDING)
-  error       String?
-  createdById String
-  createdBy   User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  appId       String?          @unique
-  app         App?             @relation(fields: [appId], references: [id])
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  prompt         String
+  title          String?
+  description    String?
+  sourceDir      String?
+  status         GenerationStatus @default(PENDING)
+  error          String?
+  createdById    String
+  createdBy      User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  appId          String?          @unique
+  app            App?             @relation(fields: [appId], references: [id])
+  iterationCount Int              @default(0)
+  iterations     AppIteration[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model AppIteration {
+  id             String           @id @default(cuid())
+  generatedAppId String
+  prompt         String
+  sequenceNumber Int
+  status         GenerationStatus @default(PENDING)
+  error          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  generatedApp GeneratedApp @relation(fields: [generatedAppId], references: [id], onDelete: Cascade)
+
+  @@index([generatedAppId])
 }
 
 // ============================================

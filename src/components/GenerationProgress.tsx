@@ -1,14 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-
-interface ProgressEvent {
-  stage: string;
-  message: string;
-  title?: string;
-  description?: string;
-  error?: string;
-}
+import { useGeneration } from "./GenerationContext";
 
 const STAGES = [
   { key: "designing", label: "Design", icon: "🎨" },
@@ -19,59 +11,15 @@ const STAGES = [
 ];
 
 interface GenerationProgressProps {
-  generationId: string;
-  onComplete: (data: { title?: string; description?: string }) => void;
-  onError: (error: string) => void;
+  isIteration?: boolean;
 }
 
 export default function GenerationProgress({
-  generationId,
-  onComplete,
-  onError,
+  isIteration,
 }: GenerationProgressProps) {
-  const [currentStage, setCurrentStage] = useState("pending");
-  const [message, setMessage] = useState("Preparing to build your app...");
-  const eventSourceRef = useRef<EventSource | null>(null);
-
-  useEffect(() => {
-    const eventSource = new EventSource(
-      `/api/generate/${generationId}/stream`
-    );
-    eventSourceRef.current = eventSource;
-
-    eventSource.onmessage = (event) => {
-      const data: ProgressEvent = JSON.parse(event.data);
-      setCurrentStage(data.stage);
-      setMessage(data.message);
-
-      if (data.stage === "complete") {
-        eventSource.close();
-        onComplete({ title: data.title, description: data.description });
-      }
-
-      if (data.stage === "failed") {
-        eventSource.close();
-        onError(data.error || "Generation failed unexpectedly.");
-      }
-    };
-
-    eventSource.onerror = () => {
-      eventSource.close();
-      // Don't immediately error — the stream may have closed normally
-      // Check if we already got a complete/failed event
-      setCurrentStage((prev) => {
-        if (prev !== "complete" && prev !== "failed") {
-          onError("Lost connection to the generation server.");
-          return "failed";
-        }
-        return prev;
-      });
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, [generationId, onComplete, onError]);
+  const gen = useGeneration();
+  const currentStage = gen.stage;
+  const message = gen.message;
 
   const currentIndex = STAGES.findIndex((s) => s.key === currentStage);
 
@@ -114,10 +62,10 @@ export default function GenerationProgress({
                   <div
                     className={`h-0.5 transition-all duration-700 ${
                       isComplete
-                        ? "bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600"
+                        ? "gradient-brand"
                         : isPending
                           ? "bg-gray-200"
-                          : "bg-gradient-to-r from-orange-500 to-gray-200"
+                          : "gradient-brand opacity-50"
                     }`}
                   />
                 </div>
@@ -131,7 +79,9 @@ export default function GenerationProgress({
       <div className="text-center">
         <p className="text-lg text-gray-700 font-medium">{message}</p>
         <p className="mt-2 text-sm text-gray-400">
-          This may take a few minutes. Feel free to grab a coffee.
+          {isIteration
+            ? "Refining your app. This is usually faster than the initial build."
+            : "This may take a few minutes. Feel free to grab a coffee."}
         </p>
       </div>
 

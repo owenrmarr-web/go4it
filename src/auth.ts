@@ -12,6 +12,7 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
+      isAdmin?: boolean;
     };
   }
 }
@@ -40,15 +41,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
         if (!passwordMatch) return null;
 
-        return { id: user.id, email: user.email!, name: user.name };
+        return { id: user.id, email: user.email!, name: user.name, isAdmin: user.isAdmin };
       },
     }),
   ],
   callbacks: {
     ...authConfig.callbacks,
+    async jwt({ token, user }) {
+      if (user) {
+        token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
+      }
+      return token;
+    },
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
+      }
+      if (session.user) {
+        session.user.isAdmin = token.isAdmin as boolean ?? false;
       }
       return session;
     },

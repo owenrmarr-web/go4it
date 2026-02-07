@@ -69,9 +69,8 @@ export default function Home() {
 
         toast.success(`${result.app?.title || "App"} added to ${orgName}`, {
           action: {
-            label: "Go to Org",
-            onClick: () =>
-              (window.location.href = `/org/${orgSlug}/admin`),
+            label: "Go to Dashboard",
+            onClick: () => (window.location.href = "/account"),
           },
         });
       } catch (err) {

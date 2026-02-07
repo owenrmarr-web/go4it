@@ -42,14 +42,46 @@ export async function GET(request: Request, context: RouteContext) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
+      let preparingPolls = 0;
+
       const send = (data: unknown) => {
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
         );
       };
 
-      const interval = setInterval(() => {
-        const progress = getDeployProgress(orgApp.id);
+      const interval = setInterval(async () => {
+        let progress = getDeployProgress(orgApp.id);
+
+        // DB fallback: if in-memory store stuck on "preparing" (e.g. HMR wiped it),
+        // check DB for actual status after a few polls
+        if (progress.stage === "preparing") {
+          preparingPolls++;
+          if (preparingPolls >= 5) {
+            try {
+              const dbOrgApp = await prisma.orgApp.findUnique({
+                where: { id: orgApp.id },
+                select: { status: true, flyUrl: true },
+              });
+              if (dbOrgApp?.status === "RUNNING") {
+                progress = {
+                  stage: "running",
+                  message: "Your app is live!",
+                  flyUrl: dbOrgApp.flyUrl ?? undefined,
+                };
+              } else if (dbOrgApp?.status === "FAILED") {
+                progress = {
+                  stage: "failed",
+                  message: "Something went wrong.",
+                  error: "Deploy failed. Check logs for details.",
+                };
+              }
+            } catch { /* DB check failed, continue with in-memory */ }
+          }
+        } else {
+          preparingPolls = 0;
+        }
+
         send(progress);
 
         // Stop streaming when deploy reaches a terminal state

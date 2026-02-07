@@ -35,7 +35,8 @@ GO4IT is a free marketplace for AI-generated SaaS applications targeting small a
 - **AI app generation** (`src/app/create/page.tsx`) — fully working! Users type a prompt, Claude Code CLI generates a complete app with auth, DB, seed data, and Dockerfile. Progress streamed via SSE.
 - **App Builder Playbook** (`playbook/CLAUDE.md`) — instructions that ensure generated apps follow GO4IT conventions (Next.js 16, Tailwind CSS 4, Prisma + SQLite, Docker-ready)
 - **16 seeded apps** in `prisma/seed.ts` — covers CRM, PM, invoicing, chat, HR, inventory, scheduling, etc.
-- **Prisma schema** — User, Account, Session, VerificationToken, App, UserInteraction, GeneratedApp, Organization, OrganizationMember, Invitation models
+- **Fly.io deployment pipeline** (`src/lib/fly.ts`) — fully working! Org admin clicks Launch → app containerized (Docker), deployed to Fly.io with SQLite volume, team members provisioned. Progress streamed via SSE. First deployment: Zenith Space M&A Deal Tracker.
+- **Prisma schema** — User, Account, Session, VerificationToken, App, UserInteraction, GeneratedApp, Organization, OrganizationMember, Invitation, OrgApp models
 
 ---
 
@@ -55,7 +56,7 @@ GO4IT is a free marketplace for AI-generated SaaS applications targeting small a
 | Toasts | Sonner |
 | Email | Resend (`noreply@go4it.live`) |
 | Hosting (platform) | Vercel |
-| Hosting (generated apps) | Fly.io (planned) |
+| Hosting (generated apps) | Fly.io (working — flyctl CLI via `src/lib/fly.ts`) |
 
 ---
 
@@ -234,6 +235,22 @@ For local dev, use: `DATABASE_URL="file:./dev.db" npx prisma db push`
 - `src/app/api/organizations/[slug]/apps/[appId]/deploy/stream/route.ts` — SSE progress stream
 - Generated per-deploy: `fly.toml`, `Dockerfile.fly`, `start.sh` (written into app source dir)
 
+### Prisma 7 compatibility (critical for deployed apps)
+Prisma 7 has breaking changes that `fly.ts` handles automatically during deploy prep:
+- **No `url` in schema.prisma** — Prisma 7 rejects `url = env("DATABASE_URL")` in the datasource block. `fly.ts` strips it out.
+- **`prisma.config.ts` at project root** — Prisma 7 CLI loads config via `c12` from `<projectRoot>/prisma.config.ts` (NOT inside `prisma/` dir). `fly.ts` writes this file with `defineConfig({ datasource: { url: process.env.DATABASE_URL } })`.
+- **PrismaClient requires adapter** — Bare `new PrismaClient()` fails in Prisma 7. Must pass `{ adapter }` using `PrismaLibSql`. `fly.ts` rewrites both `src/lib/prisma.ts` and `prisma/provision-users.ts` to use the adapter.
+- **`--skip-generate` removed** — `prisma db push --skip-generate` is no longer valid; start.sh uses `--accept-data-loss` only.
+- **Debian, not Alpine** — `@prisma/adapter-libsql` native bindings (`@libsql/linux-x64-musl`) fail on Alpine (`fcntl64` symbol not found). Docker images use `node:20-slim` (Debian/glibc).
+- **`@ts-nocheck` on prisma.config.ts** — Prevents TypeScript errors during `next build` (prisma config types not in app's tsconfig).
+
+### First successful deployment
+- **Fly app:** `go4it-zenith-space-cmlco6oy` → `https://go4it-zenith-space-cmlco6oy.fly.dev`
+- **Org:** Zenith Space (M&A Deal Tracker app)
+- **Runtime confirmed:** DB synced in 430ms, 5 team members provisioned, Next.js ready in 194ms
+- **Fly.io trial limitation:** Machines auto-stop after 5 minutes without credit card at https://fly.io/trial
+- **OpenSSL warning (non-blocking):** Prisma warns about missing OpenSSL on slim image; could add `apt-get install -y openssl` to Dockerfile later
+
 ### Testing deployment locally
 ```bash
 # 1. Install flyctl
@@ -252,6 +269,22 @@ curl -L https://fly.io/install.sh | sh
 - The marketplace app must have a linked GeneratedApp record with a valid sourceDir
 - Only apps that have been generated (have source code in apps/) can be deployed
 - Seeded marketplace apps without source code will show an error when Launch is clicked
+
+---
+
+## Cost Model (2026-02-07)
+
+| Service | Fixed/Monthly | Per-App Variable | Notes |
+|---|---|---|---|
+| Vercel (Pro) | $20/mo | — | Platform hosting, auto-deploy from GitHub |
+| Turso | Free tier (9GB, 500 DBs) | — | Upgrade at ~$29/mo if needed |
+| Fly.io | — | ~$2.68/mo/app (shared-cpu-1x 256MB + 1GB vol) | Scale-to-zero saves cost; trial needs credit card |
+| Anthropic API | — | ~$0.30–$0.80/generation (sonnet, ~5K tokens) | Only for AI app generation |
+| Resend | Free tier (3K emails/mo) | — | Team invite emails |
+| Squarespace | $20/yr | — | Domain registration (go4it.live) |
+| GitHub | Free | — | Public repo |
+
+**Revenue target:** 20% premium on Fly.io infra cost per deployed app instance.
 
 ---
 

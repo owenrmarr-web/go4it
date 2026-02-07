@@ -12,8 +12,9 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const isOnAuth = nextUrl.pathname.startsWith("/auth");
       const isOnAccount = nextUrl.pathname.startsWith("/account");
+      const isOnAdmin = nextUrl.pathname.startsWith("/admin");
 
-      if (isOnAccount && !isLoggedIn) return false;
+      if ((isOnAccount || isOnAdmin) && !isLoggedIn) return false;
       if (isOnAuth && isLoggedIn) return Response.redirect(new URL("/", nextUrl));
       return true;
     },

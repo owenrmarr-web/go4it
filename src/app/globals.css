@@ -34,3 +34,14 @@
 .border-theme-primary {
   border-color: var(--theme-primary);
 }
+
+.border-theme-accent {
+  border-color: var(--theme-accent);
+}
+
+.gradient-brand-text {
+  background: linear-gradient(to right, var(--theme-accent), var(--theme-secondary), var(--theme-primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

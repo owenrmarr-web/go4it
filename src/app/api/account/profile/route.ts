@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { generateSlug } from "@/lib/slug";
 
 export async function GET() {
   const session = await auth();
@@ -73,12 +74,54 @@ export async function PUT(request: Request) {
         ? JSON.stringify(themeColors)
         : null;
 
-    console.log("Updating user with data keys:", Object.keys(updateData));
-
     await prisma.user.update({
       where: { id: session.user.id },
       data: updateData,
     });
+
+    // Sync org branding or create org if needed
+    const trimmedCompany = companyName?.trim();
+    if (trimmedCompany) {
+      const ownerMembership = await prisma.organizationMember.findFirst({
+        where: { userId: session.user.id, role: "OWNER" },
+        include: { organization: true },
+      });
+
+      if (ownerMembership) {
+        // Sync org name, logo, and theme colors
+        const orgUpdate: { name?: string; logo?: string | null; themeColors?: string | null } = {};
+        orgUpdate.name = trimmedCompany;
+        if (logo !== undefined) orgUpdate.logo = logo || null;
+        if (themeColors !== undefined)
+          orgUpdate.themeColors = themeColors ? JSON.stringify(themeColors) : null;
+
+        await prisma.organization.update({
+          where: { id: ownerMembership.organizationId },
+          data: orgUpdate,
+        });
+      } else {
+        // No org yet — create one (lazy org creation)
+        let slug = generateSlug(trimmedCompany);
+        const existing = await prisma.organization.findUnique({
+          where: { slug },
+        });
+        if (existing) {
+          slug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
+        }
+
+        await prisma.organization.create({
+          data: {
+            name: trimmedCompany,
+            slug,
+            logo: logo || null,
+            themeColors: themeColors ? JSON.stringify(themeColors) : null,
+            members: {
+              create: { userId: session.user.id, role: "OWNER" },
+            },
+          },
+        });
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

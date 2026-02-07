@@ -77,10 +77,10 @@ export default function AppCard({
     }
 
     if (orgs.length === 0) {
-      toast("Create an organization first to add apps.", {
+      toast("Set up your company in Account Settings to add apps.", {
         action: {
-          label: "Create Org",
-          onClick: () => (window.location.href = "/org/new"),
+          label: "Account Settings",
+          onClick: () => (window.location.href = "/account/settings"),
         },
       });
       return;
