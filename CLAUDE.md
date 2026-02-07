@@ -17,26 +17,31 @@ GO4IT is a free marketplace for AI-generated SaaS applications targeting small a
 ## How It Works (Full Product Flow)
 
 1. **Browse** — Users land on an app-store grid of SaaS tools (CRM, PM, chat, etc.). Search bar filters by name/category.
-2. **Interact** — Hover an app card to see description + heart (save) / star (deploy) buttons.
-3. **Account** — "My Account" shows all hearted and starred apps in one place.
-4. **Create** — Users write a plain-English prompt. Claude Code CLI generates the app autonomously. Progress shown via animated step indicator. User can iterate, then publish (public or private) to GO4IT.
-5. **Deploy** — Starred apps get containerized (Docker) and hosted by GO4IT on Fly.io. Users access via `mybusiness.go4it.live` subdomain or their own custom domain. GO4IT handles all infra — no cloud expertise required.
+2. **Interact** — Hover an app card to see description + heart (save) / add (deploy) buttons.
+3. **Account** — "My Account" is a single consolidated dashboard: My Apps (deploy/configure/launch), Team Members (invite/roles/remove), and Saved Apps.
+4. **Create** — Users write a plain-English prompt. Claude Code CLI generates the app autonomously. Progress shown via animated step indicator + persistent header chip. User can iterate with follow-up prompts, then publish to GO4IT marketplace.
+5. **Deploy** — Added apps get containerized (Docker) and hosted by GO4IT on Fly.io. Users configure team access, then launch. GO4IT handles all infra — no cloud expertise required.
 
 ---
 
 ## What's Built So Far
 
-- **App store landing page** (`src/app/page.tsx`) — grid of 16 seeded marketplace apps with search/filter
+- **App store landing page** (`src/app/page.tsx`) — grid of marketplace apps with search/filter
 - **Auth** — NextAuth credentials provider (email + bcrypt password). Protected `/account` route via middleware.
-- **Heart / Star interactions** — POST/DELETE API, persisted in DB, reflected in UI via custom `useInteractions` hook
-- **My Account page** (`src/app/account/page.tsx`) — shows user's hearted and starred apps
-- **User profile settings** (`src/app/account/settings/page.tsx`) — logo upload, company info, theme color extraction
-- **Organizations & teams** — create orgs, invite members via email (Resend), role-based access (OWNER/ADMIN/MEMBER)
+- **Heart / Add interactions** — POST/DELETE API, persisted in DB, reflected in UI via custom `useInteractions` hook
+- **Consolidated Account page** (`src/app/account/page.tsx`) — single dashboard with three sections: My Apps (full deploy management with configure/launch/visit/remove), Team Members (invite/roles/remove/pending invitations), and Saved Apps (hearted marketplace apps)
+- **1:1 org simplification** — Orgs auto-created on signup when company name provided. Lazy creation from Account Settings. Single org per user simplifies UX for demos. Schema unchanged (supports multiple orgs if needed later).
+- **User profile settings** (`src/app/account/settings/page.tsx`) — logo upload, company info, theme color extraction. Syncs org branding automatically.
+- **Organizations & teams** — invite members via email (Resend), role-based access (OWNER/ADMIN/MEMBER), all managed from Account page
 - **AI app generation** (`src/app/create/page.tsx`) — fully working! Users type a prompt, Claude Code CLI generates a complete app with auth, DB, seed data, and Dockerfile. Progress streamed via SSE.
-- **App Builder Playbook** (`playbook/CLAUDE.md`) — instructions that ensure generated apps follow GO4IT conventions (Next.js 16, Tailwind CSS 4, Prisma + SQLite, Docker-ready)
-- **16 seeded apps** in `prisma/seed.ts` — covers CRM, PM, invoicing, chat, HR, inventory, scheduling, etc.
-- **Fly.io deployment pipeline** (`src/lib/fly.ts`) — fully working! Org admin clicks Launch → app containerized (Docker), deployed to Fly.io with SQLite volume, team members provisioned. Progress streamed via SSE. First deployment: Zenith Space M&A Deal Tracker.
-- **Prisma schema** — User, Account, Session, VerificationToken, App, UserInteraction, GeneratedApp, Organization, OrganizationMember, Invitation, OrgApp models
+- **App iteration** — Users can refine generated apps with follow-up prompts. Uses Claude Code CLI `--continue` flag on existing workspace. Tracks iteration count on GeneratedApp.
+- **App publishing** — Generated apps can be published to the marketplace (public or private). Creates an App record linked to the GeneratedApp.
+- **Global generation progress** (`src/components/GenerationContext.tsx`) — persistent SSE connection + localStorage. Progress chip in Header survives page navigation. Single SSE connection shared across components.
+- **Theme-aware UI** — CSS variables (`--theme-primary`, `--theme-secondary`, `--theme-accent`) extracted from uploaded logos. GO4IT logo, Create button, headings, progress bars, and gradient backgrounds all respect the theme.
+- **App Builder Playbook** (`playbook/CLAUDE.md`) — instructions that ensure generated apps follow GO4IT conventions (Next.js 16, Tailwind CSS 4, Prisma + SQLite, Docker-ready). Includes Tailwind v4 `@theme` restrictions guardrail.
+- **Fly.io deployment pipeline** (`src/lib/fly.ts`) — fully working! Account page → configure team → Launch → app containerized (Docker), deployed to Fly.io with SQLite volume, team members provisioned. Auto-detects Prisma 6 vs 7 for compatibility fixes. Progress streamed via SSE with DB fallback for HMR.
+- **Admin dashboard** (`src/app/admin/page.tsx`) — user/org management for platform admins (isAdmin flag on User model)
+- **Prisma schema** — User, Account, Session, VerificationToken, App, UserInteraction, GeneratedApp, AppIteration, Organization, OrganizationMember, Invitation, OrgApp, OrgAppMember models
 
 ---
 
@@ -67,9 +72,9 @@ playbook/
   CLAUDE.md              — App builder playbook (tech stack, styling, Dockerfile template)
 
 prisma/
-  schema.prisma          — DB models: User, App, UserInteraction, GeneratedApp, Organization, etc.
-  seed.ts                — Seeds 16 demo apps (uses LibSQL adapter)
-  migrate-generated-app.ts — Turso migration for GeneratedApp table
+  schema.prisma          — DB models: User, App, GeneratedApp, AppIteration, Organization, OrgApp, etc.
+  seed.ts                — Seeds demo apps (uses LibSQL adapter)
+  migrate-*.ts           — Turso migration scripts (one per schema change)
 
 apps/
   .gitkeep               — Generated apps directory (gitignored, stored on disk only)
@@ -80,27 +85,32 @@ src/
   middleware.ts          — Protects /account route (requires session)
 
   app/
-    layout.tsx           — Root layout (SessionProvider, ThemeProvider, Toaster)
+    layout.tsx           — Root layout (SessionProvider, ThemeProvider, GenerationProvider, Toaster)
     page.tsx             — Home / marketplace grid
-    globals.css          — Tailwind imports + gradient-brand utility class
+    globals.css          — Tailwind imports, theme CSS variables, gradient utilities
 
     auth/page.tsx        — Login / signup page
-    account/page.tsx     — My Account (hearted + starred apps, organizations)
+    account/page.tsx     — Consolidated dashboard: My Apps, Team Members, Saved Apps
     account/settings/page.tsx — User profile settings (logo, company, theme)
-    create/page.tsx      — AI app creation (prompt → progress → complete)
-    org/new/page.tsx     — Create organization
-    org/[slug]/admin/page.tsx — Organization admin dashboard
+    create/page.tsx      — AI app creation (prompt → progress → refine → publish)
+    admin/page.tsx       — Platform admin dashboard (users, orgs)
+    org/[slug]/admin/page.tsx — Organization admin (legacy, still functional)
     invite/[token]/page.tsx   — Accept invitation
 
     api/
       apps/route.ts              — GET /api/apps (search + category filter)
-      interactions/route.ts      — POST/DELETE /api/interactions (heart/star)
+      interactions/route.ts      — POST/DELETE /api/interactions (heart/add)
       account/interactions/route.ts — GET user's interactions
-      account/profile/route.ts     — GET/PUT user profile
+      account/profile/route.ts     — GET/PUT user profile (syncs org branding)
+      account/org/route.ts         — GET user's org + apps + members + invitations
       auth/[...nextauth]/route.ts  — NextAuth handler
-      auth/signup/route.ts         — POST signup (bcrypt)
+      auth/signup/route.ts         — POST signup (bcrypt, auto-create org)
       generate/route.ts            — POST start app generation job
-      generate/[id]/stream/route.ts — GET SSE progress stream
+      generate/[id]/stream/route.ts — GET SSE progress stream (DB fallback)
+      generate/[id]/iterate/route.ts — POST start iteration on existing app
+      generate/[id]/publish/route.ts — POST publish generated app to marketplace
+      generate/[id]/status/route.ts  — GET generation status (polling fallback)
+      admin/...                    — Admin API endpoints (users, orgs)
       organizations/...            — Org CRUD, members, invitations
       organizations/[slug]/apps/route.ts — GET/POST/DELETE org apps
       organizations/[slug]/apps/[appId]/members/route.ts — GET/PUT app team access
@@ -109,23 +119,25 @@ src/
       invite/[token]/route.ts      — Accept invitation
 
   components/
-    Header.tsx           — Top nav bar (Create, logo, My Account)
-    AppCard.tsx          — App card with hover reveal: description, heart, star
-    SearchBar.tsx        — Search input (filters apps client-side)
-    GenerationProgress.tsx — Animated step indicator for app generation
-    SessionProvider.tsx  — Wraps app in NextAuth SessionProvider
-    ThemeProvider.tsx    — Dynamic theme colors from logo extraction
+    Header.tsx             — Top nav bar (Create, logo, generation chip, My Account)
+    AppCard.tsx            — App card with hover reveal: description, heart, add
+    SearchBar.tsx          — Search input (filters apps client-side)
+    GenerationContext.tsx   — Global generation state: SSE connection, localStorage persistence
+    GenerationProgress.tsx — Animated step indicator (reads from GenerationContext)
+    SessionProvider.tsx    — Wraps app in NextAuth SessionProvider
+    ThemeProvider.tsx      — Dynamic theme colors from logo extraction → CSS variables
 
   hooks/
-    useInteractions.ts   — Hook: manages heart/star state + API calls
+    useInteractions.ts   — Hook: manages heart/add state + API calls
 
   lib/
     prisma.ts            — Prisma singleton (LibSQL adapter)
     interactions.ts      — Fetch helpers: POST/DELETE interactions
-    generator.ts         — Claude Code CLI spawning, progress parsing, DB updates
-    fly.ts               — Fly.io deployment: flyctl wrapper, progress tracking, Docker file generation
+    generator.ts         — Claude Code CLI spawning, progress parsing, iteration support
+    fly.ts               — Fly.io deployment: Prisma 6/7 auto-detection, flyctl wrapper
     email.ts             — Resend email client + invite template
     colorExtractor.ts    — Extract theme colors from uploaded logos
+    slug.ts              — Slug generation for org URLs
     constants.ts         — Use case options, country list
 
   types/
@@ -136,19 +148,37 @@ src/
 
 ## AI App Generation (how it works)
 
+### Initial generation
 1. User types a prompt on `/create` (must be logged in)
 2. `POST /api/generate` creates a `GeneratedApp` record and spawns Claude Code CLI
 3. CLI runs in `apps/{generationId}/` directory with the playbook as `CLAUDE.md`
 4. CLI flags: `-p` (print mode), `--output-format stream-json`, `--verbose`, `--dangerously-skip-permissions`, `--model sonnet`
 5. Progress parsed from stream-json output via `[GO4IT:STAGE:...]` markers defined in the playbook
-6. SSE endpoint (`/api/generate/[id]/stream`) streams progress to the frontend
+6. SSE endpoint (`/api/generate/[id]/stream`) streams progress to the frontend (with DB fallback for HMR)
 7. On completion, app metadata extracted from `package.json` and saved to DB
 8. Generated apps are self-contained: Next.js 16, Tailwind CSS 4, Prisma + SQLite, Dockerfile included
+
+### Iteration / refine
+1. User enters a follow-up prompt on the refine screen
+2. `POST /api/generate/[id]/iterate` creates an `AppIteration` record and spawns CLI with `--continue`
+3. CLI resumes in the same workspace directory, preserving prior context
+4. Same SSE streaming, same progress tracking — `iterationCount` incremented on GeneratedApp
+
+### Publishing
+1. User clicks "Publish" after generation/iteration is complete
+2. `POST /api/generate/[id]/publish` creates an `App` record in the marketplace
+3. App appears in the marketplace grid, linked to its GeneratedApp via `generatedAppId`
+
+### Global progress tracking
+- `GenerationContext` manages a single SSE connection per generation
+- State persisted to localStorage — survives page navigation
+- Compact progress chip in Header links back to `/create?gen={id}`
 
 **Environment requirement:** `ANTHROPIC_API_KEY` must be set in `.env` (separate from Claude subscription — needs API credits at console.anthropic.com)
 
 **Known playbook fixes applied:**
 - Tailwind CSS v4 requires `@tailwindcss/postcss` in postcss.config.mjs (not `tailwindcss` directly)
+- `@theme` blocks only allow flat CSS custom properties or `@keyframes` — no nested selectors, `@dark` blocks, or wildcards
 
 ---
 
@@ -203,8 +233,8 @@ For local dev, use: `DATABASE_URL="file:./dev.db" npx prisma db push`
 ## Fly.io Deployment (2026-02-07)
 
 ### How it works
-1. User adds an app to their org from the marketplace (+ Add button)
-2. On the org admin page (Apps tab), user configures team member access
+1. User adds an app to their org from the marketplace (+ Add button on AppCard)
+2. On the Account page (My Apps section), user clicks Configure to set team member access
 3. User clicks "Launch" — triggers `POST /api/organizations/[slug]/apps/[appId]/deploy`
 4. Deploy endpoint calls `src/lib/fly.ts` which:
    - Generates `fly.toml`, `Dockerfile.fly`, `start.sh` in the app's source directory
@@ -290,9 +320,13 @@ curl -L https://fly.io/install.sh | sh
 
 ## Next Steps (Roadmap — in priority order)
 
-1. **App iteration** — Let users refine generated apps with follow-up prompts (re-run Claude Code CLI on existing workspace with `--continue` or new prompt).
-2. **Publish to marketplace** — After generation, user can publish their app (public or private). Creates an App record linked to the GeneratedApp.
-3. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues (like the Tailwind PostCSS fix) and add guardrails.
-4. **Custom domain routing** — Support `orgname.go4it.live` subdomains (Fly.io certs + wildcard DNS) and `crm.mybusiness.com` custom domains.
-5. **Builder service for production** — Extract `src/lib/generator.ts` into a standalone Fly.io service so generation works in production (not just local dev).
-6. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
+1. **Custom domain routing** — Support `orgname.go4it.live` subdomains (Fly.io certs + wildcard DNS on go4it.live) and eventually `crm.mybusiness.com` custom domains.
+2. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues and add guardrails.
+3. **Builder service for production** — Extract `src/lib/generator.ts` into a standalone Fly.io service so generation works in production (not just local dev).
+4. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
+
+### Completed
+- ~~App iteration~~ — Users can refine generated apps with follow-up prompts (CLI `--continue`)
+- ~~Publish to marketplace~~ — Generated apps can be published (public or private)
+- ~~1:1 org simplification~~ — Auto-create org on signup, consolidated account page
+- ~~Theme-aware UI~~ — CSS variables from logo extraction applied to all branded elements
