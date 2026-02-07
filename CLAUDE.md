@@ -101,6 +101,10 @@ src/
       generate/route.ts            — POST start app generation job
       generate/[id]/stream/route.ts — GET SSE progress stream
       organizations/...            — Org CRUD, members, invitations
+      organizations/[slug]/apps/route.ts — GET/POST/DELETE org apps
+      organizations/[slug]/apps/[appId]/members/route.ts — GET/PUT app team access
+      organizations/[slug]/apps/[appId]/deploy/route.ts — POST trigger Fly.io deploy
+      organizations/[slug]/apps/[appId]/deploy/stream/route.ts — GET SSE deploy progress
       invite/[token]/route.ts      — Accept invitation
 
   components/
@@ -118,6 +122,7 @@ src/
     prisma.ts            — Prisma singleton (LibSQL adapter)
     interactions.ts      — Fetch helpers: POST/DELETE interactions
     generator.ts         — Claude Code CLI spawning, progress parsing, DB updates
+    fly.ts               — Fly.io deployment: flyctl wrapper, progress tracking, Docker file generation
     email.ts             — Resend email client + invite template
     colorExtractor.ts    — Extract theme colors from uploaded logos
     constants.ts         — Use case options, country list
@@ -183,22 +188,78 @@ For local dev, use: `DATABASE_URL="file:./dev.db" npx prisma db push`
 
 ---
 
-## Architecture Decisions (2026-02-06)
+## Architecture Decisions (2026-02-07)
 
 - **Deployment target:** Fly.io (not AWS EC2/LightSail) — scale-to-zero, built-in subdomain routing, simpler ops
 - **AI engine:** Claude Code CLI invoked as subprocess (not Agent SDK or raw API)
 - **App builder playbook:** `playbook/CLAUDE.md` copied into each workspace — ensures consistent tech stack and conventions
 - **Code storage:** Local file system during generation → Cloudflare R2 archival later
 - **Progress UX:** Step-based indicators via SSE (not raw terminal output)
+- **App deployment:** flyctl CLI spawned as subprocess from `src/lib/fly.ts`. Generates fly.toml, Dockerfile.fly, and start.sh per app, then runs `flyctl deploy`. Each deployed app gets a 1GB volume for SQLite persistence.
+
+---
+
+## Fly.io Deployment (2026-02-07)
+
+### How it works
+1. User adds an app to their org from the marketplace (+ Add button)
+2. On the org admin page (Apps tab), user configures team member access
+3. User clicks "Launch" — triggers `POST /api/organizations/[slug]/apps/[appId]/deploy`
+4. Deploy endpoint calls `src/lib/fly.ts` which:
+   - Generates `fly.toml`, `Dockerfile.fly`, `start.sh` in the app's source directory
+   - Runs `flyctl apps create go4it-{orgSlug}-{shortId}`
+   - Creates a 1GB volume for SQLite data persistence
+   - Sets secrets (AUTH_SECRET, GO4IT_TEAM_MEMBERS)
+   - Runs `flyctl deploy` which builds the Docker image and deploys
+5. On container startup, `start.sh` runs:
+   - `prisma db push` to create/update database tables
+   - `provision-users.ts` to create team member accounts
+   - `node server.js` to start the Next.js app
+6. Progress is streamed to the frontend via SSE endpoint
+7. OrgApp record updated with flyAppId, flyUrl, and RUNNING status
+
+### Environment variables needed
+- `FLY_API_TOKEN` — Fly.io API token (get from `flyctl tokens create deploy` or dashboard)
+- `FLYCTL_PATH` — Path to flyctl binary (defaults to `~/.fly/bin/flyctl`)
+- `FLY_REGION` — Fly.io region (defaults to `ord` / Chicago)
+
+### Fly app naming convention
+- Format: `go4it-{orgSlug}-{shortOrgAppId}`
+- Example: `go4it-zenith-space-a1b2c3d4`
+- URL: `https://go4it-zenith-space-a1b2c3d4.fly.dev`
+
+### Key files
+- `src/lib/fly.ts` — Deployment orchestration (creates app, volume, secrets, deploys)
+- `src/app/api/organizations/[slug]/apps/[appId]/deploy/route.ts` — Deploy trigger endpoint
+- `src/app/api/organizations/[slug]/apps/[appId]/deploy/stream/route.ts` — SSE progress stream
+- Generated per-deploy: `fly.toml`, `Dockerfile.fly`, `start.sh` (written into app source dir)
+
+### Testing deployment locally
+```bash
+# 1. Install flyctl
+curl -L https://fly.io/install.sh | sh
+
+# 2. Authenticate
+~/.fly/bin/flyctl auth login
+
+# 3. Ensure FLY_API_TOKEN is set (or rely on flyctl auth)
+# flyctl tokens create deploy → add to .env
+
+# 4. Start dev server, log in, add an app to an org, configure team, click Launch
+```
+
+### Requirements for deployment
+- The marketplace app must have a linked GeneratedApp record with a valid sourceDir
+- Only apps that have been generated (have source code in apps/) can be deployed
+- Seeded marketplace apps without source code will show an error when Launch is clicked
 
 ---
 
 ## Next Steps (Roadmap — in priority order)
 
-1. **Containerize & deploy via Fly.io** — Build orchestration so starring an app actually deploys it to `orgname.go4it.live`. Requires: Fly.io account, Machines API integration, subdomain routing, TLS.
-2. **App iteration** — Let users refine generated apps with follow-up prompts (re-run Claude Code CLI on existing workspace with `--continue` or new prompt).
-3. **Publish to marketplace** — After generation, user can publish their app (public or private). Creates an App record linked to the GeneratedApp.
-4. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues (like the Tailwind PostCSS fix) and add guardrails.
+1. **App iteration** — Let users refine generated apps with follow-up prompts (re-run Claude Code CLI on existing workspace with `--continue` or new prompt).
+2. **Publish to marketplace** — After generation, user can publish their app (public or private). Creates an App record linked to the GeneratedApp.
+3. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues (like the Tailwind PostCSS fix) and add guardrails.
+4. **Custom domain routing** — Support `orgname.go4it.live` subdomains (Fly.io certs + wildcard DNS) and `crm.mybusiness.com` custom domains.
 5. **Builder service for production** — Extract `src/lib/generator.ts` into a standalone Fly.io service so generation works in production (not just local dev).
 6. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
-7. **Custom domains** — Support `crm.mybusiness.com` alongside `mybusiness.go4it.live`.

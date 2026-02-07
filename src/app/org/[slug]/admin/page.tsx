@@ -118,6 +118,8 @@ export default function OrgAdminPage({
   const [configuringAppId, setConfiguringAppId] = useState<string | null>(null);
   const [savingMembers, setSavingMembers] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+  const [deployingAppId, setDeployingAppId] = useState<string | null>(null);
+  const [deployMessage, setDeployMessage] = useState<string>("");
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
@@ -237,6 +239,73 @@ export default function OrgAdminPage({
       const message =
         err instanceof Error ? err.message : "Failed to remove app";
       toast.error(message);
+    }
+  };
+
+  const handleLaunchApp = async (orgApp: OrgApp) => {
+    if (orgApp.members.length === 0) {
+      toast.error("Configure team access before launching");
+      return;
+    }
+
+    setDeployingAppId(orgApp.appId);
+    setDeployMessage("Starting deployment...");
+
+    try {
+      const res = await fetch(
+        `/api/organizations/${slug}/apps/${orgApp.appId}/deploy`,
+        { method: "POST" }
+      );
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to start deployment");
+      }
+
+      // Connect to SSE for progress updates
+      const eventSource = new EventSource(
+        `/api/organizations/${slug}/apps/${orgApp.appId}/deploy/stream`
+      );
+
+      eventSource.onmessage = (event) => {
+        try {
+          const progress = JSON.parse(event.data);
+          setDeployMessage(progress.message);
+
+          if (progress.stage === "running") {
+            eventSource.close();
+            setDeployingAppId(null);
+            toast.success("App deployed successfully!", {
+              action: progress.flyUrl
+                ? {
+                    label: "Visit",
+                    onClick: () => window.open(progress.flyUrl, "_blank"),
+                  }
+                : undefined,
+            });
+            fetchOrgApps();
+          } else if (progress.stage === "failed") {
+            eventSource.close();
+            setDeployingAppId(null);
+            toast.error(progress.error || "Deployment failed");
+            fetchOrgApps();
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+        setDeployingAppId(null);
+        fetchOrgApps();
+      };
+    } catch (err) {
+      setDeployingAppId(null);
+      const message =
+        err instanceof Error ? err.message : "Failed to deploy";
+      toast.error(message);
+      fetchOrgApps();
     }
   };
 
@@ -597,15 +666,37 @@ export default function OrgAdminPage({
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                          STATUS_COLORS[orgApp.status] || "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {STATUS_LABELS[orgApp.status] || orgApp.status}
-                      </span>
+                      {/* Deploy progress indicator */}
+                      {deployingAppId === orgApp.appId ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600" />
+                          <span className="text-xs text-purple-600 font-medium max-w-48 truncate">
+                            {deployMessage}
+                          </span>
+                        </div>
+                      ) : (
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                            STATUS_COLORS[orgApp.status] || "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {STATUS_LABELS[orgApp.status] || orgApp.status}
+                        </span>
+                      )}
 
-                      {canManage && (
+                      {/* Visit button for running apps */}
+                      {orgApp.status === "RUNNING" && orgApp.flyUrl && (
+                        <a
+                          href={orgApp.flyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 text-sm font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+                        >
+                          Visit
+                        </a>
+                      )}
+
+                      {canManage && deployingAppId !== orgApp.appId && (
                         <>
                           <button
                             onClick={() => handleConfigureApp(orgApp)}
@@ -613,14 +704,12 @@ export default function OrgAdminPage({
                           >
                             Configure
                           </button>
-                          {orgApp.status === "ADDED" && (
+                          {(orgApp.status === "ADDED" || orgApp.status === "FAILED") && (
                             <button
                               className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity"
-                              onClick={() =>
-                                toast("Fly.io deployment coming soon!")
-                              }
+                              onClick={() => handleLaunchApp(orgApp)}
                             >
-                              Launch
+                              {orgApp.status === "FAILED" ? "Retry" : "Launch"}
                             </button>
                           )}
                           <button
