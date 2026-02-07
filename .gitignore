@@ -39,6 +39,10 @@ dev.db
 *.db-shm
 *.db-wal
 
+# generated apps (stored on disk, not in repo)
+/apps/*
+!/apps/.gitkeep
+
 # vercel
 .vercel
 

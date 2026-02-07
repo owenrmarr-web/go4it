@@ -24,6 +24,7 @@ model User {
   sessions      Session[]
   interactions  UserInteraction[]
   organizations OrganizationMember[]
+  generatedApps GeneratedApp[]
   createdAt     DateTime  @default(now())
 }
 
@@ -71,6 +72,7 @@ model App {
   isPublic        Boolean           @default(true)
   createdAt       DateTime          @default(now())
   interactions    UserInteraction[]
+  generatedApp    GeneratedApp?
 }
 
 enum InteractionType {
@@ -89,6 +91,33 @@ model UserInteraction {
   app  App  @relation(fields: [appId],  references: [id], onDelete: Cascade)
 
   @@unique([userId, appId, type])
+}
+
+// ============================================
+// App Generation Models
+// ============================================
+
+enum GenerationStatus {
+  PENDING
+  GENERATING
+  COMPLETE
+  FAILED
+}
+
+model GeneratedApp {
+  id          String           @id @default(cuid())
+  prompt      String
+  title       String?
+  description String?
+  sourceDir   String?
+  status      GenerationStatus @default(PENDING)
+  error       String?
+  createdById String
+  createdBy   User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  appId       String?          @unique
+  app         App?             @relation(fields: [appId], references: [id])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 // ============================================
