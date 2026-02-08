@@ -195,7 +195,8 @@ model OrgApp {
   appId          String
   status         DeployStatus @default(ADDED)
   flyAppId       String?      // Fly.io app ID once deployed
-  flyUrl         String?      // e.g., zenith-space-leadflow.fly.dev
+  flyUrl         String?      // e.g., https://crm-zenith.go4it.live
+  subdomain      String?      @unique // e.g., "crm-zenith" → crm-zenith.go4it.live
   addedAt        DateTime     @default(now())
   deployedAt     DateTime?
 
@@ -229,6 +230,8 @@ model Invitation {
   id             String           @id @default(cuid())
   organizationId String
   email          String
+  name           String?          // First + last name
+  title          String?          // Job title
   role           OrgRole          @default(MEMBER)
   token          String           @unique @default(cuid())
   status         InvitationStatus @default(PENDING)

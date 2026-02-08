@@ -211,7 +211,7 @@ src/
 | Vercel URL | https://go4it-alpha.vercel.app |
 | GitHub repo | https://github.com/owenrmarr-web/go4it |
 | Database | Turso (LibSQL) — `libsql://go4it-owenrmarr.aws-us-west-2.turso.io` |
-| DNS | A record `@` → `216.198.79.1` (set in Squarespace, verified on Vercel) |
+| DNS | A record `@` → `216.198.79.1` (Squarespace → Vercel); `*` CNAME → `fly-global.fly.dev` (wildcard subdomains → Fly.io) |
 
 ### How deploys work
 - Push to `main` on GitHub → Vercel auto-builds and deploys
@@ -280,9 +280,21 @@ For local dev, use: `DATABASE_URL="file:./dev.db" npx prisma db push`
 - Example: `go4it-zenith-space-a1b2c3d4`
 - URL: `https://go4it-zenith-space-a1b2c3d4.fly.dev`
 
+### Custom subdomains (2026-02-08)
+- Wildcard DNS: `*.go4it.live CNAME fly-global.fly.dev` (set in Squarespace)
+- Subdomain format: `{appSlug}-{orgSlug}.go4it.live` (e.g., `crm-zenith.go4it.live`)
+- Auto-generated on deploy, customizable from Account → Configure panel
+- Each deployed app stores its subdomain as `OrgApp.subdomain` (`@unique` constraint)
+- `flyctl certs add {subdomain}.go4it.live --app {flyAppId}` provisions TLS via Let's Encrypt
+- `.fly.dev` URLs continue to work as fallback
+- Subdomain utility: `src/lib/subdomain.ts` (generation + validation with reserved name checks)
+- Subdomain API: `src/app/api/organizations/[slug]/apps/[appId]/subdomain/route.ts` (GET/PUT — also handles cert updates for already-deployed apps)
+
 ### Key files
-- `src/lib/fly.ts` — Deployment orchestration (creates app, volume, secrets, deploys)
-- `src/app/api/organizations/[slug]/apps/[appId]/deploy/route.ts` — Deploy trigger endpoint
+- `src/lib/fly.ts` — Deployment orchestration (creates app, volume, secrets, deploys, configures subdomain cert)
+- `src/lib/subdomain.ts` — Subdomain generation and validation
+- `src/app/api/organizations/[slug]/apps/[appId]/deploy/route.ts` — Deploy trigger endpoint (auto-generates subdomain)
+- `src/app/api/organizations/[slug]/apps/[appId]/subdomain/route.ts` — Subdomain management (GET/PUT)
 - `src/app/api/organizations/[slug]/apps/[appId]/deploy/stream/route.ts` — SSE progress stream
 - Generated per-deploy: `fly.toml`, `Dockerfile.fly`, `start.sh` (written into app source dir)
 
@@ -341,12 +353,13 @@ curl -L https://fly.io/install.sh | sh
 
 ## Next Steps (Roadmap — in priority order)
 
-1. **Custom domain routing** — Support `orgname.go4it.live` subdomains (Fly.io certs + wildcard DNS on go4it.live) and eventually `crm.mybusiness.com` custom domains.
+1. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
 2. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues and add guardrails.
 3. **Builder service for production** — Extract `src/lib/generator.ts` into a standalone Fly.io service so generation works in production (not just local dev).
 4. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
 
 ### Completed
+- ~~Custom subdomain routing~~ — `*.go4it.live` wildcard DNS + auto-generated subdomains + Fly.io TLS certs. Configurable from Account page.
 - ~~App iteration~~ — Users can refine generated apps with follow-up prompts (CLI `--continue`)
 - ~~Publish to marketplace~~ — Generated apps can be published (public or private)
 - ~~1:1 org simplification~~ — Auto-create org on signup, consolidated account page

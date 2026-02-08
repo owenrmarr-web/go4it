@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { deployApp } from "@/lib/fly";
+import { generateSubdomain, validateSubdomain } from "@/lib/subdomain";
 
 type RouteContext = { params: Promise<{ slug: string; appId: string }> };
 
@@ -106,8 +107,22 @@ export async function POST(request: Request, context: RouteContext) {
       email: m.user.email!,
     }));
 
+  // Auto-generate subdomain if not already set
+  let subdomain = orgApp.subdomain;
+  if (!subdomain) {
+    const suggested = generateSubdomain(orgApp.app.title, slug);
+    const validation = await validateSubdomain(suggested);
+    if (validation.valid) {
+      subdomain = suggested;
+      await prisma.orgApp.update({
+        where: { id: orgApp.id },
+        data: { subdomain },
+      });
+    }
+  }
+
   // Start deployment in background (don't await)
-  deployApp(orgApp.id, slug, sourceDir, teamMembers).catch((err) => {
+  deployApp(orgApp.id, slug, sourceDir, teamMembers, subdomain ?? undefined).catch((err) => {
     console.error(`[Deploy] Unhandled error for ${orgApp.id}:`, err);
   });
 

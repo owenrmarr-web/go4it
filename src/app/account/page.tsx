@@ -27,6 +27,7 @@ interface OrgApp {
   appId: string;
   status: string;
   flyUrl: string | null;
+  subdomain: string | null;
   addedAt: string;
   deployedAt: string | null;
   app: {
@@ -49,6 +50,8 @@ interface Member {
 interface Invitation {
   id: string;
   email: string;
+  name: string | null;
+  title: string | null;
   role: "OWNER" | "ADMIN" | "MEMBER";
   expiresAt: string;
   createdAt: string;
@@ -102,11 +105,20 @@ export default function AccountPage() {
   const [deployingAppId, setDeployingAppId] = useState<string | null>(null);
   const [deployMessage, setDeployMessage] = useState("");
 
+  // Subdomain state
+  const [subdomainInput, setSubdomainInput] = useState("");
+  const [subdomainError, setSubdomainError] = useState<string | null>(null);
+  const [savingSubdomain, setSavingSubdomain] = useState(false);
+
   // Invite state
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteFirstName, setInviteFirstName] = useState("");
+  const [inviteLastName, setInviteLastName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteTitle, setInviteTitle] = useState("");
   const [inviteRole, setInviteRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
   const [sendingInvite, setSendingInvite] = useState(false);
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
 
   // For AppCard — build a UserOrg array from the single org
   const orgs: UserOrg[] = useMemo(() => {
@@ -186,6 +198,8 @@ export default function AccountPage() {
   const handleConfigureApp = (orgApp: OrgApp) => {
     setConfiguringAppId(orgApp.id);
     setSelectedMembers(new Set(orgApp.members.map((m) => m.userId)));
+    setSubdomainInput(orgApp.subdomain || "");
+    setSubdomainError(null);
   };
 
   const handleSelectAllMembers = () => {
@@ -233,6 +247,34 @@ export default function AccountPage() {
       toast.error(message);
     } finally {
       setSavingMembers(false);
+    }
+  };
+
+  const handleSaveSubdomain = async () => {
+    const orgApp = orgApps.find((a) => a.id === configuringAppId);
+    if (!orgApp || !org || !subdomainInput.trim()) return;
+
+    setSavingSubdomain(true);
+    setSubdomainError(null);
+    try {
+      const res = await fetch(
+        `/api/organizations/${org.slug}/apps/${orgApp.appId}/subdomain`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subdomain: subdomainInput }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to set subdomain");
+      toast.success("Custom URL updated!");
+      fetchOrgData();
+    } catch (err) {
+      setSubdomainError(
+        err instanceof Error ? err.message : "Failed to set subdomain"
+      );
+    } finally {
+      setSavingSubdomain(false);
     }
   };
 
@@ -335,6 +377,10 @@ export default function AccountPage() {
       return;
     }
 
+    const fullName = [inviteFirstName.trim(), inviteLastName.trim()]
+      .filter(Boolean)
+      .join(" ");
+
     setSendingInvite(true);
     try {
       const res = await fetch(
@@ -342,7 +388,12 @@ export default function AccountPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+          body: JSON.stringify({
+            email: inviteEmail,
+            name: fullName || null,
+            title: inviteTitle.trim() || null,
+            role: inviteRole,
+          }),
         }
       );
 
@@ -350,7 +401,10 @@ export default function AccountPage() {
       if (!res.ok) throw new Error(data.error || "Failed to send invitation");
 
       toast.success(`Invitation sent to ${inviteEmail}`);
+      setInviteFirstName("");
+      setInviteLastName("");
       setInviteEmail("");
+      setInviteTitle("");
       setInviteRole("MEMBER");
       setShowInviteModal(false);
       fetchOrgData();
@@ -360,6 +414,33 @@ export default function AccountPage() {
       toast.error(message);
     } finally {
       setSendingInvite(false);
+    }
+  };
+
+  const handleResendInvite = async (invitationId: string) => {
+    if (!org) return;
+    setResendingInviteId(invitationId);
+    try {
+      const res = await fetch(
+        `/api/organizations/${org.slug}/invitations`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ invitationId }),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to resend invitation");
+
+      toast.success("Invitation resent!");
+      fetchOrgData();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to resend invitation";
+      toast.error(message);
+    } finally {
+      setResendingInviteId(null);
     }
   };
 
@@ -516,6 +597,11 @@ export default function AccountPage() {
                             </h3>
                             <p className="text-sm text-gray-500">
                               {orgApp.app.category}
+                              {orgApp.subdomain && (
+                                <span className="ml-2">
+                                  · {orgApp.subdomain}.go4it.live
+                                </span>
+                              )}
                               {orgApp.members.length > 0 && (
                                 <span className="ml-2">
                                   · {orgApp.members.length} team member
@@ -605,9 +691,64 @@ export default function AccountPage() {
                         </div>
                       </div>
 
-                      {/* Team access config panel */}
+                      {/* Configure panel */}
                       {configuringAppId === orgApp.id && (
                         <div className="border-t border-gray-100 px-5 py-4 bg-gray-50">
+                          {/* Custom URL */}
+                          <div className="mb-4 pb-4 border-b border-gray-200">
+                            <p className="text-sm font-medium text-gray-700 mb-2">
+                              Custom URL
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={subdomainInput}
+                                onChange={(e) =>
+                                  setSubdomainInput(
+                                    e.target.value
+                                      .toLowerCase()
+                                      .replace(/[^a-z0-9-]/g, "")
+                                  )
+                                }
+                                placeholder={
+                                  orgApp.subdomain ||
+                                  `${orgApp.app.title
+                                    .toLowerCase()
+                                    .replace(/[^a-z0-9]+/g, "-")
+                                    .replace(/^-+|-+$/g, "")
+                                    .substring(0, 30)}-${org?.slug || ""}`
+                                }
+                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                              />
+                              <span className="text-sm text-gray-500 whitespace-nowrap">
+                                .go4it.live
+                              </span>
+                              <button
+                                onClick={handleSaveSubdomain}
+                                disabled={
+                                  savingSubdomain || !subdomainInput.trim()
+                                }
+                                className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors disabled:opacity-50"
+                              >
+                                {savingSubdomain
+                                  ? "Saving..."
+                                  : orgApp.subdomain
+                                    ? "Update"
+                                    : "Set"}
+                              </button>
+                            </div>
+                            {subdomainError && (
+                              <p className="text-xs text-red-500 mt-1">
+                                {subdomainError}
+                              </p>
+                            )}
+                            {orgApp.subdomain && (
+                              <p className="text-xs text-green-600 mt-1">
+                                https://{orgApp.subdomain}.go4it.live
+                              </p>
+                            )}
+                          </div>
+
                           <div className="flex items-center justify-between mb-3">
                             <p className="text-sm font-medium text-gray-700">
                               Team Access
@@ -696,7 +837,7 @@ export default function AccountPage() {
                   {/* Header bar with count + invite */}
                   <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                     <p className="text-sm text-gray-600">
-                      {members.length} team member
+                      {members.length} member
                       {members.length !== 1 && "s"}
                       {invitations.length > 0 &&
                         ` · ${invitations.length} pending`}
@@ -705,44 +846,11 @@ export default function AccountPage() {
                       onClick={() => setShowInviteModal(true)}
                       className="px-4 py-2 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
                     >
-                      + Invite Member
+                      + Add Team Member
                     </button>
                   </div>
 
-                  {/* Pending invitations */}
-                  {invitations.length > 0 && (
-                    <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
-                      <p className="text-xs font-medium text-gray-500 uppercase mb-2">
-                        Pending Invitations
-                      </p>
-                      <div className="space-y-2">
-                        {invitations.map((invite) => (
-                          <div
-                            key={invite.id}
-                            className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-200"
-                          >
-                            <div>
-                              <p className="text-sm font-medium text-gray-700">
-                                {invite.email}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Invited as {ROLE_LABELS[invite.role]} · Expires{" "}
-                                {new Date(invite.expiresAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => handleCancelInvite(invite.id)}
-                              className="text-xs text-red-500 hover:text-red-700"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Members list */}
+                  {/* Unified members + pending list */}
                   <div className="divide-y divide-gray-100">
                     {members.map((member) => {
                       const isOnlyOwner =
@@ -821,6 +929,73 @@ export default function AccountPage() {
                         </div>
                       );
                     })}
+
+                    {/* Pending invitations inline */}
+                    {invitations.map((invite) => (
+                      <div
+                        key={`inv-${invite.id}`}
+                        className="px-6 py-4 flex items-center justify-between bg-gray-50/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-semibold">
+                            {invite.name?.[0]?.toUpperCase() || invite.email[0]?.toUpperCase() || "?"}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-gray-700">
+                                {invite.name || invite.email}
+                              </p>
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                Pending
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-500">
+                              {invite.name ? invite.email : ""}
+                              {invite.title && (
+                                <span>
+                                  {invite.name ? " · " : ""}{invite.title}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-medium ${ROLE_COLORS[invite.role]}`}
+                          >
+                            {ROLE_LABELS[invite.role]}
+                          </span>
+                          <button
+                            onClick={() => handleResendInvite(invite.id)}
+                            disabled={resendingInviteId === invite.id}
+                            className="px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors disabled:opacity-50"
+                          >
+                            {resendingInviteId === invite.id ? "Sending..." : "Resend"}
+                          </button>
+                          <button
+                            onClick={() => handleCancelInvite(invite.id)}
+                            className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                            title="Cancel invitation"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              className="w-5 h-5"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M6 18 18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -861,13 +1036,40 @@ export default function AccountPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">
-              Invite Team Member
+              Add Team Member
             </h3>
 
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    value={inviteFirstName}
+                    onChange={(e) => setInviteFirstName(e.target.value)}
+                    placeholder="Jane"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    value={inviteLastName}
+                    onChange={(e) => setInviteLastName(e.target.value)}
+                    placeholder="Smith"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
+                  Email Address <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="email"
@@ -880,7 +1082,20 @@ export default function AccountPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Role
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={inviteTitle}
+                  onChange={(e) => setInviteTitle(e.target.value)}
+                  placeholder="e.g. Sales Manager"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Account Type
                 </label>
                 <select
                   value={inviteRole}
@@ -901,7 +1116,10 @@ export default function AccountPage() {
               <button
                 onClick={() => {
                   setShowInviteModal(false);
+                  setInviteFirstName("");
+                  setInviteLastName("");
                   setInviteEmail("");
+                  setInviteTitle("");
                   setInviteRole("MEMBER");
                 }}
                 className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
@@ -913,7 +1131,7 @@ export default function AccountPage() {
                 disabled={sendingInvite || !inviteEmail.trim()}
                 className="flex-1 gradient-brand text-white px-4 py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
               >
-                {sendingInvite ? "Sending..." : "Send Invite"}
+                {sendingInvite ? "Sending..." : "Add & Send Invite"}
               </button>
             </div>
           </div>

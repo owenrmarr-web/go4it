@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { COUNTRIES, USE_CASE_OPTIONS } from "@/lib/constants";
+import { COUNTRIES, US_STATES, USE_CASE_OPTIONS } from "@/lib/constants";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -19,10 +19,29 @@ export default function AuthPage() {
     useCases: [] as string[],
   });
 
+  const [stateSearch, setStateSearch] = useState("");
+  const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
+  const stateInputRef = useRef<HTMLInputElement>(null);
+
+  const isUS = formData.country === "United States";
+
+  const filteredStates = useMemo(() => {
+    if (!stateSearch) return US_STATES;
+    const q = stateSearch.toLowerCase();
+    return US_STATES.filter((s) => s.toLowerCase().includes(q));
+  }, [stateSearch]);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      // Clear state when country changes
+      ...(name === "country" ? { state: "" } : {}),
+    }));
+    if (name === "country") setStateSearch("");
   };
 
   const toggleUseCase = (value: string) => {
@@ -167,14 +186,61 @@ export default function AuthPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     State / Province
                   </label>
-                  <input
-                    type="text"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
-                    placeholder="e.g. California"
-                  />
+                  {isUS ? (
+                    <div className="relative">
+                      <input
+                        ref={stateInputRef}
+                        type="text"
+                        value={stateSearch || formData.state}
+                        onChange={(e) => {
+                          setStateSearch(e.target.value);
+                          setStateDropdownOpen(true);
+                          if (!e.target.value) {
+                            setFormData((prev) => ({ ...prev, state: "" }));
+                          }
+                        }}
+                        onFocus={() => setStateDropdownOpen(true)}
+                        onBlur={() =>
+                          setTimeout(() => setStateDropdownOpen(false), 150)
+                        }
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                        placeholder="Search state..."
+                      />
+                      {stateDropdownOpen && filteredStates.length > 0 && (
+                        <ul className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          {filteredStates.map((s) => (
+                            <li
+                              key={s}
+                              onMouseDown={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  state: s,
+                                }));
+                                setStateSearch("");
+                                setStateDropdownOpen(false);
+                              }}
+                              className={`px-4 py-2 text-sm cursor-pointer hover:bg-purple-50 ${
+                                formData.state === s
+                                  ? "bg-purple-50 text-purple-700 font-medium"
+                                  : "text-gray-700"
+                              }`}
+                            >
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                      placeholder="e.g. Ontario"
+                    />
+                  )}
                 </div>
               </div>
 

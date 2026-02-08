@@ -73,7 +73,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const body = await request.json();
-    const { email, role = "MEMBER" } = body;
+    const { email, name, title, role = "MEMBER" } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -130,6 +130,8 @@ export async function POST(request: Request, context: RouteContext) {
       data: {
         organizationId: membership.organizationId,
         email,
+        name: name || null,
+        title: title || null,
         role: role as "OWNER" | "ADMIN" | "MEMBER",
         expiresAt,
       },
@@ -152,6 +154,8 @@ export async function POST(request: Request, context: RouteContext) {
       invitation: {
         id: invitation.id,
         email: invitation.email,
+        name: invitation.name,
+        title: invitation.title,
         role: invitation.role,
         expiresAt: invitation.expiresAt,
       },
@@ -162,6 +166,89 @@ export async function POST(request: Request, context: RouteContext) {
     console.error("Send invitation error:", errorMessage);
     return NextResponse.json(
       { error: `Failed to send invitation: ${errorMessage}` },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/organizations/[slug]/invitations - Resend invitation
+export async function PUT(request: Request, context: RouteContext) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { slug } = await context.params;
+
+  const membership = await prisma.organizationMember.findFirst({
+    where: {
+      userId: session.user.id,
+      organization: { slug },
+      role: { in: ["OWNER", "ADMIN"] },
+    },
+    include: {
+      organization: true,
+      user: { select: { name: true } },
+    },
+  });
+
+  if (!membership) {
+    return NextResponse.json(
+      { error: "Only owners and admins can resend invitations" },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+    const { invitationId } = body;
+
+    if (!invitationId) {
+      return NextResponse.json(
+        { error: "Invitation ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const invitation = await prisma.invitation.findUnique({
+      where: { id: invitationId },
+    });
+
+    if (!invitation || invitation.organizationId !== membership.organizationId) {
+      return NextResponse.json(
+        { error: "Invitation not found" },
+        { status: 404 }
+      );
+    }
+
+    // Reset expiration to 7 days from now
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await prisma.invitation.update({
+      where: { id: invitationId },
+      data: { expiresAt, status: "PENDING" },
+    });
+
+    // Resend email
+    const baseUrl = process.env.NEXTAUTH_URL || "https://go4it.live";
+    const inviteUrl = `${baseUrl}/invite/${invitation.token}`;
+
+    await sendInviteEmail({
+      to: invitation.email,
+      organizationName: membership.organization.name,
+      inviterName: membership.user.name || "Someone",
+      role: invitation.role,
+      inviteUrl,
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("Resend invitation error:", errorMessage);
+    return NextResponse.json(
+      { error: `Failed to resend invitation: ${errorMessage}` },
       { status: 500 }
     );
   }

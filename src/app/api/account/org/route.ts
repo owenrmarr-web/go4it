@@ -71,6 +71,7 @@ export async function GET() {
       appId: oa.appId,
       status: oa.status,
       flyUrl: oa.flyUrl,
+      subdomain: oa.subdomain,
       addedAt: oa.addedAt,
       deployedAt: oa.deployedAt,
       app: {
@@ -95,6 +96,8 @@ export async function GET() {
     invitations: org.invitations.map((inv) => ({
       id: inv.id,
       email: inv.email,
+      name: inv.name,
+      title: inv.title,
       role: inv.role,
       expiresAt: inv.expiresAt,
       createdAt: inv.createdAt,

@@ -13,6 +13,7 @@ export type DeployStage =
   | "creating"
   | "building"
   | "deploying"
+  | "configuring"
   | "running"
   | "failed";
 
@@ -28,6 +29,7 @@ const STAGE_MESSAGES: Record<DeployStage, string> = {
   creating: "Setting up infrastructure...",
   building: "Building your app (this may take a few minutes)...",
   deploying: "Starting up...",
+  configuring: "Setting up custom domain...",
   running: "Your app is live!",
   failed: "Something went wrong.",
 };
@@ -232,7 +234,8 @@ export async function deployApp(
   orgAppId: string,
   orgSlug: string,
   sourceDir: string,
-  teamMembers: { name: string; email: string }[]
+  teamMembers: { name: string; email: string }[],
+  subdomain?: string
 ): Promise<void> {
   // Create a URL-safe app name from org slug + short ID
   const flyAppName = `go4it-${orgSlug}-${orgAppId.slice(0, 8)}`
@@ -538,8 +541,30 @@ export default defineConfig({
       );
     }
 
+    // ---- Stage: Configuring (subdomain) ----
+    if (subdomain) {
+      updateDeployProgress(orgAppId, "configuring");
+      const customDomain = `${subdomain}.go4it.live`;
+
+      const certResult = await flyctl(
+        ["certs", "add", customDomain, "--app", flyAppName],
+        { cwd: sourceDir }
+      );
+
+      if (certResult.code !== 0 && !certResult.stderr.includes("already exists")) {
+        console.warn(
+          `[Deploy ${orgAppId}] Cert warning for ${customDomain}: ${certResult.stderr}`
+        );
+      } else {
+        console.log(`[Deploy ${orgAppId}] Custom domain configured: ${customDomain}`);
+      }
+    }
+
     // ---- Stage: Running ----
-    const flyUrl = `https://${flyAppName}.fly.dev`;
+    const flyDevUrl = `https://${flyAppName}.fly.dev`;
+    const flyUrl = subdomain
+      ? `https://${subdomain}.go4it.live`
+      : flyDevUrl;
     updateDeployProgress(orgAppId, "running", { flyUrl });
 
     await prisma.orgApp.update({
@@ -548,6 +573,7 @@ export default defineConfig({
         status: "RUNNING",
         flyAppId: flyAppName,
         flyUrl,
+        subdomain: subdomain || undefined,
         deployedAt: new Date(),
       },
     });
