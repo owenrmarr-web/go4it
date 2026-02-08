@@ -36,11 +36,11 @@ export async function GET(
       const interval = setInterval(async () => {
         let progress = getProgress(id);
 
-        // If in-memory store shows pending for too long, check DB
-        // (handles HMR wiping the in-memory store during dev)
+        // If in-memory store shows pending, check DB immediately
+        // (handles HMR wiping in-memory store, spawn failures, etc.)
         if (progress.stage === "pending") {
           pendingPolls++;
-          if (pendingPolls >= 3) {
+          if (pendingPolls >= 1) {
             try {
               const dbApp = await prisma.generatedApp.findUnique({
                 where: { id },

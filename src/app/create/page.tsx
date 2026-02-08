@@ -35,6 +35,8 @@ const PROMPT_SUGGESTIONS = [
   "A scheduling app for a salon to manage appointments and staff",
 ];
 
+const isProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === "production" || process.env.NEXT_PUBLIC_VERCEL_ENV === "preview";
+
 export default function CreatePage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -178,6 +180,18 @@ export default function CreatePage() {
               build it for you.
             </p>
 
+            {isProduction && (
+              <div className="mt-6 mx-auto max-w-lg rounded-xl border border-orange-200 bg-orange-50 px-5 py-4 text-center">
+                <p className="text-sm font-semibold text-orange-800">
+                  Coming Soon to go4it.live
+                </p>
+                <p className="mt-1 text-sm text-orange-700">
+                  App generation is currently available in local development only.
+                  We&apos;re building a cloud-hosted builder — stay tuned!
+                </p>
+              </div>
+            )}
+
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -193,7 +207,7 @@ export default function CreatePage() {
             <div className="mt-4 flex justify-center">
               <button
                 onClick={handleGenerate}
-                disabled={prompt.trim().length < 10}
+                disabled={isProduction || prompt.trim().length < 10}
                 className="gradient-brand text-white px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Generate

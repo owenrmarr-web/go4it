@@ -83,7 +83,7 @@ function runClaudeCLI(
   console.log(`[Generator ${generationId}] Args: npx ${cliArgs.join(" ").slice(0, 200)}...`);
   console.log(`[Generator ${generationId}] ANTHROPIC_API_KEY set: ${!!process.env.ANTHROPIC_API_KEY}`);
 
-  const child = spawn("/usr/local/bin/npx", cliArgs, {
+  const child = spawn("npx", cliArgs, {
     cwd: workspaceDir,
     env: {
       ...process.env,
@@ -154,9 +154,12 @@ function runClaudeCLI(
 
   child.on("error", async (err) => {
     processStore.delete(generationId);
-    console.error(`[Generator ${generationId}] Spawn error:`, err.message);
-    updateProgress(generationId, "failed", { error: err.message });
-    await onError(err.message);
+    const errorMsg = (err as NodeJS.ErrnoException).code === "ENOENT"
+      ? "Claude Code CLI (npx) not found. App generation requires a local development environment."
+      : err.message;
+    console.error(`[Generator ${generationId}] Spawn error:`, errorMsg);
+    updateProgress(generationId, "failed", { error: errorMsg });
+    await onError(errorMsg);
   });
 }
 

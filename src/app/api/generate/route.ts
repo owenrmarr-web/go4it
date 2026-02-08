@@ -4,6 +4,14 @@ import { auth } from "@/auth";
 import { startGeneration } from "@/lib/generator";
 
 export async function POST(request: Request) {
+  // Generation requires Claude Code CLI + persistent filesystem (local dev only)
+  if (process.env.VERCEL) {
+    return NextResponse.json(
+      { error: "App generation is only available in local development. We're working on bringing this to go4it.live — stay tuned!" },
+      { status: 503 }
+    );
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

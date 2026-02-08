@@ -7,6 +7,13 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (process.env.VERCEL) {
+    return NextResponse.json(
+      { error: "App generation is only available in local development. We're working on bringing this to go4it.live — stay tuned!" },
+      { status: 503 }
+    );
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
