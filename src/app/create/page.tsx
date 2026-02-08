@@ -262,7 +262,53 @@ export default function CreatePage() {
                 {gen.description}
               </p>
             )}
-            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+            {/* Preview */}
+            <div className="mt-6">
+              {gen.previewUrl ? (
+                <div className="flex items-center justify-center gap-3">
+                  <a
+                    href={gen.previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity"
+                  >
+                    Open Preview
+                  </a>
+                  <button
+                    onClick={() => {
+                      gen.stopPreview();
+                      toast.success("Preview stopped");
+                    }}
+                    className="text-sm text-gray-500 hover:text-red-500 transition-colors"
+                  >
+                    Stop Preview
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={async () => {
+                    try {
+                      await gen.startPreview();
+                      toast.success("Preview is ready!");
+                    } catch (err) {
+                      toast.error(
+                        err instanceof Error
+                          ? err.message
+                          : "Failed to start preview"
+                      );
+                    }
+                  }}
+                  disabled={gen.previewLoading}
+                  className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {gen.previewLoading
+                    ? "Starting preview..."
+                    : "Preview Your App"}
+                </button>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               {!gen.published ? (
                 <button
                   onClick={() => {
@@ -270,14 +316,14 @@ export default function CreatePage() {
                     setPublishDescription(gen.description || "");
                     setLocalView("publish");
                   }}
-                  className="gradient-brand text-white px-6 py-2.5 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+                  className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-colors"
                 >
                   Publish to Marketplace
                 </button>
               ) : (
                 <button
                   onClick={() => router.push("/")}
-                  className="gradient-brand text-white px-6 py-2.5 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+                  className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-colors"
                 >
                   View in Marketplace
                 </button>

@@ -38,9 +38,13 @@ GO4IT is a free marketplace for AI-generated SaaS applications targeting small a
 - **App publishing** — Generated apps can be published to the marketplace (public or private). Creates an App record linked to the GeneratedApp.
 - **Global generation progress** (`src/components/GenerationContext.tsx`) — persistent SSE connection + localStorage. Progress chip in Header survives page navigation. Single SSE connection shared across components.
 - **Theme-aware UI** — CSS variables (`--theme-primary`, `--theme-secondary`, `--theme-accent`) extracted from uploaded logos. GO4IT logo, Create button, headings, progress bars, and gradient backgrounds all respect the theme.
-- **App Builder Playbook** (`playbook/CLAUDE.md`) — instructions that ensure generated apps follow GO4IT conventions (Next.js 16, Tailwind CSS 4, Prisma + SQLite, Docker-ready). Includes Tailwind v4 `@theme` restrictions guardrail.
+- **App Builder Playbook** (`playbook/CLAUDE.md`) — instructions that ensure generated apps follow GO4IT conventions (Next.js 16, Tailwind CSS 4, Prisma 6 + SQLite, Docker-ready). Includes Tailwind v4 `@theme` restrictions and middleware regex guardrails.
+- **Starter template** (`playbook/template/`) — pre-built boilerplate (package.json, auth, prisma schema, Dockerfile, layout, globals.css) copied into each generated app workspace before Claude Code runs. Saves generation time and ensures consistency.
+- **Live preview** (`src/lib/previewer.ts`) — users can preview generated apps locally before publishing. Spawns a dev server on a dynamic port (4001+). Auth bypassed via `PREVIEW_MODE` env var (patches `auth.ts` to return fake session). Skips npm install/db setup if already done during generation.
+- **Parallel npm install** — `npm install` runs in background during Claude Code generation so dependencies are ready when generation completes. Preview startup is near-instant.
 - **Fly.io deployment pipeline** (`src/lib/fly.ts`) — fully working! Account page → configure team → Launch → app containerized (Docker), deployed to Fly.io with SQLite volume, team members provisioned. Auto-detects Prisma 6 vs 7 for compatibility fixes. Progress streamed via SSE with DB fallback for HMR.
-- **Admin dashboard** (`src/app/admin/page.tsx`) — user/org management for platform admins (isAdmin flag on User model)
+- **Admin dashboard** (`src/app/admin/page.tsx`) — user/org/creations management for platform admins (isAdmin flag on User model). Creations tab shows all generated apps with creator, status, iterations, and publish state.
+- **Marketplace cleanup** — seeded placeholder apps removed. Only real generated+published apps appear. Empty state CTA directs users to create.
 - **Prisma schema** — User, Account, Session, VerificationToken, App, UserInteraction, GeneratedApp, AppIteration, Organization, OrganizationMember, Invitation, OrgApp, OrgAppMember models
 
 ---
@@ -53,7 +57,7 @@ GO4IT is a free marketplace for AI-generated SaaS applications targeting small a
 | Language | TypeScript |
 | Styling | Tailwind CSS 4 |
 | Auth | NextAuth v5 beta (credentials provider) |
-| ORM | Prisma 7 (client engine) |
+| ORM | Prisma 7 (platform) / Prisma 6 (generated apps) |
 | DB adapter | LibSQL via `@prisma/adapter-libsql` |
 | DB (dev) | SQLite file (`dev.db`) |
 | DB (prod) | Turso (cloud LibSQL) |
@@ -70,10 +74,11 @@ GO4IT is a free marketplace for AI-generated SaaS applications targeting small a
 ```
 playbook/
   CLAUDE.md              — App builder playbook (tech stack, styling, Dockerfile template)
+  template/              — Starter template copied into each generated app workspace
 
 prisma/
   schema.prisma          — DB models: User, App, GeneratedApp, AppIteration, Organization, OrgApp, etc.
-  seed.ts                — Seeds demo apps (uses LibSQL adapter)
+  seed.ts                — Seeds admin user for dev (uses LibSQL adapter)
   migrate-*.ts           — Turso migration scripts (one per schema change)
 
 apps/
@@ -92,8 +97,8 @@ src/
     auth/page.tsx        — Login / signup page
     account/page.tsx     — Consolidated dashboard: My Apps, Team Members, Saved Apps
     account/settings/page.tsx — User profile settings (logo, company, theme)
-    create/page.tsx      — AI app creation (prompt → progress → refine → publish)
-    admin/page.tsx       — Platform admin dashboard (users, orgs)
+    create/page.tsx      — AI app creation (prompt → progress → preview → refine → publish)
+    admin/page.tsx       — Platform admin dashboard (users, orgs, creations)
     org/[slug]/admin/page.tsx — Organization admin (legacy, still functional)
     invite/[token]/page.tsx   — Accept invitation
 
@@ -109,8 +114,9 @@ src/
       generate/[id]/stream/route.ts — GET SSE progress stream (DB fallback)
       generate/[id]/iterate/route.ts — POST start iteration on existing app
       generate/[id]/publish/route.ts — POST publish generated app to marketplace
+      generate/[id]/preview/route.ts  — POST/GET/DELETE live preview management
       generate/[id]/status/route.ts  — GET generation status (polling fallback)
-      admin/...                    — Admin API endpoints (users, orgs)
+      admin/...                    — Admin API endpoints (users, orgs, generations)
       organizations/...            — Org CRUD, members, invitations
       organizations/[slug]/apps/route.ts — GET/POST/DELETE org apps
       organizations/[slug]/apps/[appId]/members/route.ts — GET/PUT app team access
@@ -133,7 +139,8 @@ src/
   lib/
     prisma.ts            — Prisma singleton (LibSQL adapter)
     interactions.ts      — Fetch helpers: POST/DELETE interactions
-    generator.ts         — Claude Code CLI spawning, progress parsing, iteration support
+    generator.ts         — Claude Code CLI spawning, progress parsing, iteration support, parallel npm install
+    previewer.ts         — Live preview: dev server spawning, auth bypass, port allocation
     fly.ts               — Fly.io deployment: Prisma 6/7 auto-detection, flyctl wrapper
     email.ts             — Resend email client + invite template
     colorExtractor.ts    — Extract theme colors from uploaded logos
@@ -151,18 +158,30 @@ src/
 ### Initial generation
 1. User types a prompt on `/create` (must be logged in)
 2. `POST /api/generate` creates a `GeneratedApp` record and spawns Claude Code CLI
-3. CLI runs in `apps/{generationId}/` directory with the playbook as `CLAUDE.md`
-4. CLI flags: `-p` (print mode), `--output-format stream-json`, `--verbose`, `--dangerously-skip-permissions`, `--model sonnet`
-5. Progress parsed from stream-json output via `[GO4IT:STAGE:...]` markers defined in the playbook
-6. SSE endpoint (`/api/generate/[id]/stream`) streams progress to the frontend (with DB fallback for HMR)
-7. On completion, app metadata extracted from `package.json` and saved to DB
-8. Generated apps are self-contained: Next.js 16, Tailwind CSS 4, Prisma + SQLite, Dockerfile included
+3. Starter template (`playbook/template/`) copied into `apps/{generationId}/` as boilerplate
+4. `npm install` started in parallel with Claude Code CLI (saves ~60s)
+5. CLI runs with playbook as `CLAUDE.md`. Flags: `-p`, `--output-format stream-json`, `--verbose`, `--dangerously-skip-permissions`, `--model sonnet`
+6. Progress parsed from stream-json output via `[GO4IT:STAGE:...]` markers defined in the playbook
+7. SSE endpoint (`/api/generate/[id]/stream`) streams progress to the frontend (with DB fallback for HMR)
+8. On completion: metadata extracted, parallel install awaited, incremental `npm install` + `prisma db push` + seed run during "finalizing" stage
+9. Generated apps are self-contained: Next.js 16, Tailwind CSS 4, Prisma 6 + SQLite, Dockerfile included
 
 ### Iteration / refine
 1. User enters a follow-up prompt on the refine screen
 2. `POST /api/generate/[id]/iterate` creates an `AppIteration` record and spawns CLI with `--continue`
 3. CLI resumes in the same workspace directory, preserving prior context
 4. Same SSE streaming, same progress tracking — `iterationCount` incremented on GeneratedApp
+
+### Live preview
+1. User clicks "Preview" on the create page after generation/iteration completes
+2. `POST /api/generate/[id]/preview` calls `src/lib/previewer.ts` which:
+   - Skips npm install/db setup if already done during generation
+   - Patches `src/auth.ts` to return a fake session when `PREVIEW_MODE=true` (bypasses all auth)
+   - Spawns `npx next dev -p <port>` with `PREVIEW_MODE=true` in env
+   - Waits for server ready, returns URL
+3. App opens in a new browser tab — no sign-in required
+4. `DELETE /api/generate/[id]/preview` kills the process
+5. Ports start at 4001, auto-increment. In-memory only — auto-cleanup on server restart.
 
 ### Publishing
 1. User clicks "Publish" after generation/iteration is complete
@@ -179,6 +198,8 @@ src/
 **Known playbook fixes applied:**
 - Tailwind CSS v4 requires `@tailwindcss/postcss` in postcss.config.mjs (not `tailwindcss` directly)
 - `@theme` blocks only allow flat CSS custom properties or `@keyframes` — no nested selectors, `@dark` blocks, or wildcards
+- Next.js 16 middleware `matcher` does not support regex lookaheads (e.g. `(?!auth)`) — use simple path patterns
+- Generated apps use Prisma 6 (not 7) to avoid `url`/`prisma.config.ts`/adapter breaking changes
 
 ---
 
@@ -330,3 +351,7 @@ curl -L https://fly.io/install.sh | sh
 - ~~Publish to marketplace~~ — Generated apps can be published (public or private)
 - ~~1:1 org simplification~~ — Auto-create org on signup, consolidated account page
 - ~~Theme-aware UI~~ — CSS variables from logo extraction applied to all branded elements
+- ~~Starter template~~ — Pre-built boilerplate for generated apps (auth, prisma, config, Dockerfile)
+- ~~Live preview~~ — Preview generated apps locally before publishing (auth bypass, parallel install)
+- ~~Marketplace cleanup~~ — Removed seeded placeholder apps, only real generated apps shown
+- ~~Admin creations tab~~ — Admin dashboard shows all generated apps with creator/status/iterations

@@ -7,7 +7,10 @@ export async function GET(request: Request) {
   const category = url.searchParams.get("category");
 
   let apps = await prisma.app.findMany({
-    where: { isPublic: true },
+    where: {
+      isPublic: true,
+      generatedApp: { isNot: null },
+    },
     orderBy: { createdAt: "desc" },
   });
 

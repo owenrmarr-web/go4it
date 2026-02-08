@@ -20,6 +20,17 @@ interface AdminUser {
   };
 }
 
+interface AdminGeneration {
+  id: string;
+  title: string | null;
+  prompt: string;
+  status: string;
+  iterationCount: number;
+  createdAt: string;
+  createdBy: { id: string; name: string; email: string };
+  app: { id: string } | null;
+}
+
 interface AdminOrg {
   id: string;
   name: string;
@@ -38,11 +49,13 @@ interface AdminOrg {
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"users" | "organizations">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "organizations" | "creations">("users");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [orgs, setOrgs] = useState<AdminOrg[]>([]);
+  const [generations, setGenerations] = useState<AdminGeneration[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [orgsLoading, setOrgsLoading] = useState(true);
+  const [generationsLoading, setGenerationsLoading] = useState(true);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -62,6 +75,12 @@ export default function AdminPage() {
       .then((data) => setOrgs(data))
       .catch(() => {})
       .finally(() => setOrgsLoading(false));
+
+    fetch("/api/admin/generations")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => setGenerations(data))
+      .catch(() => {})
+      .finally(() => setGenerationsLoading(false));
   }, [session, status, router]);
 
   if (status === "loading" || !session?.user?.isAdmin) {
@@ -85,7 +104,7 @@ export default function AdminPage() {
               GO4IT Admin
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Platform overview — {users.length} users, {orgs.length} organizations
+              Platform overview — {users.length} users, {orgs.length} organizations, {generations.length} creations
             </p>
           </div>
         </div>
@@ -111,6 +130,16 @@ export default function AdminPage() {
             }`}
           >
             Organizations ({orgs.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("creations")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "creations"
+                ? "bg-white shadow-sm text-gray-900"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Creations ({generations.length})
           </button>
         </div>
 
@@ -290,6 +319,102 @@ export default function AdminPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">
                           {new Date(org.createdAt).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+        {/* Creations Tab */}
+        {activeTab === "creations" && (
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            {generationsLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+              </div>
+            ) : generations.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                No apps created yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        App
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Created By
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Iterations
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Published
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Created
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {generations.map((gen) => (
+                      <tr key={gen.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 truncate">
+                              {gen.title || "Untitled"}
+                            </p>
+                            <p className="text-sm text-gray-400 truncate max-w-xs">
+                              {gen.prompt.slice(0, 80)}{gen.prompt.length > 80 ? "..." : ""}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+                              {gen.createdBy.name?.[0]?.toUpperCase() || "?"}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm text-gray-900 truncate">{gen.createdBy.name}</p>
+                              <p className="text-xs text-gray-400 truncate">{gen.createdBy.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
+                            gen.status === "COMPLETE"
+                              ? "bg-green-100 text-green-700"
+                              : gen.status === "FAILED"
+                              ? "bg-red-100 text-red-700"
+                              : gen.status === "GENERATING"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}>
+                            {gen.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 text-center">
+                          {gen.iterationCount}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {gen.app ? (
+                            <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                              Yes
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {new Date(gen.createdAt).toLocaleDateString()}
                         </td>
                       </tr>
                     ))}

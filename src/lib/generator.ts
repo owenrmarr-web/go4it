@@ -1,5 +1,5 @@
-import { spawn, ChildProcess } from "child_process";
-import { readFileSync, readdirSync, mkdirSync, writeFileSync, existsSync } from "fs";
+import { spawn, ChildProcess, execSync } from "child_process";
+import { readFileSync, readdirSync, mkdirSync, writeFileSync, existsSync, cpSync } from "fs";
 import path from "path";
 import prisma from "./prisma";
 
@@ -35,6 +35,7 @@ const STAGE_MESSAGES: Record<GenerationStage, string> = {
 // In-memory progress store (single-server dev setup)
 const progressStore = new Map<string, GenerationProgress>();
 const processStore = new Map<string, ChildProcess>();
+const installPromises = new Map<string, Promise<boolean>>();
 
 export function getProgress(generationId: string): GenerationProgress {
   return (
@@ -69,6 +70,10 @@ function getAppsDir(): string {
 
 function getPlaybookPath(): string {
   return path.join(getProjectRoot(), "playbook", "CLAUDE.md");
+}
+
+function getTemplatePath(): string {
+  return path.join(getProjectRoot(), "playbook", "template");
 }
 
 // Shared CLI runner used by both startGeneration and startIteration
@@ -137,6 +142,11 @@ function runClaudeCLI(
     if (code === 0) {
       const appMeta = extractAppMetadata(workspaceDir);
       console.log(`[Generator ${generationId}] Complete: title="${appMeta.title}", description="${appMeta.description?.slice(0, 100)}"`);
+
+      // Pre-install dependencies so preview is instant
+      updateProgress(generationId, "finalizing", { message: "Installing dependencies..." });
+      await prepareForPreview(generationId, workspaceDir);
+
       updateProgress(generationId, "complete", {
         title: appMeta.title,
         description: appMeta.description,
@@ -191,9 +201,37 @@ export async function startGeneration(
   // Create workspace directory
   mkdirSync(workspaceDir, { recursive: true });
 
+  // Copy starter template into workspace (config, auth, DB, UI boilerplate)
+  const templateDir = getTemplatePath();
+  if (existsSync(templateDir)) {
+    cpSync(templateDir, workspaceDir, { recursive: true });
+    console.log(`[Generator ${generationId}] Template copied to workspace`);
+  }
+
   // Copy playbook into workspace as CLAUDE.md
   const playbookContent = readFileSync(getPlaybookPath(), "utf-8");
   writeFileSync(path.join(workspaceDir, "CLAUDE.md"), playbookContent);
+
+  // Create .env for the generated app
+  const envPath = path.join(workspaceDir, ".env");
+  if (!existsSync(envPath)) {
+    writeFileSync(envPath, 'DATABASE_URL="file:./dev.db"\nAUTH_SECRET="preview-secret-key"\n');
+  }
+
+  // Start npm install in parallel with Claude Code (template deps ~30-60s)
+  const installPromise = new Promise<boolean>((resolve) => {
+    console.log(`[Generator ${generationId}] Starting parallel npm install...`);
+    const installChild = spawn("npm", ["install"], {
+      cwd: workspaceDir,
+      stdio: "pipe",
+    });
+    installChild.on("close", (code) => {
+      console.log(`[Generator ${generationId}] Parallel npm install finished (code ${code})`);
+      resolve(code === 0);
+    });
+    installChild.on("error", () => resolve(false));
+  });
+  installPromises.set(generationId, installPromise);
 
   // Update DB status
   await prisma.generatedApp.update({
@@ -343,6 +381,66 @@ function extractAppMetadata(workspaceDir: string): {
   }
 
   return { title, description };
+}
+
+async function prepareForPreview(generationId: string, workspaceDir: string) {
+  const env = { ...process.env, DATABASE_URL: "file:./dev.db" };
+
+  // Wait for the parallel npm install that started with generation
+  const parallelInstall = installPromises.get(generationId);
+  if (parallelInstall) {
+    console.log(`[Generator ${generationId}] Waiting for parallel npm install to finish...`);
+    const success = await parallelInstall;
+    installPromises.delete(generationId);
+
+    if (success) {
+      // Run incremental install in case Claude added new deps to package.json
+      try {
+        console.log(`[Generator ${generationId}] Running incremental npm install...`);
+        execSync("npm install", { cwd: workspaceDir, stdio: "pipe", timeout: 60000 });
+      } catch (err) {
+        console.error(`[Generator ${generationId}] Incremental npm install failed (non-fatal):`, (err as Error).message);
+      }
+    } else {
+      // Parallel install failed, try a fresh install
+      try {
+        console.log(`[Generator ${generationId}] Parallel install failed, running full npm install...`);
+        execSync("npm install", { cwd: workspaceDir, stdio: "pipe", timeout: 120000 });
+      } catch (err) {
+        console.error(`[Generator ${generationId}] npm install failed (non-fatal):`, (err as Error).message);
+        return;
+      }
+    }
+  } else {
+    // No parallel install (e.g. iteration), run fresh
+    try {
+      execSync("npm install", { cwd: workspaceDir, stdio: "pipe", timeout: 120000 });
+    } catch (err) {
+      console.error(`[Generator ${generationId}] npm install failed (non-fatal):`, (err as Error).message);
+      return;
+    }
+  }
+
+  // prisma db push
+  try {
+    execSync("npx prisma db push --accept-data-loss", {
+      cwd: workspaceDir, stdio: "pipe", timeout: 30000, env,
+    });
+  } catch {
+    console.log(`[Generator ${generationId}] prisma db push failed (non-fatal)`);
+  }
+
+  // Seed data
+  const seedPath = path.join(workspaceDir, "prisma", "seed.ts");
+  if (existsSync(seedPath)) {
+    try {
+      execSync("npx tsx prisma/seed.ts", {
+        cwd: workspaceDir, stdio: "pipe", timeout: 30000, env,
+      });
+    } catch {
+      console.log(`[Generator ${generationId}] Seed failed (non-fatal)`);
+    }
+  }
 }
 
 export function cleanupProgress(generationId: string) {

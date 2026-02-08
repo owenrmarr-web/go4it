@@ -45,6 +45,11 @@ export default function Header() {
       <nav className="max-w-7xl mx-auto px-4 py-4 relative flex items-center justify-between">
         {/* Left side */}
         <div className="flex items-center gap-2">
+          <Link href="/">
+            <button className="px-5 py-2 rounded-lg border-2 border-theme-accent text-theme-accent font-semibold hover:opacity-80 transition-opacity">
+              App Store
+            </button>
+          </Link>
           <Link href="/create">
             <button className="px-5 py-2 rounded-lg border-2 border-theme-accent text-theme-accent font-semibold hover:opacity-80 transition-opacity">
               Create
@@ -103,11 +108,11 @@ export default function Header() {
             <img
               src={profile.logo}
               alt="Company logo"
-              className="h-8 w-8 rounded-lg object-contain border border-gray-200 hidden sm:block"
+              className="h-10 w-10 rounded-lg object-contain border border-gray-200 hidden sm:block"
             />
           )}
           {session && profile?.companyName && (
-            <span className="text-sm font-medium text-gray-500 hidden md:inline max-w-32 truncate">
+            <span className="text-sm font-medium text-gray-500 hidden md:inline max-w-52 truncate">
               {profile.companyName}
             </span>
           )}

@@ -29,6 +29,8 @@ interface GenerationState {
   error?: string;
   iterationCount: number;
   published: boolean;
+  previewUrl: string | null;
+  previewLoading: boolean;
 }
 
 interface GenerationContextType extends GenerationState {
@@ -38,6 +40,8 @@ interface GenerationContextType extends GenerationState {
   setPublished: () => void;
   incrementIteration: () => void;
   reset: () => void;
+  startPreview: () => Promise<void>;
+  stopPreview: () => Promise<void>;
 }
 
 const GenerationContext = createContext<GenerationContextType | null>(null);
@@ -57,13 +61,14 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     message: "",
     iterationCount: 0,
     published: false,
+    previewUrl: null,
+    previewLoading: false,
   });
   const eventSourceRef = useRef<EventSource | null>(null);
   const resumedRef = useRef(false);
 
   // Connect SSE stream for active generation
   const connectSSE = useCallback((genId: string) => {
-    // Close any existing connection
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
@@ -111,13 +116,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       }
     };
 
-    es.onerror = () => {
-      // SSE will auto-reconnect, but after too many failures the browser stops
-      // The DB fallback in the stream endpoint handles stale state
-    };
+    es.onerror = () => {};
   }, []);
 
-  // Start a new generation
   const startGeneration = useCallback(
     (id: string) => {
       setState({
@@ -126,6 +127,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         message: "Preparing to build your app...",
         iterationCount: 0,
         published: false,
+        previewUrl: null,
+        previewLoading: false,
       });
       localStorage.setItem(STORAGE_KEY, id);
       connectSSE(id);
@@ -165,13 +168,45 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       iterationCount: prev.iterationCount + 1,
       stage: "pending",
       message: "Refining your app...",
+      previewUrl: null,
     }));
-    // Reconnect SSE for the iteration
     setState((prev) => {
       if (prev.generationId) connectSSE(prev.generationId);
       return prev;
     });
   }, [connectSSE]);
+
+  const startPreviewFn = useCallback(async () => {
+    if (!state.generationId) return;
+    setState((prev) => ({ ...prev, previewLoading: true }));
+    try {
+      const res = await fetch(`/api/generate/${state.generationId}/preview`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to start preview");
+      }
+      const { url } = await res.json();
+      setState((prev) => ({ ...prev, previewUrl: url, previewLoading: false }));
+      window.open(url, "_blank");
+    } catch (err) {
+      setState((prev) => ({ ...prev, previewLoading: false }));
+      throw err;
+    }
+  }, [state.generationId]);
+
+  const stopPreviewFn = useCallback(async () => {
+    if (!state.generationId) return;
+    try {
+      await fetch(`/api/generate/${state.generationId}/preview`, {
+        method: "DELETE",
+      });
+    } catch {
+      // Best effort
+    }
+    setState((prev) => ({ ...prev, previewUrl: null, previewLoading: false }));
+  }, [state.generationId]);
 
   const reset = useCallback(() => {
     if (eventSourceRef.current) {
@@ -185,10 +220,11 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       message: "",
       iterationCount: 0,
       published: false,
+      previewUrl: null,
+      previewLoading: false,
     });
   }, []);
 
-  // Resume from localStorage on mount
   useEffect(() => {
     if (resumedRef.current) return;
     resumedRef.current = true;
@@ -196,7 +232,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     const savedId = localStorage.getItem(STORAGE_KEY);
     if (!savedId) return;
 
-    // Fetch current status from API
     fetch(`/api/generate/${savedId}/status`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -212,6 +247,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             message: "Building your app...",
             iterationCount: data.iterationCount ?? 0,
             published: false,
+            previewUrl: null,
+            previewLoading: false,
           });
           connectSSE(savedId);
         } else if (data.status === "COMPLETE") {
@@ -223,6 +260,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             description: data.description ?? undefined,
             iterationCount: data.iterationCount ?? 0,
             published: !!data.appId,
+            previewUrl: null,
+            previewLoading: false,
           });
         } else if (data.status === "FAILED") {
           setState({
@@ -232,6 +271,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             error: data.error ?? undefined,
             iterationCount: data.iterationCount ?? 0,
             published: false,
+            previewUrl: null,
+            previewLoading: false,
           });
         } else {
           localStorage.removeItem(STORAGE_KEY);
@@ -242,7 +283,6 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       });
   }, [connectSSE]);
 
-  // Cleanup SSE on unmount
   useEffect(() => {
     return () => {
       if (eventSourceRef.current) {
@@ -261,6 +301,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         setPublished,
         incrementIteration,
         reset,
+        startPreview: startPreviewFn,
+        stopPreview: stopPreviewFn,
       }}
     >
       {children}

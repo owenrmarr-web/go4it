@@ -122,6 +122,23 @@ export default function Home() {
           <div className="flex justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
           </div>
+        ) : apps.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="text-6xl mb-4">🚀</div>
+            <p className="text-xl font-semibold text-gray-700">
+              No apps yet — be the first to create one!
+            </p>
+            <p className="text-gray-400 mt-2 max-w-md mx-auto">
+              Describe your dream business tool and our AI will build it
+              for you in minutes.
+            </p>
+            <a
+              href="/create"
+              className="inline-block mt-6 gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity"
+            >
+              Create Your First App
+            </a>
+          </div>
         ) : filteredApps.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-xl text-gray-400">
