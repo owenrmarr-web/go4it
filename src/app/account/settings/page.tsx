@@ -18,6 +18,7 @@ interface UserProfile {
   state: string | null;
   country: string | null;
   useCases: string[];
+  businessDescription: string | null;
   logo: string | null;
   themeColors: ThemeColors | null;
 }
@@ -37,6 +38,7 @@ export default function SettingsPage() {
     state: "",
     country: "",
     useCases: [] as string[],
+    businessDescription: "",
   });
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [themeColors, setThemeColors] = useState<ThemeColors | null>(null);
@@ -59,6 +61,7 @@ export default function SettingsPage() {
             state: data.state || "",
             country: data.country || "",
             useCases: data.useCases || [],
+            businessDescription: data.businessDescription || "",
           });
           setLogoPreview(data.logo);
           setThemeColors(data.themeColors);
@@ -386,6 +389,30 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Business Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Business Description
+            </label>
+            <textarea
+              name="businessDescription"
+              value={formData.businessDescription}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  businessDescription: e.target.value,
+                }))
+              }
+              rows={3}
+              maxLength={500}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700 resize-none"
+              placeholder='e.g. "I run a plumbing business in California with business and consumer customers"'
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Helps our AI generate apps with realistic data tailored to your business.
+            </p>
           </div>
 
           {/* Save Button */}

@@ -52,14 +52,66 @@ These files exist and are fully functional. Do NOT recreate them. You may edit t
 
 Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · Prisma 6 · SQLite · NextAuth v5 · Sonner
 
-## Styling Rules
+## Business Context
 
+The user's prompt may begin with a `[BUSINESS CONTEXT]` block containing:
+- Business description (type of business, customer types)
+- Company name
+- Location (state, country)
+- Industry focus areas
+
+**If a business context block is present, you MUST use it to:**
+
+1. **Seed data** — Generate realistic records that match the business. Examples:
+   - A plumbing business should have job records like "Kitchen sink installation", "Water heater replacement", customer names, and local addresses.
+   - A law firm should have case records, client matters, billing entries with legal terminology.
+   - Use the company name as the organization name in seed data.
+   - Use the location for addresses (city names, state, zip codes from that region).
+   - Amounts, prices, and currencies should be appropriate for the location and industry.
+
+2. **App copy** — Use terminology that matches the industry. A plumber's CRM should say "Jobs" not "Tickets". A law firm's tool should say "Matters" not "Projects".
+
+3. **Admin user** — The seed admin user (`admin@example.com` / `demo123`) should have the company name as their organization.
+
+**If no business context block is present**, generate generic but realistic seed data as before.
+
+**Important:** The business context informs only the seed data and UI labels — it does NOT change the app's technical architecture, data model design, or feature set. Build exactly what the user's app prompt describes.
+
+## Styling Rules — GO4IT Design System
+
+All apps must match the GO4IT visual identity. Follow these rules exactly:
+
+**Font:** Inter (pre-configured in layout via `next/font/google`). Clean, modern sans-serif.
+
+**Colors & Gradient:**
 - Primary gradient: `gradient-brand` class (orange → pink → purple). Also available as `gradient-brand-text` for text.
 - Or use Tailwind directly: `bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600`
-- Page backgrounds: `bg-gray-50`. Cards: white with `rounded-xl shadow-sm`.
-- Buttons: `rounded-xl` with `shadow-lg` on primary actions.
-- UI feel: modern, clean, friendly — not corporate.
-- Use Tailwind utility classes only. No custom CSS, no CSS modules.
+
+**Border Radius:**
+- Inputs, small buttons: `rounded-lg`
+- Cards, modals, panels: `rounded-xl`
+- Pills, badges, tags: `rounded-full`
+
+**Buttons:**
+- Primary: `gradient-brand text-white px-4 py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity`
+- Secondary: `bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-colors`
+
+**Cards:** `bg-white rounded-xl shadow-sm border border-gray-100 p-6`
+
+**Inputs:** `w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700`
+
+**Page Layout:** `bg-gray-50` background, `max-w-7xl mx-auto px-6 py-8` container
+
+**Header/Nav:** Clean nav bar with `bg-white shadow-sm`, app title in `gradient-brand-text font-extrabold`
+
+**Typography:**
+- Headings: `text-gray-900 font-bold` (or `font-extrabold` for page titles)
+- Body text: `text-gray-600`
+- Muted/helper text: `text-gray-400 text-sm`
+
+**Tables:** `divide-y divide-gray-100`, hover rows `hover:bg-gray-50`, header `text-gray-500 text-sm font-medium`
+
+**Overall Feel:** Modern, clean, friendly — like a polished startup tool. NOT corporate. Generous whitespace, subtle shadows, smooth transitions. Use Tailwind utility classes only. No custom CSS, no CSS modules.
 
 **Tailwind CSS v4 `@theme` restrictions:**
 - `@theme` blocks may ONLY contain flat CSS custom properties or `@keyframes`

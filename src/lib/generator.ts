@@ -13,6 +13,14 @@ export type GenerationStage =
   | "complete"
   | "failed";
 
+export interface BusinessContext {
+  businessContext?: string;
+  companyName?: string;
+  state?: string;
+  country?: string;
+  useCases?: string[];
+}
+
 export interface GenerationProgress {
   stage: GenerationStage;
   message: string;
@@ -173,6 +181,32 @@ function runClaudeCLI(
   });
 }
 
+function buildEnrichedPrompt(
+  rawPrompt: string,
+  context?: BusinessContext
+): string {
+  if (!context) return rawPrompt;
+
+  const parts: string[] = [];
+  if (context.businessContext) parts.push(`Business: ${context.businessContext}`);
+  if (context.companyName) parts.push(`Company name: ${context.companyName}`);
+  if (context.state && context.country)
+    parts.push(`Location: ${context.state}, ${context.country}`);
+  else if (context.country) parts.push(`Location: ${context.country}`);
+  if (context.useCases?.length)
+    parts.push(`Industry focus: ${context.useCases.join(", ")}`);
+
+  if (parts.length === 0) return rawPrompt;
+
+  return [
+    "[BUSINESS CONTEXT]",
+    ...parts,
+    "[END BUSINESS CONTEXT]",
+    "",
+    rawPrompt,
+  ].join("\n");
+}
+
 function buildCLIArgs(prompt: string, useContinue: boolean): string[] {
   const args = [
     "--yes",
@@ -194,7 +228,8 @@ function buildCLIArgs(prompt: string, useContinue: boolean): string[] {
 
 export async function startGeneration(
   generationId: string,
-  prompt: string
+  prompt: string,
+  context?: BusinessContext
 ): Promise<void> {
   const workspaceDir = path.join(getAppsDir(), generationId);
 
@@ -241,10 +276,12 @@ export async function startGeneration(
 
   updateProgress(generationId, "pending");
 
+  const enrichedPrompt = buildEnrichedPrompt(prompt, context);
+
   runClaudeCLI(
     generationId,
     workspaceDir,
-    buildCLIArgs(prompt, false),
+    buildCLIArgs(enrichedPrompt, false),
     async (appMeta) => {
       await prisma.generatedApp.update({
         where: { id: generationId },

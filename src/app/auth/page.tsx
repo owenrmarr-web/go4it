@@ -17,6 +17,7 @@ export default function AuthPage() {
     state: "",
     country: "",
     useCases: [] as string[],
+    businessDescription: "",
   });
 
   const [stateSearch, setStateSearch] = useState("");
@@ -84,6 +85,7 @@ export default function AuthPage() {
           state: formData.state || null,
           country: formData.country || null,
           useCases: formData.useCases.length > 0 ? formData.useCases : null,
+          businessDescription: formData.businessDescription || null,
         }),
       });
       const data = await res.json();
@@ -264,6 +266,27 @@ export default function AuthPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Describe your business{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  name="businessDescription"
+                  value={formData.businessDescription}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      businessDescription: e.target.value,
+                    }))
+                  }
+                  rows={2}
+                  maxLength={500}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700 resize-none text-sm"
+                  placeholder='e.g. "I run a plumbing business in California with business and consumer customers"'
+                />
               </div>
             </>
           )}

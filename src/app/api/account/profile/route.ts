@@ -19,6 +19,7 @@ export async function GET() {
       state: true,
       country: true,
       useCases: true,
+      businessDescription: true,
       logo: true,
       themeColors: true,
     },
@@ -43,7 +44,7 @@ export async function PUT(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, companyName, state, country, useCases, logo, themeColors } =
+    const { name, companyName, state, country, useCases, logo, themeColors, businessDescription } =
       body;
 
     // Build update object with only defined fields
@@ -55,6 +56,7 @@ export async function PUT(request: Request) {
       useCases?: string | null;
       logo?: string | null;
       themeColors?: string | null;
+      businessDescription?: string | null;
     } = {};
 
     // Only update fields that were provided
@@ -73,6 +75,8 @@ export async function PUT(request: Request) {
       updateData.themeColors = themeColors
         ? JSON.stringify(themeColors)
         : null;
+    if (businessDescription !== undefined)
+      updateData.businessDescription = businessDescription || null;
 
     await prisma.user.update({
       where: { id: session.user.id },

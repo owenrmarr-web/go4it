@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import { startGeneration } from "@/lib/generator";
+import { startGeneration, type BusinessContext } from "@/lib/generator";
 
 export async function POST(request: Request) {
   // Generation requires Claude Code CLI + persistent filesystem (local dev only)
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { prompt } = await request.json();
+  const { prompt, businessContext: formContext } = await request.json();
   if (!prompt || typeof prompt !== "string" || prompt.trim().length < 10) {
     return NextResponse.json(
       { error: "Prompt must be at least 10 characters" },
@@ -42,8 +42,28 @@ export async function POST(request: Request) {
       },
     });
 
+    // Fetch user profile for business context enrichment
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        companyName: true,
+        state: true,
+        country: true,
+        useCases: true,
+        businessDescription: true,
+      },
+    });
+
+    const context: BusinessContext = {
+      businessContext: formContext || user?.businessDescription || undefined,
+      companyName: user?.companyName || undefined,
+      state: user?.state || undefined,
+      country: user?.country || undefined,
+      useCases: user?.useCases ? JSON.parse(user.useCases) : undefined,
+    };
+
     // Start generation in the background (non-blocking)
-    startGeneration(generatedApp.id, prompt.trim()).catch((err) => {
+    startGeneration(generatedApp.id, prompt.trim(), context).catch((err) => {
       console.error(`Generation failed for ${generatedApp.id}:`, err);
     });
 

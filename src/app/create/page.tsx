@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -60,6 +60,21 @@ export default function CreatePage() {
   const [publishIcon, setPublishIcon] = useState(APP_ICONS[0]);
   const [publishIsPublic, setPublishIsPublic] = useState(true);
   const [publishing, setPublishing] = useState(false);
+  const [businessContext, setBusinessContext] = useState("");
+
+  // Re-populate if user has a saved business description
+  useEffect(() => {
+    if (session?.user) {
+      fetch("/api/account/profile")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((profile) => {
+          if (profile?.businessDescription) {
+            setBusinessContext(profile.businessDescription);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [session]);
 
   const pageState = localView === "default" ? derivePageState() : localView;
 
@@ -67,6 +82,11 @@ export default function CreatePage() {
     if (!session?.user) {
       toast.error("Please sign in to create an app.");
       router.push("/auth");
+      return;
+    }
+
+    if (!businessContext.trim()) {
+      toast.error("Please describe your business to personalize your app.");
       return;
     }
 
@@ -79,7 +99,10 @@ export default function CreatePage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+          businessContext: businessContext.trim() || undefined,
+        }),
       });
 
       if (!res.ok) {
@@ -192,12 +215,31 @@ export default function CreatePage() {
               </div>
             )}
 
+            {/* Business Context */}
+            <div className="mt-8">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                About Your Business <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={businessContext}
+                onChange={(e) => setBusinessContext(e.target.value)}
+                placeholder='e.g. "I run a plumbing business in California with business and consumer customers"'
+                rows={2}
+                maxLength={500}
+                className="w-full px-5 py-3 rounded-xl border border-gray-200 shadow-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent text-sm"
+              />
+              <p className="mt-1 text-xs text-gray-400">
+                Personalizes your app with realistic data tailored to your
+                business.
+              </p>
+            </div>
+
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="e.g. Build a CRM for a law firm to track case progress and client communications..."
               rows={5}
-              className="mt-8 w-full px-5 py-4 rounded-xl border border-gray-200 shadow-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent text-base"
+              className="mt-4 w-full px-5 py-4 rounded-xl border border-gray-200 shadow-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent text-base"
             />
 
             <div className="mt-3 text-right text-sm text-gray-400">
@@ -207,7 +249,7 @@ export default function CreatePage() {
             <div className="mt-4 flex justify-center">
               <button
                 onClick={handleGenerate}
-                disabled={isProduction || prompt.trim().length < 10}
+                disabled={isProduction || !businessContext.trim() || prompt.trim().length < 10}
                 className="gradient-brand text-white px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Generate

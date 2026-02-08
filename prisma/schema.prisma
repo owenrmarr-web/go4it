@@ -18,6 +18,7 @@ model User {
   state         String?
   country       String?
   useCases      String?   // JSON array of selected use cases
+  businessDescription String?   // Free-text business description for AI context
   logo          String?   // Base64 encoded logo image
   themeColors   String?   // JSON object with extracted colors { primary, secondary, accent }
   accounts      Account[]

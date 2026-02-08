@@ -5,7 +5,7 @@ import { generateSlug } from "@/lib/slug";
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password, companyName, state, country, useCases } =
+    const { name, email, password, companyName, state, country, useCases, businessDescription } =
       await request.json();
 
     if (!name || !email || !password) {
@@ -35,6 +35,7 @@ export async function POST(request: Request) {
           state: state || null,
           country: country || null,
           useCases: useCases ? JSON.stringify(useCases) : null,
+          businessDescription: businessDescription || null,
         },
       });
 
