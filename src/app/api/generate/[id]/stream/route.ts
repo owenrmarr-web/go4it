@@ -51,9 +51,10 @@ export async function GET(
   const stream = new ReadableStream({
     start(controller) {
       let lastStage = "";
+      let lastDetail = "";
 
       const interval = setInterval(async () => {
-        let progress: { stage: string; message: string; title?: string; description?: string; error?: string };
+        let progress: { stage: string; message: string; detail?: string; title?: string; description?: string; error?: string };
 
         // Try local in-memory progress first (local dev)
         const localProgress = getLocalProgress(id);
@@ -67,6 +68,7 @@ export async function GET(
               select: {
                 status: true,
                 currentStage: true,
+                currentDetail: true,
                 title: true,
                 description: true,
                 error: true,
@@ -98,6 +100,7 @@ export async function GET(
               progress = {
                 stage,
                 message: STAGE_MESSAGES[stage] || "Building your app...",
+                detail: dbApp.currentDetail ?? undefined,
               };
             } else {
               progress = {
@@ -113,9 +116,11 @@ export async function GET(
           }
         }
 
-        // Send update when stage changes
-        if (progress.stage !== lastStage) {
+        // Send update when stage or detail changes
+        const currentDetail = progress.detail || "";
+        if (progress.stage !== lastStage || currentDetail !== lastDetail) {
           lastStage = progress.stage;
+          lastDetail = currentDetail;
           const data = JSON.stringify(progress);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
         }

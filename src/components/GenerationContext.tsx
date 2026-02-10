@@ -24,6 +24,7 @@ interface GenerationState {
   generationId: string | null;
   stage: GenStage;
   message: string;
+  detail?: string;
   title?: string;
   description?: string;
   error?: string;
@@ -109,6 +110,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             ...prev,
             stage: data.stage as GenStage,
             message: data.message || prev.message,
+            detail: data.detail,
           };
         });
       } catch {

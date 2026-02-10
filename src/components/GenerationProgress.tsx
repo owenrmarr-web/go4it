@@ -20,6 +20,7 @@ export default function GenerationProgress({
   const gen = useGeneration();
   const currentStage = gen.stage;
   const message = gen.message;
+  const detail = gen.detail;
 
   const currentIndex = STAGES.findIndex((s) => s.key === currentStage);
 
@@ -78,10 +79,15 @@ export default function GenerationProgress({
       {/* Status message */}
       <div className="text-center">
         <p className="text-lg text-gray-700 font-medium">{message}</p>
+        {detail && (
+          <p className="mt-1 text-sm text-gray-500 font-mono truncate max-w-md mx-auto">
+            {detail}
+          </p>
+        )}
         <p className="mt-2 text-sm text-gray-400">
           {isIteration
             ? "Refining your app. This is usually faster than the initial build."
-            : "This may take a few minutes. Feel free to grab a coffee."}
+            : "This may take 5\u201310 minutes. Feel free to grab a coffee."}
         </p>
       </div>
 

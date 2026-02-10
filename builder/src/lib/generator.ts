@@ -435,11 +435,16 @@ function handleStreamEvent(
     const msg = event.message as Record<string, unknown>;
     if (msg.content && Array.isArray(msg.content)) {
       for (const block of msg.content) {
-        if ((block as Record<string, unknown>).type === "text") {
-          checkForStageMarkers(
-            generationId,
-            (block as Record<string, unknown>).text as string
+        const b = block as Record<string, unknown>;
+        if (b.type === "text") {
+          checkForStageMarkers(generationId, b.text as string);
+        }
+        if (b.type === "tool_use") {
+          const detail = extractToolDetail(
+            b.name as string,
+            b.input as Record<string, unknown>
           );
+          if (detail) updateDetail(generationId, detail);
         }
       }
     }
@@ -449,6 +454,42 @@ function handleStreamEvent(
     const result = event.result as string;
     checkForStageMarkers(generationId, result);
   }
+}
+
+function extractToolDetail(
+  toolName: string,
+  input: Record<string, unknown>
+): string | null {
+  const filePath = (input?.file_path as string) || (input?.path as string);
+  const shortPath = filePath
+    ? filePath.replace(/^.*\/apps\/[^/]+\//, "")
+    : null;
+
+  switch (toolName) {
+    case "Write":
+      return shortPath ? `Creating ${shortPath}` : "Creating file...";
+    case "Edit":
+      return shortPath ? `Editing ${shortPath}` : "Editing file...";
+    case "Read":
+      return shortPath ? `Reading ${shortPath}` : "Reading file...";
+    case "Bash":
+      return (input?.description as string)?.slice(0, 80) || "Running command...";
+    case "Glob":
+    case "Grep":
+      return "Searching codebase...";
+    default:
+      return null;
+  }
+}
+
+// Fire-and-forget detail text update
+function updateDetail(generationId: string, detail: string) {
+  prisma.generatedApp
+    .update({
+      where: { id: generationId },
+      data: { currentDetail: detail },
+    })
+    .catch(() => {});
 }
 
 function checkForStageMarkers(generationId: string, text: string) {

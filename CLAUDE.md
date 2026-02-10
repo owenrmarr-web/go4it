@@ -159,7 +159,7 @@ src/
 builder/                   — Standalone builder service (deployed to Fly.io)
   package.json             — fastify, prisma, libsql, tsx
   Dockerfile               — Node 20 slim + flyctl + playbook
-  fly.toml                 — Fly.io config (shared-cpu-2x, 1GB RAM, 10GB volume)
+  fly.toml                 — Fly.io config (shared-cpu-4x, 2GB RAM, 10GB volume)
   build.sh                 — Copies prisma/, playbook/, prisma.config.ts before Docker build
   src/
     index.ts               — Fastify server with auth middleware
@@ -415,7 +415,7 @@ Modified routes: `/api/generate`, `/api/generate/[id]/iterate`, `/api/generate/[
 - `BUILDER_API_KEY` — same shared secret
 
 ### Infrastructure
-- **VM:** shared-cpu-2x, 1024MB RAM
+- **VM:** shared-cpu-4x, 2048MB RAM (upgraded from 2x/1GB — Claude Code CLI OOM'd on smaller machine)
 - **Volume:** 10GB persistent storage at `/data` (workspaces stored at `/data/apps/{id}/`)
 - **Cost:** ~$5-7/mo compute (scale-to-zero) + $1.50/mo volume
 - **Playbook + template:** baked into Docker image via `build.sh`
@@ -452,10 +452,12 @@ flyctl deploy --app go4it-builder
 
 ## Next Steps (Roadmap — in priority order)
 
-1. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
-2. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues and add guardrails.
-3. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
-4. **Builder hardening** — Garbage collection for old workspaces, rate limiting, error logging/monitoring.
+1. **Fix production preview** — Preview doesn't load on builder service (worked locally). Likely needs Fly.io machine spawning or port forwarding instead of local dev server.
+2. **Generation UX improvements** — Real-time detail text below stage indicator (show what Claude is doing), update timing copy to "5-10 minutes".
+3. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
+4. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues and add guardrails.
+5. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
+6. **Builder hardening** — Garbage collection for old workspaces, rate limiting, error logging/monitoring.
 
 ### Completed
 - ~~Builder service for production~~ — Standalone Fastify API on Fly.io (`go4it-builder.fly.dev`). Platform delegates generation, iteration, preview, and deploy via HTTP. Production generation works end-to-end.
