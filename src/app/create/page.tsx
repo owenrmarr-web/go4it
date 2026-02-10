@@ -59,6 +59,7 @@ export default function CreatePage() {
   const [publishIsPublic, setPublishIsPublic] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [businessContext, setBusinessContext] = useState("");
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // Re-populate if user has a saved business description
   useEffect(() => {
@@ -273,6 +274,40 @@ export default function CreatePage() {
             <GenerationProgress
               isIteration={gen.iterationCount > 0}
             />
+            {/* Cancel button */}
+            <div className="mt-8">
+              {showCancelConfirm ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 inline-block">
+                  <p className="text-sm text-amber-800 mb-3">
+                    Builds typically take <strong>5-10 minutes</strong> as we set up the entire infrastructure for your app. Are you sure you want to cancel?
+                  </p>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={() => {
+                        handleStartOver();
+                        setShowCancelConfirm(false);
+                      }}
+                      className="px-5 py-1.5 rounded-lg bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors"
+                    >
+                      Yes, Cancel Build
+                    </button>
+                    <button
+                      onClick={() => setShowCancelConfirm(false)}
+                      className="px-5 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-100 transition-colors"
+                    >
+                      Keep Building
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </div>
         )}
 
