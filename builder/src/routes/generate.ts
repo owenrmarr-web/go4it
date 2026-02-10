@@ -1,6 +1,5 @@
 import { FastifyInstance } from "fastify";
 import { startGeneration, type BusinessContext } from "../lib/generator.js";
-import prisma from "../lib/prisma.js";
 
 export default async function generateRoute(app: FastifyInstance) {
   app.post<{
@@ -18,21 +17,9 @@ export default async function generateRoute(app: FastifyInstance) {
         .send({ error: "generationId and prompt are required" });
     }
 
-    // Verify the generation record exists and is PENDING
-    const gen = await prisma.generatedApp.findUnique({
-      where: { id: generationId },
-      select: { status: true },
-    });
-
-    if (!gen) {
-      return reply.status(404).send({ error: "Generation not found" });
-    }
-
-    if (gen.status !== "PENDING" && gen.status !== "GENERATING") {
-      return reply
-        .status(409)
-        .send({ error: `Generation is already ${gen.status}` });
-    }
+    // Skip DB verification — the platform already created the record in Turso.
+    // Reading it here can fail due to replication delay between Vercel and Fly.io.
+    // startGeneration will update the record; if it doesn't exist, that update will fail gracefully.
 
     // Start generation in background
     startGeneration(generationId, prompt, businessContext).catch((err) => {
