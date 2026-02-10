@@ -51,6 +51,31 @@ export function getActiveJobCount(): number {
 
 const APPS_DIR = process.env.APPS_DIR || "/data/apps";
 
+// Retry a Prisma update with backoff — handles Turso replication delay
+// between Vercel (writes record) and Fly.io builder (reads/updates it)
+async function retryUpdate(
+  generationId: string,
+  data: Record<string, string | undefined>,
+  maxRetries = 5,
+  delayMs = 1000
+): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await prisma.generatedApp.update({
+        where: { id: generationId },
+        data,
+      });
+      return;
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      console.log(
+        `[Generator ${generationId}] Record not found yet, retrying in ${delayMs}ms (attempt ${attempt}/${maxRetries})`
+      );
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
 function getAppsDir(): string {
   return APPS_DIR;
 }
@@ -309,10 +334,8 @@ export async function startGeneration(
   installPromises.set(generationId, installPromise);
 
   // Update DB: status GENERATING + sourceDir on builder volume
-  await prisma.generatedApp.update({
-    where: { id: generationId },
-    data: { status: "GENERATING", sourceDir: workspaceDir },
-  });
+  // Uses retry because of Turso replication delay — the record was just created by Vercel
+  await retryUpdate(generationId, { status: "GENERATING", sourceDir: workspaceDir });
 
   await updateProgress(generationId, "pending");
 
