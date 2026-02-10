@@ -113,8 +113,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ id: generatedApp.id }, { status: 201 });
   } catch (error) {
     console.error("Failed to start generation:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to start generation" },
+      { error: `Failed to start generation: ${message}` },
       { status: 500 }
     );
   }
