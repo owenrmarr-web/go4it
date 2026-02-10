@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
-import { startPreview, stopPreview, getPreview } from "@/lib/previewer";
+
+const BUILDER_URL = process.env.BUILDER_URL;
+const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
 
 export async function GET(
   _request: Request,
@@ -13,13 +15,23 @@ export async function GET(
   }
 
   const { id } = await params;
-  const preview = getPreview(id);
 
-  if (!preview) {
-    return NextResponse.json({ status: "stopped" });
+  // In local dev, check in-memory previews
+  if (!BUILDER_URL) {
+    try {
+      const { getPreview } = await import("@/lib/previewer");
+      const preview = getPreview(id);
+      if (!preview) return NextResponse.json({ status: "stopped" });
+      return NextResponse.json(preview);
+    } catch {
+      return NextResponse.json({ status: "stopped" });
+    }
   }
 
-  return NextResponse.json(preview);
+  // Production: no in-memory state — preview is a Fly.io app
+  const shortId = id.slice(0, 8);
+  const previewUrl = `https://go4it-preview-${shortId}.fly.dev`;
+  return NextResponse.json({ status: "running", url: previewUrl });
 }
 
 export async function POST(
@@ -46,6 +58,35 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Delegate to builder service if configured
+  if (BUILDER_URL) {
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
+
+      const res = await fetch(`${BUILDER_URL}/preview`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ generationId: id }),
+      });
+
+      if (!res.ok) {
+        const error = await res.text();
+        return NextResponse.json(
+          { error: `Preview failed: ${error}` },
+          { status: 500 }
+        );
+      }
+
+      const data = await res.json();
+      return NextResponse.json({ url: data.url });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Builder service unavailable";
+      return NextResponse.json({ error: message }, { status: 503 });
+    }
+  }
+
+  // Local dev fallback
   if (!generatedApp.sourceDir) {
     return NextResponse.json(
       { error: "No source directory found for this app" },
@@ -54,6 +95,7 @@ export async function POST(
   }
 
   try {
+    const { startPreview } = await import("@/lib/previewer");
     const { url } = await startPreview(id, generatedApp.sourceDir);
     return NextResponse.json({ url });
   } catch (err) {
@@ -72,6 +114,29 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  stopPreview(id);
+
+  // Delegate to builder service if configured
+  if (BUILDER_URL) {
+    try {
+      const headers: Record<string, string> = {};
+      if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
+
+      await fetch(`${BUILDER_URL}/preview/${id}`, {
+        method: "DELETE",
+        headers,
+      });
+    } catch {
+      // Best effort cleanup
+    }
+    return new Response(null, { status: 204 });
+  }
+
+  // Local dev fallback
+  try {
+    const { stopPreview } = await import("@/lib/previewer");
+    stopPreview(id);
+  } catch {
+    // Already stopped
+  }
   return new Response(null, { status: 204 });
 }

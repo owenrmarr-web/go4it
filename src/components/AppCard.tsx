@@ -126,10 +126,24 @@ export default function AppCard({
           </span>
         </div>
 
-        {/* Title */}
-        <h3 className="mt-3 font-bold text-gray-900 text-lg leading-tight">
-          {app.title}
-        </h3>
+        {/* Title + Version */}
+        <div className="mt-3 flex items-center gap-2">
+          <h3 className="font-bold text-gray-900 text-lg leading-tight">
+            {app.title}
+          </h3>
+          {app.version && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-700">
+              {app.version}
+            </span>
+          )}
+        </div>
+
+        {/* Creator username */}
+        {app.creatorUsername && (
+          <p className="mt-1 text-xs text-gray-400 font-medium">
+            by @{app.creatorUsername}
+          </p>
+        )}
 
         {/* Description — invisible until hover, but always occupies space */}
         <p className="mt-2 text-sm text-gray-500 leading-relaxed flex-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -147,7 +161,7 @@ export default function AppCard({
               : "bg-gray-100 text-gray-600 hover:bg-pink-50 hover:text-pink-500"
           }`}
         >
-          {isHearted ? "♥" : "♡"} {isHearted ? "Saved" : "Save"}
+          {isHearted ? "♥" : "♡"} {app.heartCount > 0 ? app.heartCount : isHearted ? "Saved" : "Save"}
         </button>
         <div className="relative flex-1" ref={pickerRef}>
           <button

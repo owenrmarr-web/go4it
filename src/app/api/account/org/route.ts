@@ -23,6 +23,13 @@ export async function GET() {
                   description: true,
                   icon: true,
                   category: true,
+                  generatedApp: {
+                    select: {
+                      id: true,
+                      marketplaceVersion: true,
+                      createdById: true,
+                    },
+                  },
                 },
               },
               members: {
@@ -66,27 +73,46 @@ export async function GET() {
       logo: org.logo,
       themeColors: org.themeColors ? JSON.parse(org.themeColors) : null,
     },
-    apps: org.apps.map((oa) => ({
-      id: oa.id,
-      appId: oa.appId,
-      status: oa.status,
-      flyUrl: oa.flyUrl,
-      subdomain: oa.subdomain,
-      addedAt: oa.addedAt,
-      deployedAt: oa.deployedAt,
-      app: {
-        id: oa.app.id,
-        title: oa.app.title,
-        description: oa.app.description,
-        icon: oa.app.icon,
-        category: oa.app.category,
-      },
-      members: oa.members.map((m) => ({
-        id: m.id,
-        userId: m.userId,
-        user: m.user,
-      })),
-    })),
+    apps: org.apps.map((oa) => {
+      const genApp = oa.app.generatedApp;
+      const latestX = genApp?.marketplaceVersion ?? 1;
+      const latestY = oa.orgIterationCount ?? 0;
+      const deployedX = oa.deployedMarketplaceVersion;
+      const deployedY = oa.deployedOrgVersion;
+      const needsUpdate =
+        oa.status === "RUNNING" &&
+        deployedX != null &&
+        deployedY != null &&
+        (deployedX < latestX || deployedY < latestY);
+
+      return {
+        id: oa.id,
+        appId: oa.appId,
+        status: oa.status,
+        flyUrl: oa.flyUrl,
+        subdomain: oa.subdomain,
+        addedAt: oa.addedAt,
+        deployedAt: oa.deployedAt,
+        app: {
+          id: oa.app.id,
+          title: oa.app.title,
+          description: oa.app.description,
+          icon: oa.app.icon,
+          category: oa.app.category,
+        },
+        members: oa.members.map((m) => ({
+          id: m.id,
+          userId: m.userId,
+          user: m.user,
+        })),
+        // Version info
+        deployedVersion: deployedX != null ? `V${deployedX}.${deployedY ?? 0}` : null,
+        latestVersion: `V${latestX}.${latestY}`,
+        needsUpdate: !!needsUpdate,
+        generatedAppId: genApp?.id ?? null,
+        isOwnApp: genApp?.createdById === session.user!.id,
+      };
+    }),
     members: org.members.map((m) => ({
       id: m.id,
       role: m.role,

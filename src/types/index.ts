@@ -9,6 +9,9 @@ export interface App {
   tags: string;
   isPublic: boolean;
   createdAt: string;
+  version: string | null;
+  creatorUsername: string | null;
+  heartCount: number;
 }
 
 export type InteractionType = "HEART" | "STAR";

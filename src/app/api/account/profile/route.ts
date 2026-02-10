@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { generateSlug } from "@/lib/slug";
+import { validateUsername } from "@/lib/username";
 
 export async function GET() {
   const session = await auth();
@@ -14,6 +15,7 @@ export async function GET() {
     select: {
       id: true,
       name: true,
+      username: true,
       email: true,
       companyName: true,
       state: true,
@@ -44,12 +46,13 @@ export async function PUT(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, companyName, state, country, useCases, logo, themeColors, businessDescription } =
+    const { name, username, companyName, state, country, useCases, logo, themeColors, businessDescription } =
       body;
 
     // Build update object with only defined fields
     const updateData: {
       name?: string;
+      username?: string;
       companyName?: string | null;
       state?: string | null;
       country?: string | null;
@@ -58,6 +61,18 @@ export async function PUT(request: Request) {
       themeColors?: string | null;
       businessDescription?: string | null;
     } = {};
+
+    // Validate and update username if provided
+    if (username !== undefined) {
+      const usernameCheck = await validateUsername(username, session.user.id);
+      if (!usernameCheck.valid) {
+        return NextResponse.json(
+          { error: usernameCheck.error },
+          { status: 400 }
+        );
+      }
+      updateData.username = username;
+    }
 
     // Only update fields that were provided
     if (name) updateData.name = name;

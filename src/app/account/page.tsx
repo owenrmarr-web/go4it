@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import AppCard, { type UserOrg } from "@/components/AppCard";
 import { useInteractions } from "@/hooks/useInteractions";
@@ -38,6 +39,12 @@ interface OrgApp {
     category: string;
   };
   members: OrgAppMember[];
+  // Version info
+  deployedVersion: string | null;
+  latestVersion: string;
+  needsUpdate: boolean;
+  generatedAppId: string | null;
+  isOwnApp: boolean;
 }
 
 interface Member {
@@ -87,6 +94,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 export default function AccountPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [allApps, setAllApps] = useState<App[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
   const [org, setOrg] = useState<OrgData | null>(null);
@@ -104,6 +112,7 @@ export default function AccountPage() {
   const [savingMembers, setSavingMembers] = useState(false);
   const [deployingAppId, setDeployingAppId] = useState<string | null>(null);
   const [deployMessage, setDeployMessage] = useState("");
+  const [forkingAppId, setForkingAppId] = useState<string | null>(null);
 
   // Subdomain state
   const [subdomainInput, setSubdomainInput] = useState("");
@@ -517,6 +526,57 @@ export default function AccountPage() {
     }
   };
 
+  const handleModifyApp = async (orgApp: OrgApp) => {
+    if (!orgApp.generatedAppId) {
+      toast.error("This app cannot be modified");
+      return;
+    }
+
+    if (orgApp.isOwnApp) {
+      // Navigate directly to the create page for the existing generated app
+      router.push(`/create?gen=${orgApp.generatedAppId}`);
+      return;
+    }
+
+    // Fork the app first, then navigate
+    setForkingAppId(orgApp.appId);
+    try {
+      const res = await fetch(`/api/generate/${orgApp.generatedAppId}/fork`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to fork app");
+      }
+
+      const { id: forkedId } = await res.json();
+
+      // Save the forked source dir on the OrgApp
+      if (org) {
+        await fetch(`/api/organizations/${org.slug}/apps/${orgApp.appId}/source`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ generatedAppId: forkedId }),
+        }).catch(() => {
+          // Non-critical — the fork still works
+        });
+      }
+
+      router.push(`/create?gen=${forkedId}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fork app";
+      toast.error(message);
+    } finally {
+      setForkingAppId(null);
+    }
+  };
+
+  const handleUpdateApp = (orgApp: OrgApp) => {
+    // Re-deploy using the same launch flow
+    handleLaunchApp(orgApp);
+  };
+
   const handleSignOut = async () => {
     await signOut({ redirect: true, redirectTo: "/" });
   };
@@ -556,6 +616,9 @@ export default function AccountPage() {
             <section className="mb-12">
               <h2 className="text-xl font-bold text-gray-800 mb-4">My Apps</h2>
 
+              {/* Team Portal URL */}
+              {org && <PortalBanner slug={org.slug} />}
+
               {!org ? (
                 <div className="text-center py-10 bg-white rounded-xl shadow-sm">
                   <p className="text-gray-400 mb-4">
@@ -588,14 +651,30 @@ export default function AccountPage() {
                       key={orgApp.id}
                       className="bg-white rounded-2xl shadow-sm overflow-hidden"
                     >
-                      <div className="p-5 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <span className="text-3xl">{orgApp.app.icon}</span>
+                      <div className="p-6 flex items-center justify-between">
+                        <div className="flex items-center gap-5">
+                          <span className="text-4xl">{orgApp.app.icon}</span>
                           <div>
-                            <h3 className="font-bold text-gray-900">
-                              {orgApp.app.title}
-                            </h3>
-                            <p className="text-sm text-gray-500">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-gray-900 text-lg">
+                                {orgApp.app.title}
+                              </h3>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                  orgApp.needsUpdate
+                                    ? "bg-orange-100 text-orange-700"
+                                    : "bg-purple-100 text-purple-700"
+                                }`}
+                              >
+                                {orgApp.deployedVersion || orgApp.latestVersion}
+                              </span>
+                              {orgApp.needsUpdate && (
+                                <span className="text-xs text-orange-600">
+                                  {orgApp.latestVersion} available
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-500 mt-0.5">
                               {orgApp.app.category}
                               {orgApp.subdomain && (
                                 <span className="ml-2">
@@ -644,6 +723,23 @@ export default function AccountPage() {
 
                           {deployingAppId !== orgApp.appId && (
                             <>
+                              {orgApp.generatedAppId && (
+                                <button
+                                  onClick={() => handleModifyApp(orgApp)}
+                                  disabled={forkingAppId === orgApp.appId}
+                                  className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                                >
+                                  {forkingAppId === orgApp.appId ? "Forking..." : "Modify"}
+                                </button>
+                              )}
+                              {orgApp.needsUpdate && (
+                                <button
+                                  onClick={() => handleUpdateApp(orgApp)}
+                                  className="px-3 py-1.5 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
+                                >
+                                  Update
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleConfigureApp(orgApp)}
                                 className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
@@ -1137,6 +1233,50 @@ export default function AccountPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function PortalBanner({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  const portalUrl = `go4it.live/portal/${slug}`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(`https://${portalUrl}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <span className="text-lg">🏠</span>
+        <div>
+          <p className="text-sm font-medium text-gray-700">Team Portal</p>
+          <p className="text-xs text-gray-500">
+            Share this link with your team to access all deployed apps
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <code className="text-sm text-purple-700 bg-white/70 px-3 py-1.5 rounded-lg border border-purple-200">
+          {portalUrl}
+        </code>
+        <button
+          onClick={handleCopy}
+          className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+        >
+          {copied ? "Copied!" : "Copy"}
+        </button>
+        <a
+          href={`/portal/${slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+        >
+          Visit
+        </a>
+      </div>
     </div>
   );
 }

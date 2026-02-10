@@ -10,6 +10,7 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   name          String
+  username      String?   @unique
   email         String?   @unique
   password      String?
   emailVerified DateTime?
@@ -109,21 +110,24 @@ enum GenerationStatus {
 }
 
 model GeneratedApp {
-  id             String           @id @default(cuid())
-  prompt         String
-  title          String?
-  description    String?
-  sourceDir      String?
-  status         GenerationStatus @default(PENDING)
-  error          String?
-  createdById    String
-  createdBy      User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  appId          String?          @unique
-  app            App?             @relation(fields: [appId], references: [id])
-  iterationCount Int              @default(0)
-  iterations     AppIteration[]
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                 String           @id @default(cuid())
+  prompt             String
+  title              String?
+  description        String?
+  sourceDir          String?
+  status             GenerationStatus @default(PENDING)
+  currentStage       String?          // Fine-grained: "designing", "scaffolding", "coding", "database", "finalizing"
+  error              String?
+  createdById        String
+  createdBy          User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  appId              String?          @unique
+  app                App?             @relation(fields: [appId], references: [id])
+  iterationCount     Int              @default(0)
+  marketplaceVersion Int              @default(1) // X in VX.Y — bumps on re-publish
+  forkedFromId       String?                      // ID of parent GeneratedApp when forked
+  iterations         AppIteration[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 }
 
 model AppIteration {
@@ -191,15 +195,19 @@ enum DeployStatus {
 }
 
 model OrgApp {
-  id             String       @id @default(cuid())
-  organizationId String
-  appId          String
-  status         DeployStatus @default(ADDED)
-  flyAppId       String?      // Fly.io app ID once deployed
-  flyUrl         String?      // e.g., https://crm-zenith.go4it.live
-  subdomain      String?      @unique // e.g., "crm-zenith" → crm-zenith.go4it.live
-  addedAt        DateTime     @default(now())
-  deployedAt     DateTime?
+  id                         String       @id @default(cuid())
+  organizationId             String
+  appId                      String
+  status                     DeployStatus @default(ADDED)
+  flyAppId                   String?      // Fly.io app ID once deployed
+  flyUrl                     String?      // e.g., https://crm-zenith.go4it.live
+  subdomain                  String?      @unique // e.g., "crm-zenith" → crm-zenith.go4it.live
+  addedAt                    DateTime     @default(now())
+  deployedAt                 DateTime?
+  deployedMarketplaceVersion Int?         // X at time of deploy
+  deployedOrgVersion         Int?         // Y at time of deploy
+  orgIterationCount          Int          @default(0) // current Y (org customization count)
+  orgSourceDir               String?      // org's forked source dir (null = using original)
 
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   app          App            @relation(fields: [appId], references: [id], onDelete: Cascade)

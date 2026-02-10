@@ -1,0 +1,25 @@
+app = "go4it-builder"
+primary_region = "ord"
+
+[build]
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "1024mb"
+
+[mounts]
+  source = "builder_data"
+  destination = "/data"
+
+[env]
+  NODE_ENV = "production"
+  APPS_DIR = "/data/apps"
+  FLY_REGION = "ord"
+  PORT = "3001"

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Header from "@/components/Header";
@@ -13,6 +13,7 @@ import {
 interface UserProfile {
   id: string;
   name: string;
+  username: string | null;
   email: string;
   companyName: string | null;
   state: string | null;
@@ -34,14 +35,46 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState({
     name: "",
+    username: "",
     companyName: "",
     state: "",
     country: "",
     useCases: [] as string[],
     businessDescription: "",
   });
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [usernameError, setUsernameError] = useState("");
+  const usernameCheckTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  const [originalUsername, setOriginalUsername] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [themeColors, setThemeColors] = useState<ThemeColors | null>(null);
+
+  const checkUsername = useCallback(async (username: string) => {
+    if (!username || username.length < 3) {
+      setUsernameStatus("idle");
+      setUsernameError("");
+      return;
+    }
+    if (username === originalUsername) {
+      setUsernameStatus("available");
+      setUsernameError("");
+      return;
+    }
+    setUsernameStatus("checking");
+    try {
+      const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username)}`);
+      const data = await res.json();
+      if (data.available) {
+        setUsernameStatus("available");
+        setUsernameError("");
+      } else {
+        setUsernameStatus("taken");
+        setUsernameError(data.error || "Username not available");
+      }
+    } catch {
+      setUsernameStatus("idle");
+    }
+  }, [originalUsername]);
 
   useEffect(() => {
     fetch("/api/account/profile")
@@ -57,12 +90,14 @@ export default function SettingsPage() {
           setProfile(data);
           setFormData({
             name: data.name || "",
+            username: data.username || "",
             companyName: data.companyName || "",
             state: data.state || "",
             country: data.country || "",
             useCases: data.useCases || [],
             businessDescription: data.businessDescription || "",
           });
+          setOriginalUsername(data.username || "");
           setLogoPreview(data.logo);
           setThemeColors(data.themeColors);
         }
@@ -73,6 +108,18 @@ export default function SettingsPage() {
         setLoading(false);
       });
   }, [router]);
+
+  // Debounced username availability check
+  useEffect(() => {
+    if (usernameCheckTimer.current) clearTimeout(usernameCheckTimer.current);
+    if (formData.username.length >= 3) {
+      usernameCheckTimer.current = setTimeout(() => checkUsername(formData.username), 400);
+    } else {
+      setUsernameStatus("idle");
+      setUsernameError("");
+    }
+    return () => { if (usernameCheckTimer.current) clearTimeout(usernameCheckTimer.current); };
+  }, [formData.username, checkUsername]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -152,6 +199,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          username: formData.username || undefined,
           logo: logoPreview,
           themeColors,
         }),
@@ -303,6 +351,48 @@ export default function SettingsPage() {
               onChange={handleChange}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
             />
+          </div>
+
+          {/* Username */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Username
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">@</span>
+              <input
+                type="text"
+                value={formData.username}
+                onChange={(e) => {
+                  const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                  setFormData((prev) => ({ ...prev, username: val }));
+                }}
+                maxLength={20}
+                className={`w-full pl-8 pr-10 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-gray-700 ${
+                  usernameStatus === "available"
+                    ? "border-green-300 focus:ring-green-400"
+                    : usernameStatus === "taken"
+                      ? "border-red-300 focus:ring-red-400"
+                      : "border-gray-200 focus:ring-purple-400"
+                }`}
+                placeholder="your_username"
+              />
+              {usernameStatus === "checking" && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">...</span>
+              )}
+              {usernameStatus === "available" && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">✓</span>
+              )}
+              {usernameStatus === "taken" && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">✗</span>
+              )}
+            </div>
+            {usernameError && (
+              <p className="text-xs text-red-500 mt-1">{usernameError}</p>
+            )}
+            <p className="text-xs text-gray-400 mt-1">
+              Visible to other users on the marketplace.
+            </p>
           </div>
 
           {/* Email (read-only) */}

@@ -68,21 +68,48 @@ export async function POST(
     );
   }
 
+  // Re-publish: update existing App record and bump marketplace version
   if (generatedApp.appId) {
-    return NextResponse.json(
-      { error: "This app has already been published" },
-      { status: 409 }
-    );
+    const updatedApp = await prisma.app.update({
+      where: { id: generatedApp.appId },
+      data: {
+        title: title.trim(),
+        description: description.trim(),
+        category: category.trim(),
+        icon: icon || "🚀",
+        isPublic: isPublic !== false,
+      },
+    });
+
+    const updatedGen = await prisma.generatedApp.update({
+      where: { id },
+      data: { marketplaceVersion: { increment: 1 } },
+    });
+
+    return NextResponse.json({
+      appId: updatedApp.id,
+      marketplaceVersion: updatedGen.marketplaceVersion,
+      republished: true,
+    });
   }
 
-  // Create the marketplace App record and link it
+  // Get creator's username for author field
+  const creator = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { username: true, name: true, email: true },
+  });
+  const authorDisplay = creator?.username
+    ? `@${creator.username}`
+    : creator?.name || creator?.email || "Community";
+
+  // First publish: create the marketplace App record and link it
   const app = await prisma.app.create({
     data: {
       title: title.trim(),
       description: description.trim(),
       category: category.trim(),
       icon: icon || "🚀",
-      author: session.user.name || session.user.email || "Community",
+      author: authorDisplay,
       tags: JSON.stringify([]),
       isPublic: isPublic !== false,
     },
@@ -93,5 +120,5 @@ export async function POST(
     data: { appId: app.id },
   });
 
-  return NextResponse.json({ appId: app.id }, { status: 201 });
+  return NextResponse.json({ appId: app.id, marketplaceVersion: 1 }, { status: 201 });
 }

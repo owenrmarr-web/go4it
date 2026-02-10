@@ -11,6 +11,19 @@ export async function GET(request: Request) {
       isPublic: true,
       generatedApp: { isNot: null },
     },
+    include: {
+      generatedApp: {
+        select: {
+          marketplaceVersion: true,
+          createdBy: { select: { username: true } },
+        },
+      },
+      _count: {
+        select: {
+          interactions: { where: { type: "HEART" } },
+        },
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -28,5 +41,12 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.json(apps);
+  const result = apps.map(({ generatedApp, _count, ...app }) => ({
+    ...app,
+    version: generatedApp ? `V${generatedApp.marketplaceVersion}.0` : null,
+    creatorUsername: generatedApp?.createdBy?.username || null,
+    heartCount: _count?.interactions ?? 0,
+  }));
+
+  return NextResponse.json(result);
 }

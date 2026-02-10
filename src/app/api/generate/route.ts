@@ -1,15 +1,56 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import { startGeneration, type BusinessContext } from "@/lib/generator";
+
+const BUILDER_URL = process.env.BUILDER_URL;
+const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
+
+interface BusinessContext {
+  businessContext?: string;
+  companyName?: string;
+  state?: string;
+  country?: string;
+  useCases?: string[];
+}
+
+async function callBuilder(path: string, body: Record<string, unknown>) {
+  if (!BUILDER_URL) {
+    throw new Error("BUILDER_URL not configured");
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (BUILDER_API_KEY) {
+    headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
+  }
+
+  const res = await fetch(`${BUILDER_URL}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Builder service error: ${error}`);
+  }
+
+  return res.json();
+}
 
 export async function POST(request: Request) {
-  // Generation requires Claude Code CLI + persistent filesystem (local dev only)
-  if (process.env.VERCEL) {
-    return NextResponse.json(
-      { error: "App generation is only available in local development. We're working on bringing this to go4it.live — stay tuned!" },
-      { status: 503 }
-    );
+  // In local dev without BUILDER_URL, fall back to local generation
+  if (!BUILDER_URL) {
+    try {
+      const { startGeneration } = await import("@/lib/generator");
+      return handleLocalGeneration(request, startGeneration);
+    } catch {
+      return NextResponse.json(
+        { error: "Builder service not configured and local generation unavailable" },
+        { status: 503 }
+      );
+    }
   }
 
   const session = await auth();
@@ -62,7 +103,76 @@ export async function POST(request: Request) {
       useCases: user?.useCases ? JSON.parse(user.useCases) : undefined,
     };
 
-    // Start generation in the background (non-blocking)
+    // Delegate to builder service
+    await callBuilder("/generate", {
+      generationId: generatedApp.id,
+      prompt: prompt.trim(),
+      businessContext: context,
+    });
+
+    return NextResponse.json({ id: generatedApp.id }, { status: 201 });
+  } catch (error) {
+    console.error("Failed to start generation:", error);
+    return NextResponse.json(
+      { error: "Failed to start generation" },
+      { status: 500 }
+    );
+  }
+}
+
+// Local dev fallback — same as original behavior
+async function handleLocalGeneration(
+  request: Request,
+  startGeneration: (id: string, prompt: string, context?: BusinessContext) => Promise<void>
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { prompt, businessContext: formContext } = await request.json();
+  if (!prompt || typeof prompt !== "string" || prompt.trim().length < 10) {
+    return NextResponse.json(
+      { error: "Prompt must be at least 10 characters" },
+      { status: 400 }
+    );
+  }
+
+  if (prompt.length > 5000) {
+    return NextResponse.json(
+      { error: "Prompt must be under 5000 characters" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const generatedApp = await prisma.generatedApp.create({
+      data: {
+        prompt: prompt.trim(),
+        createdById: session.user.id,
+        status: "PENDING",
+      },
+    });
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        companyName: true,
+        state: true,
+        country: true,
+        useCases: true,
+        businessDescription: true,
+      },
+    });
+
+    const context: BusinessContext = {
+      businessContext: formContext || user?.businessDescription || undefined,
+      companyName: user?.companyName || undefined,
+      state: user?.state || undefined,
+      country: user?.country || undefined,
+      useCases: user?.useCases ? JSON.parse(user.useCases) : undefined,
+    };
+
     startGeneration(generatedApp.id, prompt.trim(), context).catch((err) => {
       console.error(`Generation failed for ${generatedApp.id}:`, err);
     });

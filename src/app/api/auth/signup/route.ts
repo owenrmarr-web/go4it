@@ -2,15 +2,24 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { generateSlug } from "@/lib/slug";
+import { validateUsername } from "@/lib/username";
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password, companyName, state, country, useCases, businessDescription } =
+    const { name, email, password, username, companyName, state, country, useCases, businessDescription } =
       await request.json();
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !username) {
       return NextResponse.json(
-        { error: "Name, email, and password are required" },
+        { error: "Name, email, password, and username are required" },
+        { status: 400 }
+      );
+    }
+
+    const usernameCheck = await validateUsername(username);
+    if (!usernameCheck.valid) {
+      return NextResponse.json(
+        { error: usernameCheck.error },
         { status: 400 }
       );
     }
@@ -30,6 +39,7 @@ export async function POST(request: Request) {
         data: {
           name,
           email,
+          username,
           password: hashedPassword,
           companyName: companyName || null,
           state: state || null,

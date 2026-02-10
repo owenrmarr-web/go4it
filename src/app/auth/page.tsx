@@ -1,9 +1,10 @@
 "use client";
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { COUNTRIES, US_STATES, USE_CASE_OPTIONS } from "@/lib/constants";
+import { generateUsernameFromName } from "@/lib/username-utils";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
+    username: "",
     email: "",
     password: "",
     companyName: "",
@@ -19,10 +21,48 @@ export default function AuthPage() {
     useCases: [] as string[],
     businessDescription: "",
   });
+  const [usernameManuallyEdited, setUsernameManuallyEdited] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [usernameError, setUsernameError] = useState("");
+  const usernameCheckTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
   const [stateSearch, setStateSearch] = useState("");
   const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
   const stateInputRef = useRef<HTMLInputElement>(null);
+
+  const checkUsername = useCallback(async (username: string) => {
+    if (!username || username.length < 3) {
+      setUsernameStatus("idle");
+      setUsernameError("");
+      return;
+    }
+    setUsernameStatus("checking");
+    try {
+      const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username)}`);
+      const data = await res.json();
+      if (data.available) {
+        setUsernameStatus("available");
+        setUsernameError("");
+      } else {
+        setUsernameStatus("taken");
+        setUsernameError(data.error || "Username not available");
+      }
+    } catch {
+      setUsernameStatus("idle");
+    }
+  }, []);
+
+  // Debounced username availability check
+  useEffect(() => {
+    if (usernameCheckTimer.current) clearTimeout(usernameCheckTimer.current);
+    if (formData.username.length >= 3) {
+      usernameCheckTimer.current = setTimeout(() => checkUsername(formData.username), 400);
+    } else {
+      setUsernameStatus("idle");
+      setUsernameError("");
+    }
+    return () => { if (usernameCheckTimer.current) clearTimeout(usernameCheckTimer.current); };
+  }, [formData.username, checkUsername]);
 
   const isUS = formData.country === "United States";
 
@@ -36,12 +76,18 @@ export default function AuthPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-      // Clear state when country changes
-      ...(name === "country" ? { state: "" } : {}),
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: value,
+        ...(name === "country" ? { state: "" } : {}),
+      };
+      // Auto-suggest username from name if not manually edited
+      if (name === "name" && !usernameManuallyEdited) {
+        updated.username = generateUsernameFromName(value);
+      }
+      return updated;
+    });
     if (name === "country") setStateSearch("");
   };
 
@@ -79,6 +125,7 @@ export default function AuthPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name,
+          username: formData.username,
           email: formData.email,
           password: formData.password,
           companyName: formData.companyName || null,
@@ -147,6 +194,49 @@ export default function AuthPage() {
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
                   placeholder="Your name"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Username <span className="text-red-400">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">@</span>
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => {
+                      const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                      setFormData((prev) => ({ ...prev, username: val }));
+                      setUsernameManuallyEdited(true);
+                    }}
+                    required
+                    maxLength={20}
+                    className={`w-full pl-8 pr-10 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-gray-700 ${
+                      usernameStatus === "available"
+                        ? "border-green-300 focus:ring-green-400"
+                        : usernameStatus === "taken"
+                          ? "border-red-300 focus:ring-red-400"
+                          : "border-gray-200 focus:ring-purple-400"
+                    }`}
+                    placeholder="your_username"
+                  />
+                  {usernameStatus === "checking" && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">...</span>
+                  )}
+                  {usernameStatus === "available" && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">✓</span>
+                  )}
+                  {usernameStatus === "taken" && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">✗</span>
+                  )}
+                </div>
+                {usernameError && (
+                  <p className="text-xs text-red-500 mt-1">{usernameError}</p>
+                )}
+                <p className="text-xs text-gray-400 mt-1">
+                  This will be visible to other users on the marketplace.
+                </p>
               </div>
 
               <div>

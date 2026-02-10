@@ -1,8 +1,14 @@
 import { spawn } from "child_process";
-import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync } from "fs";
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  unlinkSync,
+  mkdirSync,
+} from "fs";
 import path from "path";
 import crypto from "crypto";
-import prisma from "./prisma";
+import prisma from "./prisma.js";
 
 // ============================================
 // Types
@@ -34,7 +40,7 @@ const STAGE_MESSAGES: Record<DeployStage, string> = {
   failed: "Something went wrong.",
 };
 
-// In-memory deploy progress store (same pattern as generator.ts)
+// In-memory deploy progress (builder is single server, this is fine)
 const deployProgress = new Map<string, DeployProgress>();
 
 const FLYCTL_PATH =
@@ -238,9 +244,9 @@ export async function deployApp(
   subdomain?: string,
   existingFlyAppId?: string
 ): Promise<void> {
-  // Re-deploy: reuse existing Fly app name. New deploy: generate one.
-  const flyAppName = existingFlyAppId
-    || `go4it-${orgSlug}-${orgAppId.slice(0, 8)}`
+  const flyAppName =
+    existingFlyAppId ||
+    `go4it-${orgSlug}-${orgAppId.slice(0, 8)}`
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "-");
   const isRedeploy = !!existingFlyAppId;
@@ -259,7 +265,7 @@ export async function deployApp(
       throw new Error(`Source directory not found: ${sourceDir}`);
     }
 
-    // Generate package-lock.json if missing (required for npm ci in Docker)
+    // Generate package-lock.json if missing
     const lockPath = path.join(sourceDir, "package-lock.json");
     if (!existsSync(lockPath)) {
       console.log(`[Deploy ${orgAppId}] Generating package-lock.json...`);
@@ -275,7 +281,7 @@ export async function deployApp(
       }
     }
 
-    // Detect Prisma version from package.json (needed before generating deployment files)
+    // Detect Prisma version
     const pkgPath = path.join(sourceDir, "package.json");
     let isPrisma7 = false;
     if (existsSync(pkgPath)) {
@@ -286,25 +292,22 @@ export async function deployApp(
           pkg.dependencies?.prisma ||
           pkg.dependencies?.["@prisma/client"] ||
           "";
-        // ^7, ~7, 7.x, >=7, latest all indicate Prisma 7+
         isPrisma7 = /^[\^~>=]*7|^latest$/i.test(prismaVersion);
       } catch {
-        // If we can't read package.json, assume Prisma 7 (existing behavior)
         isPrisma7 = true;
       }
     }
 
-    console.log(`[Deploy ${orgAppId}] Detected Prisma ${isPrisma7 ? "7+" : "6 or earlier"}`);
+    console.log(
+      `[Deploy ${orgAppId}] Detected Prisma ${isPrisma7 ? "7+" : "6 or earlier"}`
+    );
 
-    // Write deployment files into source directory
+    // Write deployment files
     writeFileSync(
       path.join(sourceDir, "fly.toml"),
       generateFlyToml(flyAppName)
     );
-    writeFileSync(
-      path.join(sourceDir, "start.sh"),
-      generateStartScript()
-    );
+    writeFileSync(path.join(sourceDir, "start.sh"), generateStartScript());
     writeFileSync(
       path.join(sourceDir, "Dockerfile.fly"),
       generateDeployDockerfile(isPrisma7)
@@ -314,21 +317,19 @@ export async function deployApp(
       generateDockerignore()
     );
 
-    // Ensure public/ directory exists (Dockerfile COPY requires it)
+    // Ensure public/ exists
     const publicDir = path.join(sourceDir, "public");
     if (!existsSync(publicDir)) {
       mkdirSync(publicDir, { recursive: true });
     }
 
-    // Remove seed.ts (not needed at runtime, can cause TS errors)
+    // Remove seed.ts (not needed at runtime)
     const seedPath = path.join(sourceDir, "prisma", "seed.ts");
     if (existsSync(seedPath)) {
       unlinkSync(seedPath);
     }
 
     if (isPrisma7) {
-      // Prisma 7 requires the LibSQL adapter — rewrite prisma.ts and provision-users.ts
-      // Also add @prisma/adapter-libsql + @libsql/client to dependencies if missing
       const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
       let depsChanged = false;
       if (!pkg.dependencies?.["@prisma/adapter-libsql"]) {
@@ -343,10 +344,9 @@ export async function deployApp(
       }
       if (depsChanged) {
         writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-        // Regenerate lock file since we added dependencies
-        const lockPath = path.join(sourceDir, "package-lock.json");
-        if (existsSync(lockPath)) {
-          unlinkSync(lockPath);
+        const existingLock = path.join(sourceDir, "package-lock.json");
+        if (existsSync(existingLock)) {
+          unlinkSync(existingLock);
         }
         const lockResult = await runCommand(
           "npm",
@@ -354,12 +354,19 @@ export async function deployApp(
           { cwd: sourceDir }
         );
         if (lockResult.code !== 0) {
-          console.warn(`[Deploy ${orgAppId}] Lock regen warning: ${lockResult.stderr}`);
+          console.warn(
+            `[Deploy ${orgAppId}] Lock regen warning: ${lockResult.stderr}`
+          );
         }
       }
 
       // Replace prisma.ts with LibSQL adapter client
-      const prismaClientPath = path.join(sourceDir, "src", "lib", "prisma.ts");
+      const prismaClientPath = path.join(
+        sourceDir,
+        "src",
+        "lib",
+        "prisma.ts"
+      );
       if (existsSync(prismaClientPath)) {
         writeFileSync(
           prismaClientPath,
@@ -379,8 +386,12 @@ export default prisma;
         );
       }
 
-      // Rewrite provision-users.ts to use LibSQL adapter
-      const provisionPath = path.join(sourceDir, "prisma", "provision-users.ts");
+      // Rewrite provision-users.ts
+      const provisionPath = path.join(
+        sourceDir,
+        "prisma",
+        "provision-users.ts"
+      );
       if (existsSync(provisionPath)) {
         writeFileSync(
           provisionPath,
@@ -414,16 +425,15 @@ main().finally(() => prisma.$disconnect());
         );
       }
 
-      // Prisma 7: url property is NOT allowed in schema.prisma — must be in prisma.config.ts
+      // Remove url from schema.prisma
       const schemaPath = path.join(sourceDir, "prisma", "schema.prisma");
       if (existsSync(schemaPath)) {
         let schema = readFileSync(schemaPath, "utf-8");
-        // Remove url line if present (Prisma 7 rejects it)
         schema = schema.replace(/^\s*url\s*=\s*env\(.*\)\s*$/m, "");
         writeFileSync(schemaPath, schema);
       }
 
-      // Delete the old prisma/prisma.config.ts if it exists (wrong location)
+      // Delete old prisma config if in wrong location
       const oldPrismaConfigPath = path.join(
         sourceDir,
         "prisma",
@@ -433,10 +443,9 @@ main().finally(() => prisma.$disconnect());
         unlinkSync(oldPrismaConfigPath);
       }
 
-      // Write prisma.config.ts at project root (where Prisma 7 CLI expects it)
-      const prismaConfigPath = path.join(sourceDir, "prisma.config.ts");
+      // Write prisma.config.ts at project root
       writeFileSync(
-        prismaConfigPath,
+        path.join(sourceDir, "prisma.config.ts"),
         `// @ts-nocheck
 import { defineConfig } from "prisma/config";
 
@@ -448,11 +457,10 @@ export default defineConfig({
 `
       );
     } else {
-      // Prisma 6 or earlier: ensure schema.prisma has url = env("DATABASE_URL")
+      // Prisma 6: ensure schema has url
       const schemaPath = path.join(sourceDir, "prisma", "schema.prisma");
       if (existsSync(schemaPath)) {
         let schema = readFileSync(schemaPath, "utf-8");
-        // If url line is missing from datasource block, add it back
         if (!/url\s*=/.test(schema)) {
           schema = schema.replace(
             /(datasource\s+\w+\s*\{[^}]*provider\s*=\s*"[^"]*")/,
@@ -467,7 +475,6 @@ export default defineConfig({
     updateDeployProgress(orgAppId, isRedeploy ? "building" : "creating");
 
     if (!isRedeploy) {
-      // New deploy: create app + volume
       const createResult = await flyctl(
         ["apps", "create", flyAppName, "--json"],
         { cwd: sourceDir }
@@ -483,7 +490,6 @@ export default defineConfig({
         );
       }
 
-      // Create a 1GB volume for SQLite persistence
       const volResult = await flyctl(
         [
           "volumes",
@@ -504,13 +510,17 @@ export default defineConfig({
         volResult.code !== 0 &&
         !volResult.stderr.includes("already exists")
       ) {
-        console.warn(`[Deploy ${orgAppId}] Volume warning: ${volResult.stderr}`);
+        console.warn(
+          `[Deploy ${orgAppId}] Volume warning: ${volResult.stderr}`
+        );
       }
     } else {
-      console.log(`[Deploy ${orgAppId}] Re-deploying to existing app: ${flyAppName}`);
+      console.log(
+        `[Deploy ${orgAppId}] Re-deploying to existing app: ${flyAppName}`
+      );
     }
 
-    // Set secrets (AUTH_SECRET + team members)
+    // Set secrets
     const secrets: Record<string, string> = {
       AUTH_SECRET: authSecret,
     };
@@ -559,12 +569,17 @@ export default defineConfig({
         { cwd: sourceDir }
       );
 
-      if (certResult.code !== 0 && !certResult.stderr.includes("already exists")) {
+      if (
+        certResult.code !== 0 &&
+        !certResult.stderr.includes("already exists")
+      ) {
         console.warn(
           `[Deploy ${orgAppId}] Cert warning for ${customDomain}: ${certResult.stderr}`
         );
       } else {
-        console.log(`[Deploy ${orgAppId}] Custom domain configured: ${customDomain}`);
+        console.log(
+          `[Deploy ${orgAppId}] Custom domain configured: ${customDomain}`
+        );
       }
     }
 
@@ -575,12 +590,12 @@ export default defineConfig({
       : flyDevUrl;
     updateDeployProgress(orgAppId, "running", { flyUrl });
 
-    // Look up version info for the deployed app
     const orgAppForVersion = await prisma.orgApp.findUnique({
       where: { id: orgAppId },
       include: { app: { include: { generatedApp: true } } },
     });
-    const marketplaceVersion = orgAppForVersion?.app?.generatedApp?.marketplaceVersion ?? 1;
+    const marketplaceVersion =
+      orgAppForVersion?.app?.generatedApp?.marketplaceVersion ?? 1;
     const orgVersion = orgAppForVersion?.orgIterationCount ?? 0;
 
     await prisma.orgApp.update({
@@ -613,10 +628,6 @@ export default defineConfig({
     });
   }
 }
-
-// ============================================
-// App management helpers
-// ============================================
 
 export async function destroyApp(flyAppName: string): Promise<void> {
   await flyctl(["apps", "destroy", flyAppName, "--yes"]);

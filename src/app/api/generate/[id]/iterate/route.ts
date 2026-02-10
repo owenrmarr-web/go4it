@@ -1,19 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
-import { startIteration } from "@/lib/generator";
+
+const BUILDER_URL = process.env.BUILDER_URL;
+const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (process.env.VERCEL) {
-    return NextResponse.json(
-      { error: "App generation is only available in local development. We're working on bringing this to go4it.live — stay tuned!" },
-      { status: 503 }
-    );
-  }
-
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -81,9 +76,47 @@ export async function POST(
     },
   });
 
-  startIteration(id, iteration.id, prompt.trim()).catch((err) => {
-    console.error(`Iteration failed for ${id}/${iteration.id}:`, err);
-  });
+  // Delegate to builder service if configured, otherwise fall back to local
+  if (BUILDER_URL) {
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
+
+      const res = await fetch(`${BUILDER_URL}/iterate`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          generationId: id,
+          iterationId: iteration.id,
+          prompt: prompt.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(`Builder service error: ${error}`);
+      }
+    } catch (err) {
+      console.error(`Builder call failed for iteration ${id}/${iteration.id}:`, err);
+      return NextResponse.json(
+        { error: "Builder service unavailable" },
+        { status: 503 }
+      );
+    }
+  } else {
+    // Local dev fallback
+    try {
+      const { startIteration } = await import("@/lib/generator");
+      startIteration(id, iteration.id, prompt.trim()).catch((err) => {
+        console.error(`Iteration failed for ${id}/${iteration.id}:`, err);
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Builder service not configured and local generation unavailable" },
+        { status: 503 }
+      );
+    }
+  }
 
   return NextResponse.json({ iterationId: iteration.id }, { status: 201 });
 }

@@ -1,6 +1,28 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
-import { getProgress } from "@/lib/generator";
+
+const STAGE_MESSAGES: Record<string, string> = {
+  pending: "Preparing to build your app...",
+  designing: "Planning your app architecture...",
+  scaffolding: "Creating project structure...",
+  coding: "Building components and API routes...",
+  database: "Setting up database and seed data...",
+  finalizing: "Writing Dockerfile and finishing up...",
+  complete: "Your app is ready!",
+  failed: "Something went wrong.",
+};
+
+// Try to get in-memory progress (works in local dev), fall back gracefully
+function getLocalProgress(id: string) {
+  try {
+    // Dynamic import so this doesn't break on Vercel where generator.ts may not exist
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getProgress } = require("@/lib/generator");
+    return getProgress(id);
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(
   _request: Request,
@@ -13,7 +35,6 @@ export async function GET(
 
   const { id } = await params;
 
-  // Verify the generation exists and belongs to the user
   const generatedApp = await prisma.generatedApp.findUnique({
     where: { id },
   });
@@ -26,56 +47,74 @@ export async function GET(
     return new Response("Forbidden", { status: 403 });
   }
 
-  // Set up SSE stream
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
       let lastStage = "";
-      let pendingPolls = 0;
 
       const interval = setInterval(async () => {
-        let progress = getProgress(id);
+        let progress: { stage: string; message: string; title?: string; description?: string; error?: string };
 
-        // If in-memory store shows pending, check DB immediately
-        // (handles HMR wiping in-memory store, spawn failures, etc.)
-        if (progress.stage === "pending") {
-          pendingPolls++;
-          if (pendingPolls >= 1) {
-            try {
-              const dbApp = await prisma.generatedApp.findUnique({
-                where: { id },
-                select: { status: true, title: true, description: true, error: true },
-              });
-              if (dbApp?.status === "GENERATING") {
-                progress = {
-                  stage: "coding",
-                  message: "Building your app (this may take a few minutes)...",
-                };
-              } else if (dbApp?.status === "COMPLETE") {
-                progress = {
-                  stage: "complete",
-                  message: "Your app is ready!",
-                  title: dbApp.title ?? undefined,
-                  description: dbApp.description ?? undefined,
-                };
-              } else if (dbApp?.status === "FAILED") {
-                progress = {
-                  stage: "failed",
-                  message: "Something went wrong.",
-                  error: dbApp.error ?? undefined,
-                };
-              }
-            } catch {
-              // DB check failed, continue with in-memory
-            }
-          }
+        // Try local in-memory progress first (local dev)
+        const localProgress = getLocalProgress(id);
+        if (localProgress && localProgress.stage !== "pending") {
+          progress = localProgress;
         } else {
-          pendingPolls = 0;
+          // Fall back to DB — this is the primary path for production (builder service)
+          try {
+            const dbApp = await prisma.generatedApp.findUnique({
+              where: { id },
+              select: {
+                status: true,
+                currentStage: true,
+                title: true,
+                description: true,
+                error: true,
+              },
+            });
+
+            if (!dbApp) {
+              clearInterval(interval);
+              controller.close();
+              return;
+            }
+
+            if (dbApp.status === "COMPLETE") {
+              progress = {
+                stage: "complete",
+                message: STAGE_MESSAGES.complete,
+                title: dbApp.title ?? undefined,
+                description: dbApp.description ?? undefined,
+              };
+            } else if (dbApp.status === "FAILED") {
+              progress = {
+                stage: "failed",
+                message: STAGE_MESSAGES.failed,
+                error: dbApp.error ?? undefined,
+              };
+            } else if (dbApp.status === "GENERATING") {
+              // Use currentStage for fine-grained progress from builder
+              const stage = dbApp.currentStage || "coding";
+              progress = {
+                stage,
+                message: STAGE_MESSAGES[stage] || "Building your app...",
+              };
+            } else {
+              progress = {
+                stage: "pending",
+                message: STAGE_MESSAGES.pending,
+              };
+            }
+          } catch {
+            progress = {
+              stage: "pending",
+              message: STAGE_MESSAGES.pending,
+            };
+          }
         }
 
-        // Send update when stage changes, or periodically during DB fallback
-        // to keep the connection alive
-        if (progress.stage !== lastStage || pendingPolls > 0) {
+        // Send update when stage changes
+        if (progress.stage !== lastStage) {
           lastStage = progress.stage;
           const data = JSON.stringify(progress);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
@@ -88,7 +127,6 @@ export async function GET(
         }
       }, 1000);
 
-      // Clean up on cancel
       _request.signal.addEventListener("abort", () => {
         clearInterval(interval);
         controller.close();
