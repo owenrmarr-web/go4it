@@ -452,8 +452,8 @@ flyctl deploy --app go4it-builder
 
 ## Next Steps (Roadmap — in priority order)
 
-1. **Fix production preview** — Preview doesn't load on builder service (worked locally). Likely needs Fly.io machine spawning or port forwarding instead of local dev server.
-2. **Generation UX improvements** — Real-time detail text below stage indicator (show what Claude is doing), update timing copy to "5-10 minutes".
+1. **Fix deployed app subdomain** — `boat-rental-manager-lake-union-yachting.go4it.live` not loading despite portal page (`go4it.live/portal/lake-union-yachting`) working. Investigate Fly.io cert, DNS, or app health issue.
+2. **Fix production preview** — Preview doesn't load on builder service (worked locally). Likely needs Fly.io machine spawning or port forwarding instead of local dev server.
 3. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
 4. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues and add guardrails.
 5. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
@@ -471,3 +471,4 @@ flyctl deploy --app go4it-builder
 - ~~Live preview~~ — Preview generated apps locally before publishing (auth bypass, parallel install)
 - ~~Marketplace cleanup~~ — Removed seeded placeholder apps, only real generated apps shown
 - ~~Admin creations tab~~ — Admin dashboard shows all generated apps with creator/status/iterations
+- ~~Generation UX improvements~~ — Real-time detail text below stage indicator (shows what Claude is doing, e.g. "Creating src/components/Calendar.tsx"), timing copy updated to "5–10 minutes"
