@@ -455,8 +455,8 @@ flyctl deploy --app go4it-builder
 
 ## Next Steps (Roadmap — in priority order)
 
-1. **Fix deployed app subdomain** — `boat-rental-manager-lake-union-yachting.go4it.live` not loading despite portal page (`go4it.live/portal/lake-union-yachting`) working. Investigate Fly.io cert, DNS, or app health issue.
-2. **Fix production preview** — Preview doesn't load on builder service (worked locally). Likely needs Fly.io machine spawning or port forwarding instead of local dev server.
+1. **Test production preview end-to-end** — Preview was fixed (async deploy + polling), builder redeployed 2026-02-10. Needs testing: generate an app → click Preview → verify loading state appears → verify preview opens after deploy completes.
+2. **Fix custom subdomain DNS** — `*.go4it.live` CNAME points to `fly-global.fly.dev` which returns NXDOMAIN. Options: (a) per-app CNAME records via DNS API, or (b) shared reverse-proxy Fly app for wildcard routing. Currently using `.fly.dev` URLs as workaround.
 3. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
 4. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues and add guardrails.
 5. **Email verification** — Verify email on signup (confirmation link via Resend). Also require email verification for password changes (send code/link before allowing change). Currently password change uses old-password verification only.
@@ -464,9 +464,13 @@ flyctl deploy --app go4it-builder
 7. **Builder hardening** — Garbage collection for old workspaces, rate limiting, error logging/monitoring.
 
 ### Completed
+- ~~Deployed app URLs fixed (2026-02-10)~~ — Custom subdomain DNS broken (`fly-global.fly.dev` NXDOMAIN). Switched all deployed apps to `.fly.dev` URLs. Existing DB records migrated via `prisma/fix-fly-urls.ts`. Cert provisioning skipped until DNS is fixed.
+- ~~Production preview fixed (2026-02-10)~~ — Preview was timing out because builder did a synchronous Fly.io deploy (2-5 min) within Vercel's 60s function limit. Converted to async pattern: builder returns 202, deploys in background, frontend polls GET `/preview/:id/status` every 3s until ready.
+- ~~Password management (2026-02-10)~~ — 6-char minimum enforced on platform signup (server + client) and generated app template. Password change added to Account Settings (current + new + confirm, bcrypt verify). API at `/api/account/password`.
+- ~~Universal admin account (2026-02-10)~~ — Every deployed app auto-provisions `admin@go4it.live` / `go4it2026` via updated `provision-users.ts`. Runs regardless of team member config.
 - ~~Builder service for production~~ — Standalone Fastify API on Fly.io (`go4it-builder.fly.dev`). Platform delegates generation, iteration, preview, and deploy via HTTP. Production generation works end-to-end.
 - ~~Usernames & leaderboard~~ — Unique usernames, auto-generated on signup, creator rankings by hearts/deploys.
-- ~~Custom subdomain routing~~ — `*.go4it.live` wildcard DNS + auto-generated subdomains + Fly.io TLS certs. Configurable from Account page.
+- ~~Custom subdomain routing~~ — `*.go4it.live` wildcard DNS + auto-generated subdomains + Fly.io TLS certs. Configurable from Account page. **Note: DNS broken, using .fly.dev fallback (see roadmap item #2).**
 - ~~App iteration~~ — Users can refine generated apps with follow-up prompts (CLI `--continue`)
 - ~~Publish to marketplace~~ — Generated apps can be published (public or private)
 - ~~1:1 org simplification~~ — Auto-create org on signup, consolidated account page
