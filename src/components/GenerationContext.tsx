@@ -180,18 +180,54 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
   const startPreviewFn = useCallback(async () => {
     if (!state.generationId) return;
+    const genId = state.generationId;
     setState((prev) => ({ ...prev, previewLoading: true }));
     try {
-      const res = await fetch(`/api/generate/${state.generationId}/preview`, {
+      const res = await fetch(`/api/generate/${genId}/preview`, {
         method: "POST",
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to start preview");
       }
-      const { url } = await res.json();
-      setState((prev) => ({ ...prev, previewUrl: url, previewLoading: false }));
-      window.open(url, "_blank");
+      const data = await res.json();
+
+      // If we got a direct URL (local dev), open immediately
+      if (data.url) {
+        setState((prev) => ({ ...prev, previewUrl: data.url, previewLoading: false }));
+        window.open(data.url, "_blank");
+        return;
+      }
+
+      // Production: preview is deploying — poll for status
+      const POLL_INTERVAL = 3000;
+      const TIMEOUT = 5 * 60 * 1000; // 5 minutes
+      const startTime = Date.now();
+
+      const poll = async () => {
+        while (Date.now() - startTime < TIMEOUT) {
+          await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+          try {
+            const statusRes = await fetch(`/api/generate/${genId}/preview`);
+            if (!statusRes.ok) continue;
+            const status = await statusRes.json();
+
+            if (status.status === "ready" && status.url) {
+              setState((prev) => ({ ...prev, previewUrl: status.url, previewLoading: false }));
+              window.open(status.url, "_blank");
+              return;
+            }
+            if (status.status === "failed") {
+              throw new Error(status.error || "Preview deploy failed");
+            }
+          } catch (err) {
+            if (err instanceof Error && err.message.includes("failed")) throw err;
+          }
+        }
+        throw new Error("Preview timed out — please try again");
+      };
+
+      await poll();
     } catch (err) {
       setState((prev) => ({ ...prev, previewLoading: false }));
       throw err;

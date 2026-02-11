@@ -14,6 +14,19 @@ const FLYCTL_PATH =
   process.env.FLYCTL_PATH || `${process.env.HOME}/.fly/bin/flyctl`;
 const FLY_REGION = process.env.FLY_REGION || "ord";
 
+// In-memory preview status tracking
+interface PreviewState {
+  status: "deploying" | "ready" | "failed";
+  url?: string;
+  error?: string;
+}
+
+const previewJobs = new Map<string, PreviewState>();
+
+export function getPreviewStatus(generationId: string): PreviewState | null {
+  return previewJobs.get(generationId) ?? null;
+}
+
 function runCommand(
   cmd: string,
   args: string[],
@@ -113,8 +126,185 @@ primary_region = "${FLY_REGION}"
 `;
 }
 
+async function runPreviewDeploy(generationId: string, sourceDir: string) {
+  const shortId = generationId.slice(0, 8);
+  const previewAppName = `go4it-preview-${shortId}`;
+  const authSecret = crypto.randomBytes(32).toString("hex");
+
+  try {
+    console.log(`[Preview ${generationId}] Starting preview deploy to ${previewAppName}`);
+
+    // Patch auth for preview mode
+    patchAuthForPreview(sourceDir);
+
+    // Generate package-lock.json if missing
+    const lockPath = path.join(sourceDir, "package-lock.json");
+    if (!existsSync(lockPath)) {
+      await runCommand("npm", ["install", "--package-lock-only"], {
+        cwd: sourceDir,
+      });
+    }
+
+    // Ensure public/ exists
+    const publicDir = path.join(sourceDir, "public");
+    if (!existsSync(publicDir)) {
+      mkdirSync(publicDir, { recursive: true });
+    }
+
+    // Write preview-specific fly.toml
+    writeFileSync(
+      path.join(sourceDir, "fly.toml"),
+      generatePreviewFlyToml(previewAppName)
+    );
+
+    // Write Dockerfile.fly (use Prisma 6 — generated apps use Prisma 6)
+    const dockerfilePath = path.join(sourceDir, "Dockerfile.fly");
+    if (!existsSync(dockerfilePath)) {
+      writeFileSync(
+        dockerfilePath,
+        `FROM node:20-slim AS builder
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma
+RUN npm ci --legacy-peer-deps
+
+COPY . .
+ENV DATABASE_URL="file:./build.db"
+RUN npm run build
+
+FROM node:20-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/prisma ./prisma
+
+COPY start.sh ./
+RUN chmod +x start.sh
+
+EXPOSE 3000
+ENV PORT=3000
+CMD ["sh", "start.sh"]
+`
+      );
+    }
+
+    // Write start.sh
+    const startShPath = path.join(sourceDir, "start.sh");
+    if (!existsSync(startShPath)) {
+      writeFileSync(
+        startShPath,
+        `#!/bin/sh
+set -e
+mkdir -p /data 2>/dev/null || true
+npx prisma db push --accept-data-loss 2>&1 || echo "Warning: prisma db push had issues"
+
+# Seed data for preview
+if [ -f "prisma/seed.ts" ]; then
+  npx tsx prisma/seed.ts 2>&1 || echo "Warning: seed failed"
+fi
+
+exec node server.js
+`
+      );
+    }
+
+    // Write .dockerignore
+    writeFileSync(
+      path.join(sourceDir, ".dockerignore"),
+      `node_modules\n.next\n.git\n*.md\n.env*\ndev.db\n`
+    );
+
+    // Create preview Fly app
+    const createResult = await flyctl([
+      "apps",
+      "create",
+      previewAppName,
+      "--json",
+    ]);
+    if (
+      createResult.code !== 0 &&
+      !createResult.stderr.includes("already exists") &&
+      !createResult.stderr.includes("already been taken")
+    ) {
+      throw new Error(
+        `Failed to create preview app: ${createResult.stderr}`
+      );
+    }
+
+    // Create volume
+    const volResult = await flyctl([
+      "volumes",
+      "create",
+      "data",
+      "--size",
+      "1",
+      "--region",
+      FLY_REGION,
+      "--app",
+      previewAppName,
+      "--yes",
+    ]);
+    if (
+      volResult.code !== 0 &&
+      !volResult.stderr.includes("already exists")
+    ) {
+      console.warn(
+        `[Preview ${generationId}] Volume warning: ${volResult.stderr}`
+      );
+    }
+
+    // Set secrets
+    await flyctl([
+      "secrets",
+      "set",
+      `AUTH_SECRET=${authSecret}`,
+      `PREVIEW_MODE=true`,
+      "--app",
+      previewAppName,
+      "--stage",
+    ]);
+
+    // Deploy
+    console.log(`[Preview ${generationId}] Building and deploying preview...`);
+    const deployResult = await flyctl(
+      [
+        "deploy",
+        "--app",
+        previewAppName,
+        "--dockerfile",
+        "Dockerfile.fly",
+        "--yes",
+        "--wait-timeout",
+        "300",
+      ],
+      { cwd: sourceDir }
+    );
+
+    if (deployResult.code !== 0) {
+      throw new Error(
+        `Preview deploy failed: ${deployResult.stderr || deployResult.stdout}`
+      );
+    }
+
+    const url = `https://${previewAppName}.fly.dev`;
+    console.log(`[Preview ${generationId}] Live at ${url}`);
+    previewJobs.set(generationId, { status: "ready", url });
+  } catch (err) {
+    const errorMsg =
+      err instanceof Error ? err.message : "Preview deploy failed";
+    console.error(`[Preview ${generationId}] Failed:`, errorMsg);
+    previewJobs.set(generationId, { status: "failed", error: errorMsg });
+  }
+}
+
 export default async function previewRoute(app: FastifyInstance) {
-  // POST /preview — deploy a preview machine
+  // POST /preview — start preview deploy in background
   app.post<{
     Body: { generationId: string };
   }>("/preview", async (request, reply) => {
@@ -144,181 +334,27 @@ export default async function previewRoute(app: FastifyInstance) {
         .send({ error: "Source directory does not exist on builder" });
     }
 
-    const shortId = generationId.slice(0, 8);
-    const previewAppName = `go4it-preview-${shortId}`;
-    const authSecret = crypto.randomBytes(32).toString("hex");
+    // Start deploy in background
+    previewJobs.set(generationId, { status: "deploying" });
+    runPreviewDeploy(generationId, sourceDir).catch((err) => {
+      console.error(`[Preview] Unhandled error for ${generationId}:`, err);
+    });
 
-    try {
-      console.log(`[Preview ${generationId}] Starting preview deploy to ${previewAppName}`);
+    return reply.status(202).send({ status: "deploying", generationId });
+  });
 
-      // Patch auth for preview mode
-      patchAuthForPreview(sourceDir);
+  // GET /preview/:id/status — check preview deploy status
+  app.get<{
+    Params: { id: string };
+  }>("/preview/:id/status", async (request, reply) => {
+    const { id } = request.params;
+    const state = getPreviewStatus(id);
 
-      // Generate package-lock.json if missing
-      const lockPath = path.join(sourceDir, "package-lock.json");
-      if (!existsSync(lockPath)) {
-        await runCommand("npm", ["install", "--package-lock-only"], {
-          cwd: sourceDir,
-        });
-      }
-
-      // Ensure public/ exists
-      const publicDir = path.join(sourceDir, "public");
-      if (!existsSync(publicDir)) {
-        mkdirSync(publicDir, { recursive: true });
-      }
-
-      // Write preview-specific fly.toml
-      writeFileSync(
-        path.join(sourceDir, "fly.toml"),
-        generatePreviewFlyToml(previewAppName)
-      );
-
-      // Write Dockerfile.fly (use Prisma 6 — generated apps use Prisma 6)
-      const dockerfilePath = path.join(sourceDir, "Dockerfile.fly");
-      if (!existsSync(dockerfilePath)) {
-        writeFileSync(
-          dockerfilePath,
-          `FROM node:20-slim AS builder
-WORKDIR /app
-
-COPY package.json package-lock.json* ./
-COPY prisma ./prisma
-RUN npm ci --legacy-peer-deps
-
-COPY . .
-ENV DATABASE_URL="file:./build.db"
-RUN npm run build
-
-FROM node:20-slim AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/prisma ./prisma
-
-COPY start.sh ./
-RUN chmod +x start.sh
-
-EXPOSE 3000
-ENV PORT=3000
-CMD ["sh", "start.sh"]
-`
-        );
-      }
-
-      // Write start.sh
-      const startShPath = path.join(sourceDir, "start.sh");
-      if (!existsSync(startShPath)) {
-        writeFileSync(
-          startShPath,
-          `#!/bin/sh
-set -e
-mkdir -p /data 2>/dev/null || true
-npx prisma db push --accept-data-loss 2>&1 || echo "Warning: prisma db push had issues"
-
-# Seed data for preview
-if [ -f "prisma/seed.ts" ]; then
-  npx tsx prisma/seed.ts 2>&1 || echo "Warning: seed failed"
-fi
-
-exec node server.js
-`
-        );
-      }
-
-      // Write .dockerignore
-      writeFileSync(
-        path.join(sourceDir, ".dockerignore"),
-        `node_modules\n.next\n.git\n*.md\n.env*\ndev.db\n`
-      );
-
-      // Create preview Fly app
-      const createResult = await flyctl([
-        "apps",
-        "create",
-        previewAppName,
-        "--json",
-      ]);
-      if (
-        createResult.code !== 0 &&
-        !createResult.stderr.includes("already exists") &&
-        !createResult.stderr.includes("already been taken")
-      ) {
-        throw new Error(
-          `Failed to create preview app: ${createResult.stderr}`
-        );
-      }
-
-      // Create volume
-      const volResult = await flyctl([
-        "volumes",
-        "create",
-        "data",
-        "--size",
-        "1",
-        "--region",
-        FLY_REGION,
-        "--app",
-        previewAppName,
-        "--yes",
-      ]);
-      if (
-        volResult.code !== 0 &&
-        !volResult.stderr.includes("already exists")
-      ) {
-        console.warn(
-          `[Preview ${generationId}] Volume warning: ${volResult.stderr}`
-        );
-      }
-
-      // Set secrets
-      await flyctl([
-        "secrets",
-        "set",
-        `AUTH_SECRET=${authSecret}`,
-        `PREVIEW_MODE=true`,
-        "--app",
-        previewAppName,
-        "--stage",
-      ]);
-
-      // Deploy
-      console.log(`[Preview ${generationId}] Building and deploying preview...`);
-      const deployResult = await flyctl(
-        [
-          "deploy",
-          "--app",
-          previewAppName,
-          "--dockerfile",
-          "Dockerfile.fly",
-          "--yes",
-          "--wait-timeout",
-          "300",
-        ],
-        { cwd: sourceDir }
-      );
-
-      if (deployResult.code !== 0) {
-        throw new Error(
-          `Preview deploy failed: ${deployResult.stderr || deployResult.stdout}`
-        );
-      }
-
-      const url = `https://${previewAppName}.fly.dev`;
-      console.log(`[Preview ${generationId}] Live at ${url}`);
-
-      return reply.send({ url, flyAppName: previewAppName });
-    } catch (err) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Preview deploy failed";
-      console.error(`[Preview ${generationId}] Failed:`, errorMsg);
-      return reply.status(500).send({ error: errorMsg });
+    if (!state) {
+      return reply.status(404).send({ status: "unknown" });
     }
+
+    return reply.send(state);
   });
 
   // DELETE /preview/:id — destroy a preview machine
@@ -328,6 +364,9 @@ exec node server.js
     const { id } = request.params;
     const shortId = id.slice(0, 8);
     const previewAppName = `go4it-preview-${shortId}`;
+
+    // Clean up tracking
+    previewJobs.delete(id);
 
     try {
       console.log(`[Preview ${id}] Destroying preview app ${previewAppName}`);

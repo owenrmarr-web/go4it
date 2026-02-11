@@ -28,10 +28,22 @@ export async function GET(
     }
   }
 
-  // Production: no in-memory state — preview is a Fly.io app
-  const shortId = id.slice(0, 8);
-  const previewUrl = `https://go4it-preview-${shortId}.fly.dev`;
-  return NextResponse.json({ status: "running", url: previewUrl });
+  // Production: poll builder for preview status
+  try {
+    const headers: Record<string, string> = {};
+    if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
+
+    const res = await fetch(`${BUILDER_URL}/preview/${id}/status`, { headers });
+
+    if (!res.ok) {
+      return NextResponse.json({ status: "stopped" });
+    }
+
+    const data = await res.json();
+    return NextResponse.json(data);
+  } catch {
+    return NextResponse.json({ status: "stopped" });
+  }
 }
 
 export async function POST(
@@ -78,8 +90,8 @@ export async function POST(
         );
       }
 
-      const data = await res.json();
-      return NextResponse.json({ url: data.url });
+      // Builder returns 202 — preview is deploying in background
+      return NextResponse.json({ status: "deploying" });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Builder service unavailable";
       return NextResponse.json({ error: message }, { status: 503 });
