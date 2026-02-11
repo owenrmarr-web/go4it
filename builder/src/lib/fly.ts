@@ -559,35 +559,9 @@ export default defineConfig({
       );
     }
 
-    // ---- Stage: Configuring (subdomain) ----
-    if (subdomain) {
-      updateDeployProgress(orgAppId, "configuring");
-      const customDomain = `${subdomain}.go4it.live`;
-
-      const certResult = await flyctl(
-        ["certs", "add", customDomain, "--app", flyAppName],
-        { cwd: sourceDir }
-      );
-
-      if (
-        certResult.code !== 0 &&
-        !certResult.stderr.includes("already exists")
-      ) {
-        console.warn(
-          `[Deploy ${orgAppId}] Cert warning for ${customDomain}: ${certResult.stderr}`
-        );
-      } else {
-        console.log(
-          `[Deploy ${orgAppId}] Custom domain configured: ${customDomain}`
-        );
-      }
-    }
-
     // ---- Stage: Running ----
-    const flyDevUrl = `https://${flyAppName}.fly.dev`;
-    const flyUrl = subdomain
-      ? `https://${subdomain}.go4it.live`
-      : flyDevUrl;
+    // Use .fly.dev URL directly (custom subdomain DNS not yet working)
+    const flyUrl = `https://${flyAppName}.fly.dev`;
     updateDeployProgress(orgAppId, "running", { flyUrl });
 
     const orgAppForVersion = await prisma.orgApp.findUnique({
