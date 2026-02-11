@@ -408,6 +408,7 @@ export default function AuthPage() {
               required
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
               placeholder="••••••••"
+              minLength={6}
             />
           </div>
 

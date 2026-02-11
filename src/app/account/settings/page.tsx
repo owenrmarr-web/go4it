@@ -46,6 +46,8 @@ export default function SettingsPage() {
   const [usernameError, setUsernameError] = useState("");
   const usernameCheckTimer = useRef<ReturnType<typeof setTimeout>>(null);
   const [originalUsername, setOriginalUsername] = useState("");
+  const [passwordData, setPasswordData] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [changingPassword, setChangingPassword] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [themeColors, setThemeColors] = useState<ThemeColors | null>(null);
 
@@ -406,6 +408,73 @@ export default function SettingsPage() {
               disabled
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
             />
+          </div>
+
+          {/* Change Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Change Password
+            </label>
+            <div className="space-y-3">
+              <input
+                type="password"
+                placeholder="Current password"
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData((prev) => ({ ...prev, currentPassword: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+              />
+              <input
+                type="password"
+                placeholder="New password (min 6 characters)"
+                value={passwordData.newPassword}
+                minLength={6}
+                onChange={(e) => setPasswordData((prev) => ({ ...prev, newPassword: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+              />
+              <input
+                type="password"
+                placeholder="Confirm new password"
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+              />
+              <button
+                type="button"
+                disabled={changingPassword || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                onClick={async () => {
+                  if (passwordData.newPassword.length < 6) {
+                    toast.error("New password must be at least 6 characters");
+                    return;
+                  }
+                  if (passwordData.newPassword !== passwordData.confirmPassword) {
+                    toast.error("New passwords do not match");
+                    return;
+                  }
+                  setChangingPassword(true);
+                  try {
+                    const res = await fetch("/api/account/password", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        currentPassword: passwordData.currentPassword,
+                        newPassword: passwordData.newPassword,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || "Failed to change password");
+                    toast.success("Password changed!");
+                    setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Failed to change password");
+                  } finally {
+                    setChangingPassword(false);
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {changingPassword ? "Changing..." : "Change Password"}
+              </button>
+            </div>
           </div>
 
           {/* Company Name */}

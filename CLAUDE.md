@@ -12,6 +12,8 @@ GO4IT is a free marketplace for AI-generated SaaS applications targeting small a
 
 **Vibe:** Upbeat, fun, summer energy. Orange / pink / purple gradient palette.
 
+**UX philosophy:** The experience should feel *magical* — fast, flawless, and intuitive. Users should never feel like they're wrestling with the product. Prioritize getting everything working end-to-end first, then optimize with real usage data. Speed matters, but correctness and polish come first.
+
 ---
 
 ## How It Works (Full Product Flow)
@@ -271,6 +273,7 @@ For local dev, use: `DATABASE_URL="file:./dev.db" npx prisma db push`
 
 ## Architecture Decisions (2026-02-07)
 
+- **Deployed app UX (2026-02-10):** Separate browser tabs per app (not embedded tabs in a unified dashboard). Each deployed app is a full Next.js deployment on its own subdomain — embedding via iframes would introduce CORS/auth/styling complexity for marginal UX gain. Fly.io suspend/resume is ~2-3s, which is acceptable. Future optimization: pre-warm apps by hitting health endpoints when Account page loads (zero architecture changes needed).
 - **Deployment target:** Fly.io (not AWS EC2/LightSail) — scale-to-zero, built-in subdomain routing, simpler ops
 - **AI engine:** Claude Code CLI invoked as subprocess (not Agent SDK or raw API)
 - **App builder playbook:** `playbook/CLAUDE.md` copied into each workspace — ensures consistent tech stack and conventions
@@ -456,8 +459,9 @@ flyctl deploy --app go4it-builder
 2. **Fix production preview** — Preview doesn't load on builder service (worked locally). Likely needs Fly.io machine spawning or port forwarding instead of local dev server.
 3. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
 4. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues and add guardrails.
-5. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
-6. **Builder hardening** — Garbage collection for old workspaces, rate limiting, error logging/monitoring.
+5. **Email verification** — Verify email on signup (confirmation link via Resend). Also require email verification for password changes (send code/link before allowing change). Currently password change uses old-password verification only.
+6. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
+7. **Builder hardening** — Garbage collection for old workspaces, rate limiting, error logging/monitoring.
 
 ### Completed
 - ~~Builder service for production~~ — Standalone Fastify API on Fly.io (`go4it-builder.fly.dev`). Platform delegates generation, iteration, preview, and deploy via HTTP. Production generation works end-to-end.

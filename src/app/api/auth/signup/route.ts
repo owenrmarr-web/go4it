@@ -16,6 +16,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters" },
+        { status: 400 }
+      );
+    }
+
     const usernameCheck = await validateUsername(username);
     if (!usernameCheck.valid) {
       return NextResponse.json(
