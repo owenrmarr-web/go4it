@@ -4,14 +4,24 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
+  const password = await bcrypt.hash("go4it2026", 12);
+
+  // Always provision GO4IT admin account
+  await prisma.user.upsert({
+    where: { email: "admin@go4it.live" },
+    update: { name: "GO4IT Admin" },
+    create: { email: "admin@go4it.live", name: "GO4IT Admin", password },
+  });
+  console.log("Provisioned: GO4IT Admin (admin@go4it.live)");
+
+  // Provision team members if set
   const raw = process.env.GO4IT_TEAM_MEMBERS;
   if (!raw) {
-    console.log("No GO4IT_TEAM_MEMBERS set, skipping.");
+    console.log("No GO4IT_TEAM_MEMBERS set, skipping team provisioning.");
     return;
   }
 
   const members: { name: string; email: string }[] = JSON.parse(raw);
-  const password = await bcrypt.hash("go4it2026", 12);
 
   for (const member of members) {
     await prisma.user.upsert({
@@ -21,7 +31,7 @@ async function main() {
     });
     console.log(`Provisioned: ${member.name} (${member.email})`);
   }
-  console.log(`Done — ${members.length} users provisioned.`);
+  console.log(`Done — ${members.length + 1} users provisioned.`);
 }
 
 main().finally(() => prisma.$disconnect());
