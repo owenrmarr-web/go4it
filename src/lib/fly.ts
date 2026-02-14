@@ -234,7 +234,7 @@ export async function deployApp(
   orgAppId: string,
   orgSlug: string,
   sourceDir: string,
-  teamMembers: { name: string; email: string }[],
+  teamMembers: { name: string; email: string; passwordHash?: string }[],
   subdomain?: string,
   existingFlyAppId?: string
 ): Promise<void> {
@@ -392,21 +392,31 @@ const adapter = new PrismaLibSql({ url: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+  const defaultPassword = await bcrypt.hash("go4it2026", 12);
+
+  // Always provision GO4IT admin account
+  await prisma.user.upsert({
+    where: { email: "admin@go4it.live" },
+    update: { name: "GO4IT Admin" },
+    create: { email: "admin@go4it.live", name: "GO4IT Admin", password: defaultPassword },
+  });
+  console.log("Provisioned: GO4IT Admin (admin@go4it.live)");
+
   const raw = process.env.GO4IT_TEAM_MEMBERS;
   if (!raw) { console.log("No GO4IT_TEAM_MEMBERS set, skipping."); return; }
 
-  const members: { name: string; email: string }[] = JSON.parse(raw);
-  const password = await bcrypt.hash("go4it2026", 12);
+  const members: { name: string; email: string; passwordHash?: string }[] = JSON.parse(raw);
 
   for (const member of members) {
+    const password = member.passwordHash || defaultPassword;
     await prisma.user.upsert({
       where: { email: member.email },
-      update: { name: member.name },
+      update: { name: member.name, password },
       create: { email: member.email, name: member.name, password },
     });
-    console.log(\`Provisioned: \${member.name} (\${member.email})\`);
+    console.log(\`Provisioned: \${member.name} (\${member.email})\${member.passwordHash ? " [platform credentials]" : ""}\`);
   }
-  console.log(\`Done — \${members.length} users provisioned.\`);
+  console.log(\`Done — \${members.length + 1} users provisioned.\`);
 }
 
 main().finally(() => prisma.$disconnect());

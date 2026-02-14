@@ -38,7 +38,8 @@ export async function startPreview(
   }
 
   const port = nextPort++;
-  const url = `http://localhost:${port}`;
+  // Use 127.0.0.1 instead of localhost to isolate cookies from the main app
+  const url = `http://127.0.0.1:${port}`;
 
   // Create .env if it doesn't exist
   const envPath = path.join(sourceDir, ".env");
@@ -161,14 +162,12 @@ export function stopPreview(generationId: string): void {
 }
 
 function patchAuthForPreview(generationId: string, sourceDir: string) {
+  // Patch auth.ts if not already patched
   const authPath = path.join(sourceDir, "src", "auth.ts");
-  if (!existsSync(authPath)) return;
-
-  const content = readFileSync(authPath, "utf-8");
-  if (content.includes("PREVIEW_MODE")) return; // Already patched
-
-  // Replace auth.ts so auth() returns a fake session in preview mode
-  const patched = `import NextAuth from "next-auth";
+  if (existsSync(authPath)) {
+    const content = readFileSync(authPath, "utf-8");
+    if (!content.includes("PREVIEW_MODE")) {
+      const patched = `import NextAuth from "next-auth";
 import authConfig from "./auth.config";
 
 const nextAuth = NextAuth(authConfig);
@@ -179,7 +178,7 @@ export const signOut = nextAuth.signOut;
 
 // In preview mode, return a fake session so all auth checks pass
 const previewSession = {
-  user: { id: "preview", email: "admin@example.com", name: "Preview User" },
+  user: { id: "preview", email: "admin@go4it.live", name: "Preview User" },
   expires: new Date(Date.now() + 86400000).toISOString(),
 };
 
@@ -187,16 +186,40 @@ export const auth = process.env.PREVIEW_MODE === "true"
   ? async () => previewSession
   : nextAuth.auth;
 `;
+      writeFileSync(authPath, patched);
+      console.log(`[Preview ${generationId}] Patched auth.ts for preview mode`);
+    }
+  }
 
-  writeFileSync(authPath, patched);
-  console.log(`[Preview ${generationId}] Patched auth.ts for preview mode`);
+  // Always patch middleware.ts — the auth() wrapper breaks when auth is patched.
+  // Check independently since auth may have been patched in a previous preview attempt.
+  const middlewarePath = path.join(sourceDir, "src", "middleware.ts");
+  if (existsSync(middlewarePath)) {
+    const mwContent = readFileSync(middlewarePath, "utf-8");
+    if (!mwContent.includes("// Preview mode: skip all auth checks")) {
+      const matcherMatch = mwContent.match(/export const config\s*=\s*(\{[\s\S]*?\});/);
+      const matcherConfig = matcherMatch ? matcherMatch[1] : '{ matcher: ["/", "/m/:path*", "/settings/:path*"] }';
+
+      const patchedMw = `import { NextResponse } from "next/server";
+
+// Preview mode: skip all auth checks
+export function middleware() {
+  return NextResponse.next();
+}
+
+export const config = ${matcherConfig};
+`;
+      writeFileSync(middlewarePath, patchedMw);
+      console.log(`[Preview ${generationId}] Patched middleware.ts for preview mode`);
+    }
+  }
 }
 
 async function waitForReady(port: number, timeoutMs: number): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
-      const res = await fetch(`http://localhost:${port}`, {
+      const res = await fetch(`http://127.0.0.1:${port}`, {
         signal: AbortSignal.timeout(2000),
       });
       if (res.ok || res.status === 307 || res.status === 302) return;

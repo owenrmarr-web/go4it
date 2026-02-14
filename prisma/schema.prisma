@@ -65,19 +65,19 @@ model VerificationToken {
 }
 
 model App {
-  id              String            @id @default(cuid())
-  title           String
-  description     String
-  longDescription String?
-  category        String
-  icon            String
-  author          String
-  tags            String
-  isPublic        Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  interactions    UserInteraction[]
-  generatedApp    GeneratedApp?
-  orgApps         OrgApp[]
+  id               String            @id @default(cuid())
+  title            String
+  description      String
+  longDescription  String?
+  category         String
+  icon             String
+  author           String
+  tags             String
+  isPublic         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  interactions     UserInteraction[]
+  generatedApp     GeneratedApp?
+  orgApps          OrgApp[]
 }
 
 enum InteractionType {
@@ -151,17 +151,17 @@ model AppIteration {
 // ============================================
 
 model Organization {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique // e.g., "zenith" for zenith.go4it.live
-  logo        String?  // Base64 for now, will move to object storage later
-  themeColors String?  // JSON: { primary, secondary, accent }
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique // e.g., "zenith" for zenith.go4it.live
+  logo           String?  // Base64 for now, will move to object storage later
+  themeColors    String?  // JSON: { primary, secondary, accent }
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  members     OrganizationMember[]
-  invitations Invitation[]
-  apps        OrgApp[]
+  members       OrganizationMember[]
+  invitations   Invitation[]
+  apps          OrgApp[]
 }
 
 enum OrgRole {

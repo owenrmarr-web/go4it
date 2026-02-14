@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { COUNTRIES, US_STATES, USE_CASE_OPTIONS } from "@/lib/constants";
 import { generateUsernameFromName } from "@/lib/username-utils";
+import { generateSlug } from "@/lib/slug";
+import { extractColorsFromImage } from "@/lib/colorExtractor";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -16,6 +18,7 @@ export default function AuthPage() {
     email: "",
     password: "",
     companyName: "",
+    portalSlug: "",
     state: "",
     country: "",
     useCases: [] as string[],
@@ -24,11 +27,19 @@ export default function AuthPage() {
   const [usernameManuallyEdited, setUsernameManuallyEdited] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [usernameError, setUsernameError] = useState("");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const usernameCheckTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
   const [stateSearch, setStateSearch] = useState("");
   const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
   const stateInputRef = useRef<HTMLInputElement>(null);
+
+  // Logo + theme colors
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [themeColors, setThemeColors] = useState({ primary: "#9333EA", secondary: "#EC4899", accent: "#F97316" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const checkUsername = useCallback(async (username: string) => {
     if (!username || username.length < 3) {
@@ -86,6 +97,10 @@ export default function AuthPage() {
       if (name === "name" && !usernameManuallyEdited) {
         updated.username = generateUsernameFromName(value);
       }
+      // Auto-generate portal slug from company name if not manually edited
+      if (name === "companyName" && !slugManuallyEdited) {
+        updated.portalSlug = generateSlug(value);
+      }
       return updated;
     });
     if (name === "country") setStateSearch("");
@@ -98,6 +113,36 @@ export default function AuthPage() {
         ? prev.useCases.filter((v) => v !== value)
         : [...prev.useCases, value],
     }));
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 500 * 1024) { toast.error("Logo must be under 500KB"); return; }
+    if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setLogoPreview(base64);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const maxSize = 100;
+        const scale = Math.min(maxSize / img.width, maxSize / img.height);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const colors = extractColorsFromImage(imageData);
+        setThemeColors(colors);
+        toast.success("Colors extracted from logo!");
+      };
+      img.src = base64;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -129,6 +174,9 @@ export default function AuthPage() {
           email: formData.email,
           password: formData.password,
           companyName: formData.companyName || null,
+          portalSlug: formData.portalSlug || null,
+          logo: logoPreview || null,
+          themeColors: formData.companyName ? themeColors : null,
           state: formData.state || null,
           country: formData.country || null,
           useCases: formData.useCases.length > 0 ? formData.useCases : null,
@@ -253,6 +301,108 @@ export default function AuthPage() {
                   placeholder="Your business name"
                 />
               </div>
+
+              {formData.companyName && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Portal URL{" "}
+                      <span className="text-gray-400 font-normal">(customizable)</span>
+                    </label>
+                    <div className="flex items-center gap-0">
+                      <span className="px-3 py-2.5 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-sm text-gray-400">
+                        go4it.live/
+                      </span>
+                      <input
+                        type="text"
+                        value={formData.portalSlug}
+                        onChange={(e) => {
+                          const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                          setFormData((prev) => ({ ...prev, portalSlug: val }));
+                          setSlugManuallyEdited(true);
+                        }}
+                        className="flex-1 px-3 py-2.5 border border-gray-200 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                        placeholder="your-company"
+                        maxLength={40}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Your team portal will be available at this URL.
+                    </p>
+                  </div>
+
+                  {/* Logo Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Company Logo{" "}
+                      <span className="text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <div className="flex items-center gap-3">
+                      {logoPreview ? (
+                        <img src={logoPreview} alt="Logo" className="w-12 h-12 rounded-lg object-cover border border-gray-200" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-lg">
+                          +
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-sm text-purple-600 font-medium hover:underline"
+                        >
+                          {logoPreview ? "Change" : "Upload"}
+                        </button>
+                        {logoPreview && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLogoPreview(null);
+                              setThemeColors({ primary: "#9333EA", secondary: "#EC4899", accent: "#F97316" });
+                              if (fileInputRef.current) fileInputRef.current.value = "";
+                            }}
+                            className="text-sm text-red-500 font-medium hover:underline"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                    </div>
+                    <canvas ref={canvasRef} className="hidden" />
+                  </div>
+
+                  {/* Theme Colors */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Theme Colors
+                    </label>
+                    <div className="flex items-center gap-4">
+                      {(["primary", "secondary", "accent"] as const).map((key) => (
+                        <label key={key} className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="color"
+                            value={themeColors[key]}
+                            onChange={(e) => setThemeColors((prev) => ({ ...prev, [key]: e.target.value }))}
+                            className="w-8 h-8 rounded-full border-2 border-gray-200 cursor-pointer p-0 overflow-hidden"
+                            style={{ appearance: "none", WebkitAppearance: "none" }}
+                          />
+                          <span className="text-xs text-gray-500 capitalize">{key}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {logoPreview ? "Extracted from your logo. Click any color to customize." : "These colors personalize your portal."}
+                    </p>
+                  </div>
+                </>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

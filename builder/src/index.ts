@@ -1,8 +1,12 @@
 import Fastify from "fastify";
+import { Readable } from "stream";
 import generateRoute from "./routes/generate.js";
 import iterateRoute from "./routes/iterate.js";
 import deployRoute from "./routes/deploy.js";
-import previewRoute from "./routes/preview.js";
+import previewRoute, {
+  getActivePreview,
+  PREVIEW_PORT,
+} from "./routes/preview.js";
 import healthRoute from "./routes/health.js";
 
 const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
@@ -12,27 +16,88 @@ const app = Fastify({
   logger: true,
 });
 
-// Auth middleware — require Bearer token on all routes except /health
+// Auth middleware — only require auth for builder API routes, not preview proxy
+const PROTECTED_PATHS = new Set(["generate", "iterate", "deploy", "preview"]);
+
 app.addHook("onRequest", async (request, reply) => {
-  if (request.url === "/health") return;
+  const firstSegment = request.url.split("?")[0].split("/")[1] || "";
+
+  // Only require auth for builder API routes
+  if (firstSegment === "health" || !PROTECTED_PATHS.has(firstSegment)) return;
 
   const authHeader = request.headers.authorization;
-  if (!BUILDER_API_KEY) {
-    // No API key configured — allow all requests (dev mode)
-    return;
-  }
+  if (!BUILDER_API_KEY) return; // Dev mode — no auth required
 
   if (!authHeader || authHeader !== `Bearer ${BUILDER_API_KEY}`) {
     return reply.status(401).send({ error: "Unauthorized" });
   }
 });
 
-// Register routes
+// Register builder routes
 app.register(generateRoute);
 app.register(iterateRoute);
 app.register(deployRoute);
 app.register(previewRoute);
 app.register(healthRoute);
+
+// Preview proxy — forward unmatched routes to active preview app
+// This runs AFTER all registered routes fail to match, so builder API routes
+// (/generate, /iterate, /deploy, /preview, /health) are unaffected.
+app.setNotFoundHandler(async (request, reply) => {
+  const preview = getActivePreview();
+  if (!preview || preview.status !== "ready") {
+    return reply.code(404).send({ error: "Not found" });
+  }
+
+  try {
+    const targetUrl = `http://localhost:${PREVIEW_PORT}${request.url}`;
+
+    // Build headers, replacing host
+    const headers: Record<string, string> = {};
+    for (const [key, value] of Object.entries(request.headers)) {
+      if (typeof value === "string" && key.toLowerCase() !== "host") {
+        headers[key] = value;
+      }
+    }
+    headers["host"] = `localhost:${PREVIEW_PORT}`;
+
+    const fetchOptions: RequestInit = {
+      method: request.method as string,
+      headers,
+      redirect: "manual", // Pass redirects through to client
+    };
+
+    // Forward body for non-GET/HEAD requests
+    if (
+      request.method !== "GET" &&
+      request.method !== "HEAD" &&
+      request.body
+    ) {
+      fetchOptions.body =
+        typeof request.body === "string"
+          ? request.body
+          : JSON.stringify(request.body);
+    }
+
+    const response = await fetch(targetUrl, fetchOptions);
+
+    reply.code(response.status);
+    for (const [key, value] of response.headers.entries()) {
+      const lower = key.toLowerCase();
+      if (lower !== "transfer-encoding" && lower !== "connection") {
+        reply.header(key, value);
+      }
+    }
+
+    if (response.body) {
+      const nodeStream = Readable.fromWeb(response.body as never);
+      return reply.send(nodeStream);
+    }
+    return reply.send("");
+  } catch {
+    return reply.code(502).send({ error: "Preview not available" });
+  }
+});
 
 // Start
 async function start() {

@@ -43,6 +43,10 @@ const STAGE_MESSAGES: Record<GenerationStage, string> = {
 const processStore = new Map<string, ChildProcess>();
 const installPromises = new Map<string, Promise<boolean>>();
 
+// Timed stage timers for early stages (auto-advance designing → scaffolding → coding)
+const stageTimers = new Map<string, ReturnType<typeof setTimeout>[]>();
+const currentStages = new Map<string, GenerationStage>();
+
 // Track active generation count for health endpoint
 let activeJobs = 0;
 export function getActiveJobCount(): number {
@@ -89,12 +93,49 @@ function getTemplatePath(): string {
   return path.resolve("playbook", "template");
 }
 
+// Start the timed early-stage progression: designing (8s) → scaffolding (10s) → coding
+function startTimedStages(generationId: string) {
+  // Clear any existing timers
+  const existing = stageTimers.get(generationId);
+  if (existing) existing.forEach(clearTimeout);
+
+  // Start at "designing" immediately
+  updateProgress(generationId, "designing");
+
+  const timers = [
+    setTimeout(() => {
+      const cur = currentStages.get(generationId);
+      if (cur === "designing" || cur === "pending") {
+        updateProgress(generationId, "scaffolding");
+      }
+    }, 8000),
+    setTimeout(() => {
+      const cur = currentStages.get(generationId);
+      if (cur === "scaffolding") {
+        updateProgress(generationId, "coding");
+      }
+    }, 18000), // 8s designing + 10s scaffolding
+  ];
+  stageTimers.set(generationId, timers);
+}
+
+function cleanupTimers(generationId: string) {
+  const timers = stageTimers.get(generationId);
+  if (timers) {
+    timers.forEach(clearTimeout);
+    stageTimers.delete(generationId);
+  }
+  currentStages.delete(generationId);
+}
+
 // Write progress to Turso DB instead of in-memory store
 async function updateProgress(
   generationId: string,
   stage: GenerationStage,
   extra?: { title?: string; description?: string; error?: string }
 ) {
+  currentStages.set(generationId, stage);
+
   try {
     const data: Record<string, string | undefined> = {
       currentStage: stage,
@@ -182,6 +223,7 @@ function runClaudeCLI(
 
   child.on("close", async (code) => {
     processStore.delete(generationId);
+    cleanupTimers(generationId);
     activeJobs--;
 
     try {
@@ -230,6 +272,7 @@ function runClaudeCLI(
 
   child.on("error", async (err) => {
     processStore.delete(generationId);
+    cleanupTimers(generationId);
     activeJobs--;
     const errorMsg =
       (err as NodeJS.ErrnoException).code === "ENOENT"
@@ -337,7 +380,8 @@ export async function startGeneration(
   // Uses retry because of Turso replication delay — the record was just created by Vercel
   await retryUpdate(generationId, { status: "GENERATING", sourceDir: workspaceDir });
 
-  await updateProgress(generationId, "pending");
+  // Start timed early-stage progression (designing 8s → scaffolding 10s → coding)
+  startTimedStages(generationId);
 
   const enrichedPrompt = buildEnrichedPrompt(prompt, context);
 
@@ -391,7 +435,8 @@ export async function startIteration(
     data: { status: "GENERATING" },
   });
 
-  await updateProgress(generationId, "pending");
+  // Start timed early-stage progression (designing 8s → scaffolding 10s → coding)
+  startTimedStages(generationId);
 
   runClaudeCLI(
     generationId,
@@ -531,6 +576,75 @@ function extractAppMetadata(workspaceDir: string): {
   return { title, description };
 }
 
+// Try to build the app — returns null on success, error string on failure
+function tryBuild(
+  generationId: string,
+  workspaceDir: string
+): string | null {
+  try {
+    console.log(`[Generator ${generationId}] Running build validation...`);
+    execSync("npm run build", {
+      cwd: workspaceDir,
+      stdio: "pipe",
+      timeout: 120000,
+      env: { ...process.env, DATABASE_URL: "file:./dev.db" },
+    });
+    console.log(`[Generator ${generationId}] Build passed`);
+    return null;
+  } catch (err) {
+    const error = err as { stderr?: Buffer; stdout?: Buffer };
+    const stderr = error.stderr?.toString() || "";
+    const stdout = error.stdout?.toString() || "";
+    // Extract the most useful error info (TypeScript errors, etc.)
+    const output = stderr || stdout;
+    const errorLines = output
+      .split("\n")
+      .filter((l) => l.includes("Error") || l.includes("error") || l.includes("Type error") || l.includes("Module not found"))
+      .slice(0, 10)
+      .join("\n");
+    const buildError = errorLines || output.slice(0, 1500);
+    console.error(`[Generator ${generationId}] Build failed:\n${buildError}`);
+    return buildError;
+  }
+}
+
+// Auto-fix: spawn Claude Code CLI with --continue to fix a build error
+function autoFix(
+  generationId: string,
+  workspaceDir: string,
+  buildError: string
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const fixPrompt = `The app failed to build with this error:\n\n${buildError}\n\nFix the build error. Do not change any pre-built template files (auth.ts, auth.config.ts, prisma.ts, middleware.ts, SessionProvider.tsx, layout.tsx, globals.css, auth/page.tsx, or any file under api/auth/). Only fix the files you created.`;
+
+    console.log(`[Generator ${generationId}] Auto-fix: spawning CLI with --continue`);
+
+    const child = spawn("npx", buildCLIArgs(fixPrompt, true), {
+      cwd: workspaceDir,
+      env: {
+        ...process.env,
+        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    child.stdout.on("data", () => {}); // drain
+    child.stderr.on("data", () => {}); // drain
+
+    child.on("close", (code) => {
+      console.log(`[Generator ${generationId}] Auto-fix CLI exited with code ${code}`);
+      resolve(code === 0);
+    });
+
+    child.on("error", (err) => {
+      console.error(`[Generator ${generationId}] Auto-fix spawn error:`, err.message);
+      resolve(false);
+    });
+  });
+}
+
+const MAX_AUTO_FIX_ATTEMPTS = 2;
+
 async function prepareForPreview(
   generationId: string,
   workspaceDir: string
@@ -620,5 +734,40 @@ async function prepareForPreview(
     } catch {
       console.log(`[Generator ${generationId}] Seed failed (non-fatal)`);
     }
+  }
+
+  // Build validation + auto-fix loop
+  let buildError = tryBuild(generationId, workspaceDir);
+  for (let attempt = 1; attempt <= MAX_AUTO_FIX_ATTEMPTS && buildError; attempt++) {
+    console.log(
+      `[Generator ${generationId}] Auto-fix attempt ${attempt}/${MAX_AUTO_FIX_ATTEMPTS}`
+    );
+    await updateProgress(generationId, "coding");
+
+    const fixed = await autoFix(generationId, workspaceDir, buildError);
+    if (!fixed) {
+      console.error(`[Generator ${generationId}] Auto-fix CLI failed, giving up`);
+      break;
+    }
+
+    // Re-run npm install in case the fix added/changed dependencies
+    try {
+      execSync("npm install", {
+        cwd: workspaceDir,
+        stdio: "pipe",
+        timeout: 60000,
+      });
+    } catch {
+      // non-fatal
+    }
+
+    await updateProgress(generationId, "finalizing");
+    buildError = tryBuild(generationId, workspaceDir);
+  }
+
+  if (buildError) {
+    console.error(
+      `[Generator ${generationId}] Build still failing after auto-fix attempts — proceeding anyway`
+    );
   }
 }

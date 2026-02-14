@@ -13,7 +13,6 @@ export async function GET(
     where: { slug },
     include: {
       apps: {
-        where: { status: "RUNNING" },
         include: {
           app: {
             select: {
@@ -28,7 +27,7 @@ export async function GET(
             },
           },
         },
-        orderBy: { deployedAt: "desc" },
+        orderBy: { addedAt: "desc" },
       },
       members: {
         where: { role: "OWNER" },
@@ -63,18 +62,20 @@ export async function GET(
     }
   }
 
-  const apps = org.apps.map((oa) => ({
-    id: oa.id,
-    title: oa.app.title,
-    description: oa.app.description,
-    icon: oa.app.icon,
-    category: oa.app.category,
-    url: oa.flyUrl || (oa.subdomain ? `https://${oa.subdomain}.go4it.live` : null),
-    subdomain: oa.subdomain,
-    version: oa.deployedMarketplaceVersion != null
-      ? `V${oa.deployedMarketplaceVersion}.${oa.deployedOrgVersion ?? 0}`
-      : `V${oa.app.generatedApp?.marketplaceVersion ?? 1}.0`,
-  }));
+  const apps = org.apps
+    .filter((oa) => oa.status === "RUNNING")
+    .map((oa) => ({
+      id: oa.id,
+      title: oa.app.title,
+      description: oa.app.description,
+      icon: oa.app.icon,
+      category: oa.app.category,
+      url: oa.flyUrl || (oa.subdomain ? `https://${oa.subdomain}.go4it.live` : null),
+      subdomain: oa.subdomain,
+      version: oa.deployedMarketplaceVersion != null
+        ? `V${oa.deployedMarketplaceVersion}.${oa.deployedOrgVersion ?? 0}`
+        : `V${oa.app.generatedApp?.marketplaceVersion ?? 1}.0`,
+    }));
 
   return NextResponse.json({
     name: org.name,

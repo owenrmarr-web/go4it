@@ -107,7 +107,7 @@ export default function AuthPage() {
         </p>
 
         <div className="mt-4 text-center text-xs text-gray-400">
-          Demo: admin@example.com / demo123
+          Demo: admin@go4it.live / go4it2026
         </div>
       </div>
     </div>

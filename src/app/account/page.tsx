@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import Header from "@/components/Header";
 import AppCard, { type UserOrg } from "@/components/AppCard";
 import { useInteractions } from "@/hooks/useInteractions";
 import type { App } from "@/types";
+import { extractColorsFromImage } from "@/lib/colorExtractor";
 
 interface OrgData {
   id: string;
@@ -129,6 +130,13 @@ export default function AccountPage() {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
 
+  // Branding state
+  const [brandingLogo, setBrandingLogo] = useState<string | null>(null);
+  const [brandingColors, setBrandingColors] = useState({ primary: "#9333EA", secondary: "#EC4899", accent: "#F97316" });
+  const [savingBranding, setSavingBranding] = useState(false);
+  const brandingFileRef = useRef<HTMLInputElement>(null);
+  const brandingCanvasRef = useRef<HTMLCanvasElement>(null);
+
   // For AppCard — build a UserOrg array from the single org
   const orgs: UserOrg[] = useMemo(() => {
     if (!org) return [];
@@ -168,6 +176,15 @@ export default function AccountPage() {
       .catch(() => setAppsLoading(false));
 
     fetchOrgData();
+
+    // Load existing branding from profile
+    fetch("/api/account/profile")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.logo) setBrandingLogo(data.logo);
+        if (data.themeColors) setBrandingColors(data.themeColors);
+      })
+      .catch(() => {});
   }, [fetchOrgData]);
 
   const loading = appsLoading || interactionsLoading || orgLoading;
@@ -577,6 +594,65 @@ export default function AccountPage() {
     handleLaunchApp(orgApp);
   };
 
+  const handleBrandingLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 500 * 1024) {
+      toast.error("Logo must be under 500KB");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setBrandingLogo(dataUrl);
+
+      // Extract colors from logo
+      const img = new Image();
+      img.onload = () => {
+        const canvas = brandingCanvasRef.current;
+        if (!canvas) return;
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, img.width, img.height);
+        const colors = extractColorsFromImage(imageData);
+        setBrandingColors(colors);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveBranding = async () => {
+    setSavingBranding(true);
+    try {
+      const res = await fetch("/api/account/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logo: brandingLogo, themeColors: brandingColors }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save");
+      }
+      toast.success("Branding updated!");
+      fetchOrgData();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save branding";
+      toast.error(message);
+    } finally {
+      setSavingBranding(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut({ redirect: true, redirectTo: "/" });
   };
@@ -612,12 +688,76 @@ export default function AccountPage() {
           </div>
         ) : (
           <>
-            {/* ── My Apps ──────────────────────────────────── */}
+            {/* ── My Apps ─────────────────────────────────── */}
             <section className="mb-12">
               <h2 className="text-xl font-bold text-gray-800 mb-4">My Apps</h2>
 
               {/* Team Portal URL */}
               {org && <PortalBanner slug={org.slug} />}
+
+              {/* Branding */}
+              {org && (
+                <div className="mb-4 bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-4">Branding</h3>
+                  <div className="flex items-start gap-6">
+                    {/* Logo */}
+                    <div className="flex flex-col items-center gap-2">
+                      <div
+                        className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50 cursor-pointer hover:border-purple-300 transition-colors"
+                        onClick={() => brandingFileRef.current?.click()}
+                      >
+                        {brandingLogo ? (
+                          <img src={brandingLogo} alt="Logo" className="w-full h-full object-contain" />
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-400">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
+                          </svg>
+                        )}
+                      </div>
+                      <input ref={brandingFileRef} type="file" accept="image/*" onChange={handleBrandingLogoUpload} className="hidden" />
+                      <div className="flex gap-1">
+                        <button onClick={() => brandingFileRef.current?.click()} className="text-xs text-purple-600 hover:text-purple-700">
+                          {brandingLogo ? "Change" : "Upload"}
+                        </button>
+                        {brandingLogo && (
+                          <button onClick={() => setBrandingLogo(null)} className="text-xs text-gray-400 hover:text-red-500">
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Colors */}
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 mb-2">Theme Colors</p>
+                      <div className="flex items-center gap-4">
+                        {(["primary", "secondary", "accent"] as const).map((key) => (
+                          <label key={key} className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="color"
+                              value={brandingColors[key]}
+                              onChange={(e) => setBrandingColors((prev) => ({ ...prev, [key]: e.target.value }))}
+                              className="w-8 h-8 rounded-full border-2 border-gray-200 cursor-pointer p-0 overflow-hidden"
+                              style={{ appearance: "none", WebkitAppearance: "none" }}
+                            />
+                            <span className="text-xs text-gray-500 capitalize">{key}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Save */}
+                    <button
+                      onClick={handleSaveBranding}
+                      disabled={savingBranding}
+                      className="px-4 py-2 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 self-center"
+                    >
+                      {savingBranding ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                  <canvas ref={brandingCanvasRef} className="hidden" />
+                </div>
+              )}
 
               {!org ? (
                 <div className="text-center py-10 bg-white rounded-xl shadow-sm">
@@ -907,6 +1047,17 @@ export default function AccountPage() {
                             >
                               Cancel
                             </button>
+                            {orgApp.status === "RUNNING" && (
+                              <button
+                                onClick={() => {
+                                  setConfiguringAppId(null);
+                                  handleUpdateApp(orgApp);
+                                }}
+                                className="ml-auto px-4 py-2 border border-orange-200 rounded-lg text-sm font-medium text-orange-600 hover:bg-orange-50 transition-colors"
+                              >
+                                Re-deploy
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1239,7 +1390,7 @@ export default function AccountPage() {
 
 function PortalBanner({ slug }: { slug: string }) {
   const [copied, setCopied] = useState(false);
-  const portalUrl = `go4it.live/portal/${slug}`;
+  const portalUrl = `go4it.live/${slug}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(`https://${portalUrl}`);
@@ -1269,7 +1420,7 @@ function PortalBanner({ slug }: { slug: string }) {
           {copied ? "Copied!" : "Copy"}
         </button>
         <a
-          href={`/portal/${slug}`}
+          href={`/${slug}`}
           target="_blank"
           rel="noopener noreferrer"
           className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity"

@@ -75,6 +75,33 @@ export default function CreatePage() {
     }
   }, [session]);
 
+  // Auto-preview: when generation completes, automatically start preview
+  const [autoPreviewTriggered, setAutoPreviewTriggered] = useState<string | null>(null);
+  useEffect(() => {
+    const genId = gen.generationId;
+    if (
+      gen.stage === "complete" &&
+      genId &&
+      !gen.previewUrl &&
+      !gen.previewLoading &&
+      autoPreviewTriggered !== genId
+    ) {
+      setAutoPreviewTriggered(genId);
+      gen.startPreview().catch(() => {
+        // Silent — user can manually retry from the complete screen
+      });
+    }
+  }, [gen.stage, gen.generationId, gen.previewUrl, gen.previewLoading, autoPreviewTriggered, gen]);
+
+  // Auto-open: when preview URL becomes available, open in new tab
+  const [autoOpenedUrl, setAutoOpenedUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (gen.previewUrl && gen.previewUrl !== autoOpenedUrl) {
+      setAutoOpenedUrl(gen.previewUrl);
+      window.open(gen.previewUrl, "_blank");
+    }
+  }, [gen.previewUrl, autoOpenedUrl]);
+
   const pageState = localView === "default" ? derivePageState() : localView;
 
   const handleGenerate = async () => {
@@ -239,7 +266,7 @@ export default function CreatePage() {
                 disabled={!businessContext.trim() || prompt.trim().length < 10}
                 className="gradient-brand text-white px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Generate
+                Generate App
               </button>
             </div>
 
@@ -279,7 +306,7 @@ export default function CreatePage() {
               {showCancelConfirm ? (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 inline-block">
                   <p className="text-sm text-amber-800 mb-3">
-                    Builds typically take <strong>5-10 minutes</strong> as we set up the entire infrastructure for your app. Are you sure you want to cancel?
+                    Builds typically take <strong>1-2 minutes</strong>. Are you sure you want to cancel?
                   </p>
                   <div className="flex gap-3 justify-center">
                     <button
@@ -347,12 +374,16 @@ export default function CreatePage() {
                     Stop Preview
                   </button>
                 </div>
+              ) : gen.previewLoading ? (
+                <div className="flex items-center justify-center gap-3 text-gray-500">
+                  <div className="w-5 h-5 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+                  <span className="text-sm font-medium">Launching preview...</span>
+                </div>
               ) : (
                 <button
                   onClick={async () => {
                     try {
                       await gen.startPreview();
-                      toast.success("Preview is ready!");
                     } catch (err) {
                       toast.error(
                         err instanceof Error
@@ -361,12 +392,9 @@ export default function CreatePage() {
                       );
                     }
                   }}
-                  disabled={gen.previewLoading}
-                  className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity"
                 >
-                  {gen.previewLoading
-                    ? "Starting preview..."
-                    : "Preview Your App"}
+                  Preview Your App
                 </button>
               )}
             </div>

@@ -1,77 +1,47 @@
 import { FastifyInstance } from "fastify";
-import { spawn } from "child_process";
-import {
-  existsSync,
-  readFileSync,
-  writeFileSync,
-  mkdirSync,
-} from "fs";
+import { spawn, ChildProcess } from "child_process";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
-import crypto from "crypto";
 import prisma from "../lib/prisma.js";
 
-const FLYCTL_PATH =
-  process.env.FLYCTL_PATH || `${process.env.HOME}/.fly/bin/flyctl`;
-const FLY_REGION = process.env.FLY_REGION || "ord";
+const PREVIEW_PORT = 4001;
 
-// In-memory preview status tracking
-interface PreviewState {
-  status: "deploying" | "ready" | "failed";
+// Active preview tracking — only one preview at a time
+interface ActivePreview {
+  generationId: string;
+  port: number;
+  process: ChildProcess | null;
+  status: "starting" | "ready" | "failed";
   url?: string;
   error?: string;
 }
 
-const previewJobs = new Map<string, PreviewState>();
+let activePreview: ActivePreview | null = null;
 
-export function getPreviewStatus(generationId: string): PreviewState | null {
-  return previewJobs.get(generationId) ?? null;
+export function getActivePreview(): ActivePreview | null {
+  return activePreview;
 }
 
-function runCommand(
-  cmd: string,
-  args: string[],
-  options?: { cwd?: string }
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  return new Promise((resolve) => {
-    const child = spawn(cmd, args, {
-      cwd: options?.cwd,
-      env: process.env,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout.on("data", (data: Buffer) => {
-      stdout += data.toString();
-    });
-    child.stderr.on("data", (data: Buffer) => {
-      stderr += data.toString();
-    });
-
-    child.on("close", (code) => {
-      resolve({ stdout, stderr, code: code ?? 1 });
-    });
-
-    child.on("error", (err) => {
-      resolve({ stdout, stderr: err.message, code: 1 });
-    });
-  });
+export function getPreviewStatus(
+  generationId: string
+): { status: string; url?: string; error?: string } | null {
+  if (!activePreview || activePreview.generationId !== generationId) {
+    return null;
+  }
+  return {
+    // Map "starting" to "deploying" for compatibility with the platform's polling
+    status:
+      activePreview.status === "starting" ? "deploying" : activePreview.status,
+    url: activePreview.url,
+    error: activePreview.error,
+  };
 }
 
-function flyctl(
-  args: string[],
-  options?: { cwd?: string }
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  return runCommand(FLYCTL_PATH, args, options);
-}
+export { PREVIEW_PORT };
 
 function patchAuthForPreview(sourceDir: string) {
   const authPath = path.join(sourceDir, "src", "auth.ts");
   if (!existsSync(authPath)) return;
-
-  const content = readFileSync(authPath, "utf-8");
-  if (content.includes("PREVIEW_MODE")) return;
 
   const patched = `import NextAuth from "next-auth";
 import authConfig from "./auth.config";
@@ -84,7 +54,7 @@ export const signOut = nextAuth.signOut;
 
 // In preview mode, return a fake session so all auth checks pass
 const previewSession = {
-  user: { id: "preview", email: "admin@example.com", name: "Preview User" },
+  user: { id: "preview", email: "admin@go4it.live", name: "Preview User", role: "admin" },
   expires: new Date(Date.now() + 86400000).toISOString(),
 };
 
@@ -94,217 +64,178 @@ export const auth = process.env.PREVIEW_MODE === "true"
 `;
 
   writeFileSync(authPath, patched);
+
+  // Also patch middleware.ts — skip auth checks in preview mode
+  const middlewarePath = path.join(sourceDir, "src", "middleware.ts");
+  if (existsSync(middlewarePath)) {
+    const mwContent = readFileSync(middlewarePath, "utf-8");
+    const matcherMatch = mwContent.match(
+      /export const config\s*=\s*(\{[\s\S]*?\});/
+    );
+    const matcherConfig = matcherMatch
+      ? matcherMatch[1]
+      : '{ matcher: ["/", "/m/:path*", "/settings/:path*"] }';
+
+    const patchedMw = `import { NextResponse } from "next/server";
+
+// Preview mode: skip all auth checks
+export function middleware() {
+  return NextResponse.next();
 }
 
-function generatePreviewFlyToml(appName: string): string {
-  return `app = "${appName}"
-primary_region = "${FLY_REGION}"
-
-[build]
-
-[http_service]
-  internal_port = 3000
-  force_https = true
-  auto_stop_machines = "stop"
-  auto_start_machines = true
-  min_machines_running = 0
-
-[[vm]]
-  size = "shared-cpu-1x"
-  memory = "256mb"
-
-[mounts]
-  source = "data"
-  destination = "/data"
-
-[env]
-  DATABASE_URL = "file:/data/app.db"
-  PORT = "3000"
-  NODE_ENV = "production"
-  AUTH_TRUST_HOST = "true"
-  PREVIEW_MODE = "true"
+export const config = ${matcherConfig};
 `;
+    writeFileSync(middlewarePath, patchedMw);
+  }
 }
 
-async function runPreviewDeploy(generationId: string, sourceDir: string) {
-  const shortId = generationId.slice(0, 8);
-  const previewAppName = `go4it-preview-${shortId}`;
-  const authSecret = crypto.randomBytes(32).toString("hex");
+function killActivePreview(): Promise<void> {
+  return new Promise((resolve) => {
+    if (!activePreview?.process) {
+      activePreview = null;
+      resolve();
+      return;
+    }
 
+    const proc = activePreview.process;
+    const genId = activePreview.generationId;
+    activePreview = null;
+
+    const forceKillTimeout = setTimeout(() => {
+      try {
+        proc.kill("SIGKILL");
+      } catch {}
+      resolve();
+    }, 5000);
+
+    proc.on("close", () => {
+      clearTimeout(forceKillTimeout);
+      console.log(`[Preview ${genId}] Process stopped`);
+      resolve();
+    });
+
+    try {
+      proc.kill("SIGTERM");
+    } catch {
+      clearTimeout(forceKillTimeout);
+      resolve();
+    }
+  });
+}
+
+async function startPreviewLocal(generationId: string, sourceDir: string) {
   try {
-    console.log(`[Preview ${generationId}] Starting preview deploy to ${previewAppName}`);
+    console.log(
+      `[Preview ${generationId}] Starting fast local preview at port ${PREVIEW_PORT}`
+    );
+
+    // Kill any existing preview
+    await killActivePreview();
 
     // Patch auth for preview mode
     patchAuthForPreview(sourceDir);
 
-    // Generate package-lock.json if missing
-    const lockPath = path.join(sourceDir, "package-lock.json");
-    if (!existsSync(lockPath)) {
-      await runCommand("npm", ["install", "--package-lock-only"], {
-        cwd: sourceDir,
+    // Clean env: remove builder-specific vars that would interfere with the preview app
+    const {
+      DATABASE_URL: _db,
+      TURSO_AUTH_TOKEN: _turso,
+      BUILDER_API_KEY: _bk,
+      FLY_API_TOKEN: _fly,
+      ANTHROPIC_API_KEY: _ak,
+      PORT: _port,
+      ...cleanEnv
+    } = process.env;
+
+    const child = spawn("npx", ["next", "dev", "-p", String(PREVIEW_PORT)], {
+      cwd: sourceDir,
+      env: {
+        ...cleanEnv,
+        PREVIEW_MODE: "true",
+        NODE_ENV: "development",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    activePreview = {
+      generationId,
+      port: PREVIEW_PORT,
+      process: child,
+      status: "starting",
+    };
+
+    // Wait for dev server to be ready
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        if (activePreview?.status === "starting") {
+          // After 30s, assume ready (some apps compile slowly)
+          console.log(`[Preview ${generationId}] Timeout — marking as ready`);
+          activePreview.status = "ready";
+          activePreview.url = `https://${process.env.FLY_APP_NAME || "go4it-builder"}.fly.dev`;
+          resolve();
+        }
+      }, 30000);
+
+      const onData = (data: Buffer) => {
+        const text = data.toString();
+        if (text.trim()) {
+          console.log(`[Preview ${generationId}] ${text.trim()}`);
+        }
+        if (
+          text.includes("Ready") ||
+          text.includes("ready on") ||
+          text.includes("started server") ||
+          text.includes("✓ Ready")
+        ) {
+          if (activePreview?.status === "starting") {
+            clearTimeout(timeout);
+            activePreview.status = "ready";
+            activePreview.url = `https://${process.env.FLY_APP_NAME || "go4it-builder"}.fly.dev`;
+            console.log(
+              `[Preview ${generationId}] Ready at ${activePreview.url}`
+            );
+            resolve();
+          }
+        }
+      };
+
+      child.stdout?.on("data", onData);
+      child.stderr?.on("data", onData);
+
+      child.on("close", (code) => {
+        clearTimeout(timeout);
+        if (activePreview?.generationId === generationId) {
+          if (activePreview.status === "starting") {
+            activePreview.status = "failed";
+            activePreview.error = `Process exited with code ${code}`;
+            reject(new Error(`Preview process exited with code ${code}`));
+          }
+          if (activePreview.status === "ready") {
+            activePreview = null;
+          }
+        }
       });
-    }
 
-    // Ensure public/ exists
-    const publicDir = path.join(sourceDir, "public");
-    if (!existsSync(publicDir)) {
-      mkdirSync(publicDir, { recursive: true });
-    }
-
-    // Write preview-specific fly.toml
-    writeFileSync(
-      path.join(sourceDir, "fly.toml"),
-      generatePreviewFlyToml(previewAppName)
-    );
-
-    // Write Dockerfile.fly (use Prisma 6 — generated apps use Prisma 6)
-    const dockerfilePath = path.join(sourceDir, "Dockerfile.fly");
-    if (!existsSync(dockerfilePath)) {
-      writeFileSync(
-        dockerfilePath,
-        `FROM node:20-slim AS builder
-WORKDIR /app
-
-COPY package.json package-lock.json* ./
-COPY prisma ./prisma
-RUN npm ci --legacy-peer-deps
-
-COPY . .
-ENV DATABASE_URL="file:./build.db"
-RUN npm run build
-
-FROM node:20-slim AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/prisma ./prisma
-
-COPY start.sh ./
-RUN chmod +x start.sh
-
-EXPOSE 3000
-ENV PORT=3000
-CMD ["sh", "start.sh"]
-`
-      );
-    }
-
-    // Write start.sh
-    const startShPath = path.join(sourceDir, "start.sh");
-    if (!existsSync(startShPath)) {
-      writeFileSync(
-        startShPath,
-        `#!/bin/sh
-set -e
-mkdir -p /data 2>/dev/null || true
-npx prisma db push --accept-data-loss 2>&1 || echo "Warning: prisma db push had issues"
-
-# Seed data for preview
-if [ -f "prisma/seed.ts" ]; then
-  npx tsx prisma/seed.ts 2>&1 || echo "Warning: seed failed"
-fi
-
-exec node server.js
-`
-      );
-    }
-
-    // Write .dockerignore
-    writeFileSync(
-      path.join(sourceDir, ".dockerignore"),
-      `node_modules\n.next\n.git\n*.md\n.env*\ndev.db\n`
-    );
-
-    // Create preview Fly app
-    const createResult = await flyctl([
-      "apps",
-      "create",
-      previewAppName,
-      "--json",
-    ]);
-    if (
-      createResult.code !== 0 &&
-      !createResult.stderr.includes("already exists") &&
-      !createResult.stderr.includes("already been taken")
-    ) {
-      throw new Error(
-        `Failed to create preview app: ${createResult.stderr}`
-      );
-    }
-
-    // Create volume
-    const volResult = await flyctl([
-      "volumes",
-      "create",
-      "data",
-      "--size",
-      "1",
-      "--region",
-      FLY_REGION,
-      "--app",
-      previewAppName,
-      "--yes",
-    ]);
-    if (
-      volResult.code !== 0 &&
-      !volResult.stderr.includes("already exists")
-    ) {
-      console.warn(
-        `[Preview ${generationId}] Volume warning: ${volResult.stderr}`
-      );
-    }
-
-    // Set secrets
-    await flyctl([
-      "secrets",
-      "set",
-      `AUTH_SECRET=${authSecret}`,
-      `PREVIEW_MODE=true`,
-      "--app",
-      previewAppName,
-      "--stage",
-    ]);
-
-    // Deploy
-    console.log(`[Preview ${generationId}] Building and deploying preview...`);
-    const deployResult = await flyctl(
-      [
-        "deploy",
-        "--app",
-        previewAppName,
-        "--dockerfile",
-        "Dockerfile.fly",
-        "--yes",
-        "--wait-timeout",
-        "300",
-      ],
-      { cwd: sourceDir }
-    );
-
-    if (deployResult.code !== 0) {
-      throw new Error(
-        `Preview deploy failed: ${deployResult.stderr || deployResult.stdout}`
-      );
-    }
-
-    const url = `https://${previewAppName}.fly.dev`;
-    console.log(`[Preview ${generationId}] Live at ${url}`);
-    previewJobs.set(generationId, { status: "ready", url });
+      child.on("error", (err) => {
+        clearTimeout(timeout);
+        if (activePreview?.generationId === generationId) {
+          activePreview.status = "failed";
+          activePreview.error = err.message;
+          reject(err);
+        }
+      });
+    });
   } catch (err) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Preview deploy failed";
+    const errorMsg = err instanceof Error ? err.message : "Preview failed";
     console.error(`[Preview ${generationId}] Failed:`, errorMsg);
-    previewJobs.set(generationId, { status: "failed", error: errorMsg });
+    if (activePreview?.generationId === generationId) {
+      activePreview.status = "failed";
+      activePreview.error = errorMsg;
+    }
   }
 }
 
 export default async function previewRoute(app: FastifyInstance) {
-  // POST /preview — start preview deploy in background
+  // POST /preview — start fast local preview
   app.post<{
     Body: { generationId: string };
   }>("/preview", async (request, reply) => {
@@ -327,23 +258,21 @@ export default async function previewRoute(app: FastifyInstance) {
         .send({ error: "No source directory found" });
     }
 
-    const sourceDir = gen.sourceDir;
-    if (!existsSync(sourceDir)) {
+    if (!existsSync(gen.sourceDir)) {
       return reply
         .status(400)
         .send({ error: "Source directory does not exist on builder" });
     }
 
-    // Start deploy in background
-    previewJobs.set(generationId, { status: "deploying" });
-    runPreviewDeploy(generationId, sourceDir).catch((err) => {
+    // Start preview in background
+    startPreviewLocal(generationId, gen.sourceDir).catch((err) => {
       console.error(`[Preview] Unhandled error for ${generationId}:`, err);
     });
 
     return reply.status(202).send({ status: "deploying", generationId });
   });
 
-  // GET /preview/:id/status — check preview deploy status
+  // GET /preview/:id/status — check preview status
   app.get<{
     Params: { id: string };
   }>("/preview/:id/status", async (request, reply) => {
@@ -357,26 +286,17 @@ export default async function previewRoute(app: FastifyInstance) {
     return reply.send(state);
   });
 
-  // DELETE /preview/:id — destroy a preview machine
+  // DELETE /preview/:id — stop preview
   app.delete<{
     Params: { id: string };
   }>("/preview/:id", async (request, reply) => {
     const { id } = request.params;
-    const shortId = id.slice(0, 8);
-    const previewAppName = `go4it-preview-${shortId}`;
 
-    // Clean up tracking
-    previewJobs.delete(id);
-
-    try {
-      console.log(`[Preview ${id}] Destroying preview app ${previewAppName}`);
-      await flyctl(["apps", "destroy", previewAppName, "--yes"]);
-      return reply.send({ destroyed: true, flyAppName: previewAppName });
-    } catch (err) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to destroy preview";
-      console.error(`[Preview ${id}] Destroy failed:`, errorMsg);
-      return reply.status(500).send({ error: errorMsg });
+    if (activePreview?.generationId === id) {
+      console.log(`[Preview ${id}] Stopping preview`);
+      await killActivePreview();
     }
+
+    return reply.send({ destroyed: true });
   });
 }

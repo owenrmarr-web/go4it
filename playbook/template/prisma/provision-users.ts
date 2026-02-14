@@ -4,13 +4,13 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const password = await bcrypt.hash("go4it2026", 12);
+  const defaultPassword = await bcrypt.hash("go4it2026", 12);
 
   // Always provision GO4IT admin account
   await prisma.user.upsert({
     where: { email: "admin@go4it.live" },
     update: { name: "GO4IT Admin" },
-    create: { email: "admin@go4it.live", name: "GO4IT Admin", password },
+    create: { email: "admin@go4it.live", name: "GO4IT Admin", password: defaultPassword },
   });
   console.log("Provisioned: GO4IT Admin (admin@go4it.live)");
 
@@ -21,15 +21,17 @@ async function main() {
     return;
   }
 
-  const members: { name: string; email: string }[] = JSON.parse(raw);
+  const members: { name: string; email: string; passwordHash?: string }[] = JSON.parse(raw);
 
   for (const member of members) {
+    // Use the member's platform password hash if provided, otherwise use default
+    const password = member.passwordHash || defaultPassword;
     await prisma.user.upsert({
       where: { email: member.email },
-      update: { name: member.name },
+      update: { name: member.name, password },
       create: { email: member.email, name: member.name, password },
     });
-    console.log(`Provisioned: ${member.name} (${member.email})`);
+    console.log(`Provisioned: ${member.name} (${member.email})${member.passwordHash ? " [platform credentials]" : ""}`);
   }
   console.log(`Done — ${members.length + 1} users provisioned.`);
 }

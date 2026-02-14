@@ -190,7 +190,8 @@ builder/                   — Standalone builder service (deployed to Fly.io)
 6. Progress parsed from stream-json output via `[GO4IT:STAGE:...]` markers defined in the playbook
 7. SSE endpoint (`/api/generate/[id]/stream`) streams progress to the frontend (with DB fallback for HMR)
 8. On completion: metadata extracted, parallel install awaited, incremental `npm install` + `prisma db push` + seed run during "finalizing" stage
-9. Generated apps are self-contained: Next.js 16, Tailwind CSS 4, Prisma 6 + SQLite, Dockerfile included
+9. **Build validation + auto-fix:** `npm run build` is run to catch TypeScript/build errors. If it fails, the error is extracted and fed back to Claude Code CLI via `--continue` with a fix prompt. Up to 2 auto-fix attempts before giving up. This catches issues like missing type augmentations, undefined properties, import errors, etc.
+10. Generated apps are self-contained: Next.js 16, Tailwind CSS 4, Prisma 6 + SQLite, Dockerfile included
 
 ### Iteration / refine
 1. User enters a follow-up prompt on the refine screen

@@ -106,12 +106,22 @@ export async function POST(request: Request, context: RouteContext) {
     ? orgApp.flyAppId
     : undefined;
 
+  // Look up the org owner's password hash so they can log in with their platform credentials
+  const orgOwner = await prisma.organizationMember.findFirst({
+    where: { organizationId: organization.id, role: "OWNER" },
+    include: { user: { select: { email: true, password: true } } },
+  });
+
   // Collect team members who have access
   const teamMembers = orgApp.members
     .filter((m) => m.user.email)
     .map((m) => ({
       name: m.user.name || m.user.email!,
       email: m.user.email!,
+      // Include the owner's password hash so they can use their platform credentials
+      ...(orgOwner?.user.email === m.user.email && orgOwner.user.password
+        ? { passwordHash: orgOwner.user.password }
+        : {}),
     }));
 
   // Auto-generate subdomain if not already set

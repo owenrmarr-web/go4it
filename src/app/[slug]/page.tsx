@@ -47,7 +47,17 @@ export default function OrgPortalPage() {
         if (!r.ok) throw new Error("Not found");
         return r.json();
       })
-      .then((d) => setData(d))
+      .then((d) => {
+        setData(d);
+        // Pre-warm: fire background requests to wake suspended Fly.io machines
+        if (d?.apps) {
+          for (const app of d.apps) {
+            if (app.url) {
+              fetch(app.url, { mode: "no-cors" }).catch(() => {});
+            }
+          }
+        }
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [slug]);
@@ -83,6 +93,7 @@ export default function OrgPortalPage() {
 
   const colors = data.themeColors || defaultColors;
   const gradient = `linear-gradient(135deg, ${colors.accent}, ${colors.secondary}, ${colors.primary})`;
+  const totalCount = data.apps.length;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -112,17 +123,31 @@ export default function OrgPortalPage() {
                 {data.name}
               </h1>
               <p className="text-white/80 text-sm md:text-base mt-1">
-                {data.apps.length} app{data.apps.length !== 1 ? "s" : ""}{" "}
-                available
+                {totalCount} app{totalCount !== 1 ? "s" : ""} available
               </p>
             </div>
           </div>
         </div>
       </header>
 
-      {/* App Grid */}
-      <main className="flex-1 max-w-5xl mx-auto px-6 py-10 w-full">
-        {data.apps.length === 0 ? (
+      <main className="flex-1 max-w-5xl mx-auto px-6 py-10 w-full space-y-10">
+        {/* Apps Grid */}
+        {data.apps.length > 0 && (
+          <section>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {data.apps.map((app) => (
+                <AppLauncherCard
+                  key={app.id}
+                  app={app}
+                  accentColor={colors.primary}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Empty state */}
+        {data.apps.length === 0 && (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🚀</div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">
@@ -131,16 +156,6 @@ export default function OrgPortalPage() {
             <p className="text-gray-500">
               Apps will appear here once the team admin deploys them.
             </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.apps.map((app) => (
-              <AppLauncherCard
-                key={app.id}
-                app={app}
-                accentColor={colors.primary}
-              />
-            ))}
           </div>
         )}
       </main>

@@ -8,7 +8,7 @@ export default async function deployRoute(app: FastifyInstance) {
       orgAppId: string;
       orgSlug: string;
       generationId: string;
-      teamMembers: { name: string; email: string }[];
+      teamMembers: { name: string; email: string; passwordHash?: string }[];
       subdomain?: string;
       existingFlyAppId?: string;
     };

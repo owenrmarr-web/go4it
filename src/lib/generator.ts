@@ -45,6 +45,9 @@ const progressStore = new Map<string, GenerationProgress>();
 const processStore = new Map<string, ChildProcess>();
 const installPromises = new Map<string, Promise<boolean>>();
 
+// Timed stage timers for early stages (auto-advance designing → scaffolding → coding)
+const stageTimers = new Map<string, ReturnType<typeof setTimeout>[]>();
+
 export function getProgress(generationId: string): GenerationProgress {
   return (
     progressStore.get(generationId) ?? {
@@ -52,6 +55,32 @@ export function getProgress(generationId: string): GenerationProgress {
       message: STAGE_MESSAGES.pending,
     }
   );
+}
+
+// Start the timed early-stage progression: designing (8s) → scaffolding (10s) → coding
+function startTimedStages(generationId: string) {
+  // Clear any existing timers
+  const existing = stageTimers.get(generationId);
+  if (existing) existing.forEach(clearTimeout);
+
+  // Start at "designing" immediately
+  updateProgress(generationId, "designing");
+
+  const timers = [
+    setTimeout(() => {
+      const p = progressStore.get(generationId);
+      if (p && (p.stage === "designing" || p.stage === "pending")) {
+        updateProgress(generationId, "scaffolding");
+      }
+    }, 8000),
+    setTimeout(() => {
+      const p = progressStore.get(generationId);
+      if (p && p.stage === "scaffolding") {
+        updateProgress(generationId, "coding");
+      }
+    }, 18000), // 8s designing + 10s scaffolding
+  ];
+  stageTimers.set(generationId, timers);
 }
 
 function updateProgress(
@@ -101,6 +130,7 @@ function runClaudeCLI(
     env: {
       ...process.env,
       ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+      CLAUDECODE: undefined, // Prevent nested session detection
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -274,7 +304,8 @@ export async function startGeneration(
     data: { status: "GENERATING", sourceDir: workspaceDir },
   });
 
-  updateProgress(generationId, "pending");
+  // Start timed early-stage progression (designing 8s → scaffolding 10s → coding)
+  startTimedStages(generationId);
 
   const enrichedPrompt = buildEnrichedPrompt(prompt, context);
 
@@ -325,7 +356,8 @@ export async function startIteration(
     data: { status: "GENERATING" },
   });
 
-  updateProgress(generationId, "pending");
+  // Start timed early-stage progression (designing 8s → scaffolding 10s → coding)
+  startTimedStages(generationId);
 
   runClaudeCLI(
     generationId,
@@ -482,4 +514,9 @@ async function prepareForPreview(generationId: string, workspaceDir: string) {
 
 export function cleanupProgress(generationId: string) {
   progressStore.delete(generationId);
+  const timers = stageTimers.get(generationId);
+  if (timers) {
+    timers.forEach(clearTimeout);
+    stageTimers.delete(generationId);
+  }
 }

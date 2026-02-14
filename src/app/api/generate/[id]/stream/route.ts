@@ -58,7 +58,7 @@ export async function GET(
 
         // Try local in-memory progress first (local dev)
         const localProgress = getLocalProgress(id);
-        if (localProgress && localProgress.stage !== "pending") {
+        if (localProgress) {
           progress = localProgress;
         } else {
           // Fall back to DB — this is the primary path for production (builder service)
