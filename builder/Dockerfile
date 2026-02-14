@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install flyctl CLI, git (needed by Claude Code), and Chromium (for screenshots)
 RUN apt-get update && \
-    apt-get install -y curl git chromium fonts-liberation --no-install-recommends && \
+    apt-get install -y curl ca-certificates git chromium fonts-liberation --no-install-recommends && \
     curl -L https://fly.io/install.sh | sh && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
