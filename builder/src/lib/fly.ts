@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn, execSync } from "child_process";
 import {
   readFileSync,
   writeFileSync,
@@ -398,12 +398,27 @@ export async function deployPreviewApp(
     `[Preview ${generationId}] Deploying preview to ${flyAppName}...`
   );
 
-  // Verify .next/standalone exists (built during prepareForPreview)
+  // Ensure .next/standalone exists — run build if missing
   const standalonePath = path.join(sourceDir, ".next", "standalone");
   if (!existsSync(standalonePath)) {
-    throw new Error(
-      `Standalone build not found at ${standalonePath}. Build must complete before preview deploy.`
+    console.log(
+      `[Preview ${generationId}] Standalone not found, running npm run build...`
     );
+    try {
+      execSync("npm run build", {
+        cwd: sourceDir,
+        stdio: "pipe",
+        timeout: 120000,
+        env: { ...process.env, DATABASE_URL: "file:./dev.db" },
+      });
+    } catch (err) {
+      // Check if standalone was created despite non-zero exit (warnings)
+      if (!existsSync(standalonePath)) {
+        throw new Error(
+          `Build failed to produce standalone output at ${standalonePath}: ${(err as Error).message?.slice(0, 200)}`
+        );
+      }
+    }
   }
 
   // Write preview deploy files

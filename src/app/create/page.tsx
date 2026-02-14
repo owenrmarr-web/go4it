@@ -237,20 +237,20 @@ export default function CreatePage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
-      <main className="flex-1 flex flex-col items-center justify-center px-4 pt-16">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 pt-10">
         {/* Input State */}
         {pageState === "input" && (
           <div className="max-w-2xl w-full">
             <h1 className="text-4xl md:text-5xl font-extrabold text-center gradient-brand-text">
               Create Your App
             </h1>
-            <p className="mt-4 text-center text-gray-600 text-lg max-w-xl mx-auto">
+            <p className="mt-2 text-center text-gray-600 text-lg max-w-xl mx-auto">
               Describe your dream business tool in plain English. Our AI will
               build it for you.
             </p>
 
             {/* Business Context */}
-            <div className="mt-8">
+            <div className="mt-5">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 About Your Business <span className="text-red-400">*</span>
               </label>
@@ -276,11 +276,11 @@ export default function CreatePage() {
               className="mt-4 w-full px-5 py-4 rounded-xl border border-gray-200 shadow-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent text-base"
             />
 
-            <div className="mt-3 text-right text-sm text-gray-400">
+            <div className="mt-1 text-right text-sm text-gray-400">
               {prompt.length}/5000
             </div>
 
-            <div className="mt-4 flex justify-center">
+            <div className="mt-3 flex justify-center">
               <button
                 onClick={handleGenerate}
                 disabled={!businessContext.trim() || prompt.trim().length < 10}
@@ -291,7 +291,7 @@ export default function CreatePage() {
             </div>
 
             {/* Prompt suggestions */}
-            <div className="mt-10">
+            <div className="mt-6">
               <p className="text-sm text-gray-400 text-center mb-3">
                 Need inspiration? Try one of these:
               </p>
