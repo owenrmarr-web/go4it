@@ -404,11 +404,16 @@ export async function deployPreviewApp(
     console.log(
       `[Preview ${generationId}] Standalone not found, running npm run build...`
     );
+    // Remove stale .next/lock from previous build attempt
+    const lockPath = path.join(sourceDir, ".next", "lock");
+    if (existsSync(lockPath)) {
+      try { unlinkSync(lockPath); } catch { /* ignore */ }
+    }
     try {
       execSync("npm run build", {
         cwd: sourceDir,
         stdio: "pipe",
-        timeout: 120000,
+        timeout: 180000,
         env: { ...process.env, DATABASE_URL: "file:./dev.db" },
       });
     } catch (err) {
