@@ -7,7 +7,8 @@ const STAGE_MESSAGES: Record<string, string> = {
   scaffolding: "Creating project structure...",
   coding: "Building components and API routes...",
   database: "Setting up database and seed data...",
-  finalizing: "Writing Dockerfile and finishing up...",
+  finalizing: "Validating build and preparing preview...",
+  deploying: "Deploying your app preview...",
   complete: "Your app is ready!",
   failed: "Something went wrong.",
 };
@@ -54,7 +55,7 @@ export async function GET(
       let lastDetail = "";
 
       const interval = setInterval(async () => {
-        let progress: { stage: string; message: string; detail?: string; title?: string; description?: string; error?: string };
+        let progress: { stage: string; message: string; detail?: string; title?: string; description?: string; error?: string; previewFlyUrl?: string };
 
         // Try local in-memory progress first (local dev)
         const localProgress = getLocalProgress(id);
@@ -72,6 +73,7 @@ export async function GET(
                 title: true,
                 description: true,
                 error: true,
+                previewFlyUrl: true,
               },
             });
 
@@ -87,6 +89,7 @@ export async function GET(
                 message: STAGE_MESSAGES.complete,
                 title: dbApp.title ?? undefined,
                 description: dbApp.description ?? undefined,
+                previewFlyUrl: dbApp.previewFlyUrl ?? undefined,
               };
             } else if (dbApp.status === "FAILED") {
               progress = {

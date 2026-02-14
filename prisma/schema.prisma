@@ -126,6 +126,10 @@ model GeneratedApp {
   iterationCount     Int              @default(0)
   marketplaceVersion Int              @default(1) // X in VX.Y — bumps on re-publish
   forkedFromId       String?                      // ID of parent GeneratedApp when forked
+  previewFlyAppId    String?                      // Fly.io app name for preview deployment
+  previewFlyUrl      String?                      // e.g., https://go4it-zenith-abc12345.fly.dev
+  previewExpiresAt   DateTime?                    // 24h TTL — cleanup destroys Fly machine, not source
+  screenshot         String?                      // Base64 PNG screenshot of home page with seed data
   iterations         AppIteration[]
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
@@ -190,6 +194,7 @@ model OrganizationMember {
 enum DeployStatus {
   ADDED      // Added to org, not yet deployed
   DEPLOYING  // Currently being deployed to Fly.io
+  PREVIEW    // Preview deploy (auto-deployed after generation, seed data, PREVIEW_MODE)
   RUNNING    // Live on Fly.io
   STOPPED    // Stopped / scaled to zero
   FAILED     // Deploy failed

@@ -8,6 +8,7 @@ const STAGES = [
   { key: "coding", label: "Build", icon: "⚡" },
   { key: "database", label: "Database", icon: "🗃️" },
   { key: "finalizing", label: "Finalize", icon: "📦" },
+  { key: "deploying", label: "Deploy", icon: "🚀" },
 ];
 
 interface GenerationProgressProps {

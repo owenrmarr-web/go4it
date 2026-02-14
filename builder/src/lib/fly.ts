@@ -233,7 +233,231 @@ dev.db
 }
 
 // ============================================
-// Main deploy function
+// Preview deployment files (slim — uses pre-built artifacts)
+// ============================================
+
+function generatePreviewFlyToml(appName: string): string {
+  return `app = "${appName}"
+primary_region = "${FLY_REGION}"
+
+[build]
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[mounts]
+  source = "data"
+  destination = "/data"
+
+[env]
+  DATABASE_URL = "file:/data/app.db"
+  PORT = "3000"
+  NODE_ENV = "production"
+  AUTH_TRUST_HOST = "true"
+  PREVIEW_MODE = "true"
+`;
+}
+
+function generatePreviewStartScript(): string {
+  return `#!/bin/sh
+set -e
+
+echo "=== GO4IT Preview Startup ==="
+
+# Ensure data directory is writable
+mkdir -p /data 2>/dev/null || true
+
+# Copy seed DB if not already present on volume
+if [ ! -f /data/app.db ]; then
+  cp /app/dev.db /data/app.db 2>/dev/null || echo "Warning: no seed DB found"
+fi
+
+echo "Starting application..."
+exec node server.js
+`;
+}
+
+function generatePreviewDockerfile(): string {
+  return `FROM node:20-slim
+WORKDIR /app
+
+# Copy pre-built standalone Next.js output
+COPY .next/standalone ./
+COPY .next/static ./.next/static
+COPY public ./public
+
+# Copy prisma runtime (needed for PrismaClient)
+COPY node_modules/.prisma ./node_modules/.prisma
+COPY node_modules/@prisma ./node_modules/@prisma
+
+# Copy seed database with fake data
+COPY dev.db ./dev.db
+
+# Copy startup script
+COPY start.sh ./
+RUN chmod +x start.sh
+
+EXPOSE 3000
+ENV PORT=3000
+CMD ["sh", "start.sh"]
+`;
+}
+
+function generatePreviewDockerignore(): string {
+  return `.git
+*.md
+.env*
+src/
+prisma/
+node_modules/
+!node_modules/.prisma
+!node_modules/@prisma
+`;
+}
+
+// ============================================
+// Preview infrastructure pre-creation (runs in parallel with CLI)
+// ============================================
+
+export async function preCreateFlyInfra(
+  generationId: string,
+  orgSlug: string
+): Promise<string> {
+  const flyAppName = `go4it-${orgSlug}-${generationId.slice(0, 8)}`
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-");
+
+  console.log(
+    `[Preview ${generationId}] Pre-creating Fly infrastructure: ${flyAppName}`
+  );
+
+  const createResult = await flyctl(["apps", "create", flyAppName, "--json"]);
+  if (
+    createResult.code !== 0 &&
+    !createResult.stderr.includes("already exists") &&
+    !createResult.stderr.includes("already been taken")
+  ) {
+    throw new Error(
+      `Failed to create Fly app: ${createResult.stderr || createResult.stdout}`
+    );
+  }
+
+  const volResult = await flyctl([
+    "volumes",
+    "create",
+    "data",
+    "--size",
+    "1",
+    "--region",
+    FLY_REGION,
+    "--app",
+    flyAppName,
+    "--yes",
+  ]);
+  if (volResult.code !== 0 && !volResult.stderr.includes("already exists")) {
+    console.warn(
+      `[Preview ${generationId}] Volume warning: ${volResult.stderr}`
+    );
+  }
+
+  // Set auth secret
+  const authSecret = crypto.randomBytes(32).toString("hex");
+  await flyctl([
+    "secrets",
+    "set",
+    `AUTH_SECRET=${authSecret}`,
+    "--app",
+    flyAppName,
+    "--stage",
+  ]);
+
+  console.log(
+    `[Preview ${generationId}] Fly infrastructure ready: ${flyAppName}`
+  );
+  return flyAppName;
+}
+
+// ============================================
+// Preview deploy (slim Dockerfile with pre-built artifacts)
+// ============================================
+
+export async function deployPreviewApp(
+  generationId: string,
+  flyAppName: string,
+  sourceDir: string
+): Promise<string> {
+  console.log(
+    `[Preview ${generationId}] Deploying preview to ${flyAppName}...`
+  );
+
+  // Verify .next/standalone exists (built during prepareForPreview)
+  const standalonePath = path.join(sourceDir, ".next", "standalone");
+  if (!existsSync(standalonePath)) {
+    throw new Error(
+      `Standalone build not found at ${standalonePath}. Build must complete before preview deploy.`
+    );
+  }
+
+  // Write preview deploy files
+  writeFileSync(
+    path.join(sourceDir, "fly.toml"),
+    generatePreviewFlyToml(flyAppName)
+  );
+  writeFileSync(
+    path.join(sourceDir, "start.sh"),
+    generatePreviewStartScript()
+  );
+  writeFileSync(
+    path.join(sourceDir, "Dockerfile.fly"),
+    generatePreviewDockerfile()
+  );
+  writeFileSync(
+    path.join(sourceDir, ".dockerignore"),
+    generatePreviewDockerignore()
+  );
+
+  // Ensure public/ exists
+  const publicDir = path.join(sourceDir, "public");
+  if (!existsSync(publicDir)) {
+    mkdirSync(publicDir, { recursive: true });
+  }
+
+  // Deploy using slim Dockerfile
+  const deployResult = await flyctl(
+    [
+      "deploy",
+      "--app",
+      flyAppName,
+      "--dockerfile",
+      "Dockerfile.fly",
+      "--yes",
+      "--wait-timeout",
+      "300",
+    ],
+    { cwd: sourceDir }
+  );
+
+  if (deployResult.code !== 0) {
+    throw new Error(
+      `Preview deploy failed: ${deployResult.stderr || deployResult.stdout}`
+    );
+  }
+
+  const flyUrl = `https://${flyAppName}.fly.dev`;
+  console.log(`[Preview ${generationId}] Live at ${flyUrl}`);
+  return flyUrl;
+}
+
+// ============================================
+// Main deploy function (go-live / full deploy)
 // ============================================
 
 export async function deployApp(

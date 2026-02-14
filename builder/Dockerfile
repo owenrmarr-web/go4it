@@ -2,11 +2,14 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Install flyctl CLI and git (needed by Claude Code)
+# Install flyctl CLI, git (needed by Claude Code), and Chromium (for screenshots)
 RUN apt-get update && \
-    apt-get install -y curl git && \
+    apt-get install -y curl git chromium fonts-liberation --no-install-recommends && \
     curl -L https://fly.io/install.sh | sh && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ENV PUPPETEER_EXECUTABLE_PATH="/usr/bin/chromium"
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
 
 # Create non-root user — Claude Code CLI refuses --dangerously-skip-permissions as root
 RUN useradd -m -s /bin/bash builder && \

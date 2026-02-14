@@ -15,6 +15,7 @@ export async function GET(request: Request) {
       generatedApp: {
         select: {
           marketplaceVersion: true,
+          screenshot: true,
           createdBy: { select: { username: true } },
         },
       },
@@ -45,6 +46,7 @@ export async function GET(request: Request) {
     ...app,
     version: generatedApp ? `V${generatedApp.marketplaceVersion}.0` : null,
     creatorUsername: generatedApp?.createdBy?.username || null,
+    screenshot: generatedApp?.screenshot || null,
     heartCount: _count?.interactions ?? 0,
   }));
 

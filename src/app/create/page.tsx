@@ -113,25 +113,7 @@ export default function CreatePage() {
     }
   }, [session]);
 
-  // Auto-preview: when generation completes, automatically start preview
-  const [autoPreviewTriggered, setAutoPreviewTriggered] = useState<string | null>(null);
-  useEffect(() => {
-    const genId = gen.generationId;
-    if (
-      gen.stage === "complete" &&
-      genId &&
-      !gen.previewUrl &&
-      !gen.previewLoading &&
-      autoPreviewTriggered !== genId
-    ) {
-      setAutoPreviewTriggered(genId);
-      gen.startPreview().catch(() => {
-        // Silent — user can manually retry from the complete screen
-      });
-    }
-  }, [gen.stage, gen.generationId, gen.previewUrl, gen.previewLoading, autoPreviewTriggered, gen]);
-
-  // Auto-open: when preview URL becomes available, open in new tab
+  // Auto-open: when preview URL becomes available (from auto-deploy), open in new tab
   const [autoOpenedUrl, setAutoOpenedUrl] = useState<string | null>(null);
   useEffect(() => {
     if (gen.previewUrl && gen.previewUrl !== autoOpenedUrl) {
@@ -390,52 +372,25 @@ export default function CreatePage() {
                 {gen.description}
               </p>
             )}
-            {/* Preview */}
-            <div className="mt-6">
-              {gen.previewUrl ? (
-                <div className="flex items-center justify-center gap-3">
-                  <a
-                    href={gen.previewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity"
-                  >
-                    Open Preview
-                  </a>
-                  <button
-                    onClick={() => {
-                      gen.stopPreview();
-                      toast.success("Preview stopped");
-                    }}
-                    className="text-sm text-gray-500 hover:text-red-500 transition-colors"
-                  >
-                    Stop Preview
-                  </button>
-                </div>
-              ) : gen.previewLoading ? (
-                <div className="flex items-center justify-center gap-3 text-gray-500">
-                  <div className="w-5 h-5 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
-                  <span className="text-sm font-medium">Launching preview...</span>
-                </div>
-              ) : (
-                <button
-                  onClick={async () => {
-                    try {
-                      await gen.startPreview();
-                    } catch (err) {
-                      toast.error(
-                        err instanceof Error
-                          ? err.message
-                          : "Failed to start preview"
-                      );
-                    }
-                  }}
-                  className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity"
+            {/* Preview URL (auto-deployed) */}
+            {gen.previewUrl && (
+              <div className="mt-6">
+                <a
+                  href={gen.previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity inline-block"
                 >
-                  Preview Your App
-                </button>
-              )}
-            </div>
+                  Open Preview
+                </a>
+                <p className="mt-2 text-sm text-gray-400">
+                  Your app is live at{" "}
+                  <a href={gen.previewUrl} target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline">
+                    {gen.previewUrl.replace("https://", "")}
+                  </a>
+                </p>
+              </div>
+            )}
 
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               {!gen.published ? (

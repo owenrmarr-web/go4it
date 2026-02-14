@@ -103,11 +103,19 @@ export async function POST(request: Request) {
       useCases: user?.useCases ? JSON.parse(user.useCases) : undefined,
     };
 
+    // Fetch user's org slug for auto-preview deployment
+    const orgMember = await prisma.organizationMember.findFirst({
+      where: { userId: session.user.id, role: { in: ["OWNER", "ADMIN"] } },
+      include: { organization: { select: { slug: true } } },
+    });
+
     // Delegate to builder service
     await callBuilder("/generate", {
       generationId: generatedApp.id,
       prompt: prompt.trim(),
       businessContext: context,
+      userId: session.user.id,
+      orgSlug: orgMember?.organization.slug,
     });
 
     return NextResponse.json({ id: generatedApp.id }, { status: 201 });

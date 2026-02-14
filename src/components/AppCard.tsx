@@ -119,10 +119,20 @@ export default function AppCard({
 
   return (
     <div className="group bg-white rounded-xl shadow-md hover:shadow-xl hover:scale-[1.03] transition-all duration-300 cursor-pointer overflow-hidden flex flex-col">
+      {/* Screenshot header image */}
+      {app.screenshot && (
+        <div className="w-full h-36 overflow-hidden bg-gray-100">
+          <img
+            src={app.screenshot}
+            alt={`${app.title} screenshot`}
+            className="w-full h-full object-cover object-top"
+          />
+        </div>
+      )}
       <div className="p-5 flex flex-col flex-1">
         {/* Icon + Category badge */}
         <div className="flex items-start justify-between">
-          <span className="text-4xl leading-none">{app.icon}</span>
+          <span className={app.screenshot ? "text-2xl leading-none" : "text-4xl leading-none"}>{app.icon}</span>
           <span
             className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${badgeColor}`}
           >

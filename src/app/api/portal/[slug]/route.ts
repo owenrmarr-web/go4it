@@ -63,7 +63,7 @@ export async function GET(
   }
 
   const apps = org.apps
-    .filter((oa) => oa.status === "RUNNING" || oa.status === "DEPLOYING" || oa.status === "ADDED")
+    .filter((oa) => oa.status === "RUNNING" || oa.status === "DEPLOYING" || oa.status === "ADDED" || oa.status === "PREVIEW")
     .map((oa) => ({
       id: oa.id,
       title: oa.app.title,

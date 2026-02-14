@@ -69,7 +69,17 @@ export async function POST(
   }
 
   // Re-publish: update existing App record and bump marketplace version
+  // This also handles the case where an App was auto-created during preview deploy
   if (generatedApp.appId) {
+    // Get creator's username for author field (auto-created records may have userId as author)
+    const creator = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { username: true, name: true, email: true },
+    });
+    const authorDisplay = creator?.username
+      ? `@${creator.username}`
+      : creator?.name || creator?.email || "Community";
+
     const updatedApp = await prisma.app.update({
       where: { id: generatedApp.appId },
       data: {
@@ -77,6 +87,7 @@ export async function POST(
         description: description.trim(),
         category: category.trim(),
         icon: icon || "🚀",
+        author: authorDisplay,
         isPublic: isPublic !== false,
       },
     });

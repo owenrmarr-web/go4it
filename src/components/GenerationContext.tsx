@@ -17,6 +17,7 @@ export type GenStage =
   | "coding"
   | "database"
   | "finalizing"
+  | "deploying"
   | "complete"
   | "failed";
 
@@ -92,6 +93,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               message: data.message || "Your app is ready!",
               title: data.title ?? prev.title,
               description: data.description ?? prev.description,
+              previewUrl: data.previewFlyUrl ?? prev.previewUrl,
+              previewLoading: false,
             };
           }
 
@@ -298,7 +301,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             description: data.description ?? undefined,
             iterationCount: data.iterationCount ?? 0,
             published: !!data.appId,
-            previewUrl: null,
+            previewUrl: data.previewFlyUrl ?? null,
             previewLoading: false,
           });
         } else if (data.status === "FAILED") {

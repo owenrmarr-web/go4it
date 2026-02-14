@@ -456,17 +456,17 @@ flyctl deploy --app go4it-builder
 
 ## Next Steps (Roadmap — in priority order)
 
-1. **Fix Resend API key in Vercel** — Team invitation emails fail with "API key is invalid". `RESEND_API_KEY` needs to be added/verified in Vercel dashboard environment variables. Key in local `.env` is `re_FBhdzJce_...` — also verify it's still active at resend.com/api-keys and that `go4it.live` domain is verified at resend.com/domains.
-2. **Improve preview launch speed** — Preview currently uses `next dev` (development mode) which compiles pages on-demand on a shared CPU — slow. Better approach: `next build && next start` (production mode). Build validation already compiled the app, so after auth patching only 2 files changed → fast incremental rebuild, then `next start` serves pages instantly. Also: skip npm install if `node_modules` exists, pre-warm first page after server reports ready.
-3. **Test production preview end-to-end** — Preview was fixed (async deploy + polling, preview gate on COMPLETE status, npm install before dev server, EADDRINUSE process group kill), builder redeployed 2026-02-13. Needs testing: generate an app → click Preview → verify loading state appears → verify preview opens after deploy completes.
-4. **Fix custom subdomain DNS** — `*.go4it.live` CNAME points to `fly-global.fly.dev` which returns NXDOMAIN. Options: (a) per-app CNAME records via DNS API, or (b) shared reverse-proxy Fly app for wildcard routing. Currently using `.fly.dev` URLs as workaround.
-5. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
-6. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues and add guardrails.
-7. **Email verification** — Verify email on signup (confirmation link via Resend). Also require email verification for password changes (send code/link before allowing change). Currently password change uses old-password verification only.
-8. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
-9. **Builder hardening** — Garbage collection for old workspaces, rate limiting, error logging/monitoring.
+1. **Improve preview launch speed** — Preview currently uses `next dev` (development mode) which compiles pages on-demand on a shared CPU — slow. Better approach: `next build && next start` (production mode). Build validation already compiled the app, so after auth patching only 2 files changed → fast incremental rebuild, then `next start` serves pages instantly. Also: skip npm install if `node_modules` exists, pre-warm first page after server reports ready.
+2. **Test production preview end-to-end** — Preview was fixed (async deploy + polling, preview gate on COMPLETE status, npm install before dev server, EADDRINUSE process group kill), builder redeployed 2026-02-13. Needs testing: generate an app → click Preview → verify loading state appears → verify preview opens after deploy completes.
+3. **Fix custom subdomain DNS** — `*.go4it.live` CNAME points to `fly-global.fly.dev` which returns NXDOMAIN. Options: (a) per-app CNAME records via DNS API, or (b) shared reverse-proxy Fly app for wildcard routing. Currently using `.fly.dev` URLs as workaround.
+4. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
+5. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues and add guardrails.
+6. **Email verification** — Verify email on signup (confirmation link via Resend). Also require email verification for password changes (send code/link before allowing change). Currently password change uses old-password verification only.
+7. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
+8. **Builder hardening** — Garbage collection for old workspaces, rate limiting, error logging/monitoring.
 
 ### Completed
+- ~~Fix Resend API key in Vercel (2026-02-14)~~ — Vercel had a different/old API key (`re_6YGLgzj2_...`) than the active one on Resend (`re_FBhdzJce_...`). Updated Vercel env var, redeployed. Invitation emails working.
 - ~~Auth modal for unauthenticated users (2026-02-13)~~ — Heart/add interactions on home page show inline auth modal instead of redirect. Create page persists prompt to localStorage across auth flow. "Signup is free" messaging on auth page.
 - ~~Color picker fix (2026-02-13)~~ — Color pickers on signup/auth page were unusable (`appearance: none` on small elements). Fixed with overlay pattern: visible colored div + invisible `<input type="color">` overlay.
 - ~~Builder preview stability (2026-02-13)~~ — Three root causes fixed: (1) preview now gated on `gen.status === "COMPLETE"`, (2) build validation filters middleware deprecation warnings instead of triggering auto-fix, (3) `npm install` + proper env vars before starting dev server. Builder redeployed.

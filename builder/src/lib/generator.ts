@@ -9,6 +9,8 @@ import {
 } from "fs";
 import path from "path";
 import prisma from "./prisma.js";
+import { preCreateFlyInfra, deployPreviewApp } from "./fly.js";
+import { captureScreenshot } from "./screenshot.js";
 
 export type GenerationStage =
   | "pending"
@@ -17,6 +19,7 @@ export type GenerationStage =
   | "coding"
   | "database"
   | "finalizing"
+  | "deploying"
   | "complete"
   | "failed";
 
@@ -34,7 +37,8 @@ const STAGE_MESSAGES: Record<GenerationStage, string> = {
   scaffolding: "Creating project structure...",
   coding: "Building components and API routes...",
   database: "Setting up database and seed data...",
-  finalizing: "Writing Dockerfile and finishing up...",
+  finalizing: "Validating build and preparing preview...",
+  deploying: "Deploying your app preview...",
   complete: "Your app is ready!",
   failed: "Something went wrong.",
 };
@@ -332,7 +336,9 @@ function buildCLIArgs(prompt: string, useContinue: boolean): string[] {
 export async function startGeneration(
   generationId: string,
   prompt: string,
-  context?: BusinessContext
+  context?: BusinessContext,
+  userId?: string,
+  orgSlug?: string
 ): Promise<void> {
   activeJobs++;
   const workspaceDir = path.join(getAppsDir(), generationId);
@@ -376,6 +382,18 @@ export async function startGeneration(
   });
   installPromises.set(generationId, installPromise);
 
+  // Parallel Fly.io infrastructure pre-creation (if user has an org)
+  let flyInfraPromise: Promise<string> | null = null;
+  if (orgSlug) {
+    flyInfraPromise = preCreateFlyInfra(generationId, orgSlug).catch((err) => {
+      console.error(
+        `[Generator ${generationId}] Fly infra pre-creation failed (non-fatal):`,
+        err instanceof Error ? err.message : err
+      );
+      return ""; // Will retry during deploy
+    });
+  }
+
   // Update DB: status GENERATING + sourceDir on builder volume
   // Uses retry because of Turso replication delay — the record was just created by Vercel
   await retryUpdate(generationId, { status: "GENERATING", sourceDir: workspaceDir });
@@ -390,12 +408,107 @@ export async function startGeneration(
     workspaceDir,
     buildCLIArgs(enrichedPrompt, false),
     async (appMeta) => {
+      // Auto-deploy preview to Fly.io if org exists
+      let previewFlyAppId: string | undefined;
+      let previewFlyUrl: string | undefined;
+
+      if (orgSlug && flyInfraPromise) {
+        try {
+          await updateProgress(generationId, "deploying");
+
+          // Wait for pre-created infra, or retry creation
+          let flyAppName = await flyInfraPromise;
+          if (!flyAppName) {
+            console.log(`[Generator ${generationId}] Retrying Fly infra creation...`);
+            flyAppName = await preCreateFlyInfra(generationId, orgSlug);
+          }
+
+          previewFlyUrl = await deployPreviewApp(generationId, flyAppName, workspaceDir);
+          previewFlyAppId = flyAppName;
+
+          console.log(`[Generator ${generationId}] Preview deployed: ${previewFlyUrl}`);
+
+          // Capture screenshot of the running preview (non-blocking)
+          try {
+            console.log(`[Generator ${generationId}] Capturing screenshot...`);
+            const screenshot = await captureScreenshot(previewFlyUrl);
+            await prisma.generatedApp.update({
+              where: { id: generationId },
+              data: { screenshot },
+            });
+            console.log(`[Generator ${generationId}] Screenshot captured`);
+          } catch (screenshotErr) {
+            console.error(
+              `[Generator ${generationId}] Screenshot failed (non-fatal):`,
+              screenshotErr instanceof Error ? screenshotErr.message : screenshotErr
+            );
+          }
+        } catch (err) {
+          console.error(
+            `[Generator ${generationId}] Preview deploy failed (non-fatal):`,
+            err instanceof Error ? err.message : err
+          );
+        }
+      }
+
+      // Auto-create App + OrgApp records if preview deployed
+      if (previewFlyAppId && previewFlyUrl && userId && orgSlug) {
+        try {
+          const org = await prisma.organization.findUnique({
+            where: { slug: orgSlug },
+          });
+          if (org) {
+            const app = await prisma.app.create({
+              data: {
+                title: appMeta.title,
+                description: appMeta.description,
+                category: "Other",
+                icon: "🚀",
+                author: userId,
+                tags: "",
+                isPublic: false,
+              },
+            });
+
+            await prisma.generatedApp.update({
+              where: { id: generationId },
+              data: { appId: app.id },
+            });
+
+            await prisma.orgApp.create({
+              data: {
+                organizationId: org.id,
+                appId: app.id,
+                status: "PREVIEW",
+                flyAppId: previewFlyAppId,
+                flyUrl: previewFlyUrl,
+                deployedAt: new Date(),
+              },
+            });
+
+            console.log(
+              `[Generator ${generationId}] Auto-created App + OrgApp (PREVIEW)`
+            );
+          }
+        } catch (err) {
+          console.error(
+            `[Generator ${generationId}] Failed to create App/OrgApp records:`,
+            err instanceof Error ? err.message : err
+          );
+        }
+      }
+
       await prisma.generatedApp.update({
         where: { id: generationId },
         data: {
           status: "COMPLETE",
           title: appMeta.title,
           description: appMeta.description,
+          previewFlyAppId: previewFlyAppId || undefined,
+          previewFlyUrl: previewFlyUrl || undefined,
+          previewExpiresAt: previewFlyAppId
+            ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+            : undefined,
         },
       });
     },
@@ -420,7 +533,7 @@ export async function startIteration(
 
   const generatedApp = await prisma.generatedApp.findUnique({
     where: { id: generationId },
-    select: { sourceDir: true },
+    select: { sourceDir: true, previewFlyAppId: true },
   });
 
   if (!generatedApp?.sourceDir) {
@@ -429,6 +542,7 @@ export async function startIteration(
   }
 
   const workspaceDir = generatedApp.sourceDir;
+  const existingFlyAppName = generatedApp.previewFlyAppId;
 
   await prisma.appIteration.update({
     where: { id: iterationId },
@@ -443,6 +557,27 @@ export async function startIteration(
     workspaceDir,
     buildCLIArgs(prompt, true),
     async (appMeta) => {
+      // Re-deploy to existing Fly app if one exists
+      let previewFlyUrl: string | undefined;
+      if (existingFlyAppName) {
+        try {
+          await updateProgress(generationId, "deploying");
+          previewFlyUrl = await deployPreviewApp(
+            generationId,
+            existingFlyAppName,
+            workspaceDir
+          );
+          console.log(
+            `[Generator ${generationId}] Iteration re-deployed: ${previewFlyUrl}`
+          );
+        } catch (err) {
+          console.error(
+            `[Generator ${generationId}] Iteration re-deploy failed (non-fatal):`,
+            err instanceof Error ? err.message : err
+          );
+        }
+      }
+
       await prisma.appIteration.update({
         where: { id: iterationId },
         data: { status: "COMPLETE" },
@@ -453,6 +588,10 @@ export async function startIteration(
           status: "COMPLETE",
           title: appMeta.title,
           description: appMeta.description,
+          previewFlyUrl: previewFlyUrl || undefined,
+          previewExpiresAt: existingFlyAppName
+            ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+            : undefined,
         },
       });
     },

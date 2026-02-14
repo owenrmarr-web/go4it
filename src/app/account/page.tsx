@@ -68,6 +68,7 @@ interface Invitation {
 const STATUS_COLORS: Record<string, string> = {
   ADDED: "bg-gray-100 text-gray-600",
   DEPLOYING: "bg-yellow-100 text-yellow-700",
+  PREVIEW: "bg-blue-100 text-blue-700",
   RUNNING: "bg-green-100 text-green-700",
   STOPPED: "bg-orange-100 text-orange-700",
   FAILED: "bg-red-100 text-red-700",
@@ -76,6 +77,7 @@ const STATUS_COLORS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   ADDED: "Not deployed",
   DEPLOYING: "Deploying...",
+  PREVIEW: "Preview",
   RUNNING: "Live",
   STOPPED: "Stopped",
   FAILED: "Failed",
@@ -850,12 +852,16 @@ export default function AccountPage() {
                             </span>
                           )}
 
-                          {orgApp.status === "RUNNING" && orgApp.flyUrl && (
+                          {(orgApp.status === "RUNNING" || orgApp.status === "PREVIEW") && orgApp.flyUrl && (
                             <a
                               href={orgApp.flyUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-3 py-1.5 text-sm font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+                              className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
+                                orgApp.status === "PREVIEW"
+                                  ? "text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  : "text-green-600 border-green-200 hover:bg-green-50"
+                              }`}
                             >
                               Visit
                             </a>
@@ -887,14 +893,17 @@ export default function AccountPage() {
                                 Configure
                               </button>
                               {(orgApp.status === "ADDED" ||
-                                orgApp.status === "FAILED") && (
+                                orgApp.status === "FAILED" ||
+                                orgApp.status === "PREVIEW") && (
                                 <button
                                   className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity"
                                   onClick={() => handleLaunchApp(orgApp)}
                                 >
                                   {orgApp.status === "FAILED"
                                     ? "Retry"
-                                    : "Launch"}
+                                    : orgApp.status === "PREVIEW"
+                                      ? "Go Live"
+                                      : "Launch"}
                                 </button>
                               )}
                               <button

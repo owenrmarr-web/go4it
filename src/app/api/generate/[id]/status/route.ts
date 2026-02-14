@@ -23,6 +23,7 @@ export async function GET(
       iterationCount: true,
       appId: true,
       createdById: true,
+      previewFlyUrl: true,
     },
   });
 
@@ -41,5 +42,6 @@ export async function GET(
     error: generatedApp.error,
     iterationCount: generatedApp.iterationCount,
     appId: generatedApp.appId,
+    previewFlyUrl: generatedApp.previewFlyUrl,
   });
 }

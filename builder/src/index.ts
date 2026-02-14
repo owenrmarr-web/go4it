@@ -8,6 +8,7 @@ import previewRoute, {
   PREVIEW_PORT,
 } from "./routes/preview.js";
 import healthRoute from "./routes/health.js";
+import { cleanupExpiredPreviews } from "./lib/cleanup.js";
 
 const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -104,6 +105,10 @@ async function start() {
   try {
     await app.listen({ port: PORT, host: "0.0.0.0" });
     console.log(`GO4IT Builder Service listening on port ${PORT}`);
+
+    // Run cleanup every hour for expired preview machines (24h TTL)
+    setInterval(cleanupExpiredPreviews, 60 * 60 * 1000);
+    console.log("Preview cleanup scheduled (hourly)");
   } catch (err) {
     app.log.error(err);
     process.exit(1);

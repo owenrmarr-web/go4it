@@ -11,6 +11,7 @@ export interface App {
   createdAt: string;
   version: string | null;
   creatorUsername: string | null;
+  screenshot: string | null;
   heartCount: number;
 }
 
