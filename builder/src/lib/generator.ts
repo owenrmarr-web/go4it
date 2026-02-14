@@ -6,6 +6,7 @@ import {
   writeFileSync,
   existsSync,
   cpSync,
+  unlinkSync,
 } from "fs";
 import path from "path";
 import prisma from "./prisma.js";
@@ -754,6 +755,12 @@ function tryBuild(
   generationId: string,
   workspaceDir: string
 ): string | null {
+  // Remove stale .next/lock from previous builds
+  const lockPath = path.join(workspaceDir, ".next", "lock");
+  if (existsSync(lockPath)) {
+    try { unlinkSync(lockPath); } catch { /* ignore */ }
+  }
+
   try {
     console.log(`[Generator ${generationId}] Running build validation...`);
     execSync("npm run build", {
@@ -778,7 +785,7 @@ function tryBuild(
         if (l.includes("middleware") && l.includes("deprecated")) return false;
         if (l.includes("proxy") && l.includes("instead")) return false;
         if (l.includes("⚠") && !l.includes("Error")) return false;
-        return l.includes("Error") || l.includes("error") || l.includes("Type error") || l.includes("Module not found");
+        return l.includes("Error") || l.includes("error") || l.includes("Type error") || l.includes("Module not found") || l.includes("⨯");
       })
       .slice(0, 10)
       .join("\n");
