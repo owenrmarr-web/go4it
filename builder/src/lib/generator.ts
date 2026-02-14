@@ -141,9 +141,13 @@ async function updateProgress(
   currentStages.set(generationId, stage);
 
   try {
-    const data: Record<string, string | undefined> = {
+    const data: Record<string, string | null | undefined> = {
       currentStage: stage,
     };
+    // Clear stale detail text when leaving coding phase
+    if (stage !== "coding") {
+      data.currentDetail = null;
+    }
     // Only update status field for terminal/important stages
     if (stage === "complete") {
       data.status = "COMPLETE";
@@ -242,16 +246,34 @@ function runClaudeCLI(
     }
 
     if (code === 0) {
-      const appMeta = extractAppMetadata(workspaceDir);
-      console.log(
-        `[Generator ${generationId}] Complete: title="${appMeta.title}", description="${appMeta.description?.slice(0, 100)}"`
-      );
+      try {
+        const appMeta = extractAppMetadata(workspaceDir);
+        console.log(
+          `[Generator ${generationId}] Complete: title="${appMeta.title}", description="${appMeta.description?.slice(0, 100)}"`
+        );
 
-      await updateProgress(generationId, "finalizing");
-      await prepareForPreview(generationId, workspaceDir);
+        await updateProgress(generationId, "finalizing");
+        await prepareForPreview(generationId, workspaceDir);
 
-      // Deploy happens inside onComplete — don't mark complete until after
-      await onComplete(appMeta);
+        // Deploy happens inside onComplete — don't mark complete until after
+        await onComplete(appMeta);
+      } catch (err) {
+        // Safety net: if anything throws, still mark as complete so DB doesn't get stuck
+        console.error(
+          `[Generator ${generationId}] Error in post-generation pipeline:`,
+          err instanceof Error ? err.message : err
+        );
+        try {
+          const appMeta = extractAppMetadata(workspaceDir);
+          await onComplete(appMeta);
+        } catch {
+          // Last resort: mark complete with minimal data
+          await prisma.generatedApp.update({
+            where: { id: generationId },
+            data: { status: "COMPLETE", currentStage: "complete" },
+          });
+        }
+      }
     } else {
       const errorMsg =
         stderrBuffer.trim() ||
@@ -266,8 +288,21 @@ function runClaudeCLI(
         `[Generator ${generationId}] stdout:`,
         stdoutBuffer.slice(0, 2000)
       );
-      await updateProgress(generationId, "failed", { error: errorMsg });
-      await onError(errorMsg);
+      try {
+        await updateProgress(generationId, "failed", { error: errorMsg });
+        await onError(errorMsg);
+      } catch (err) {
+        console.error(
+          `[Generator ${generationId}] Failed to update error state:`,
+          err instanceof Error ? err.message : err
+        );
+        try {
+          await prisma.generatedApp.update({
+            where: { id: generationId },
+            data: { status: "FAILED", currentStage: "failed", error: errorMsg.slice(0, 1000) },
+          });
+        } catch { /* truly nothing we can do */ }
+      }
     }
   });
 
