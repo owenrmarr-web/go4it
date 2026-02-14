@@ -12,6 +12,7 @@ interface PortalApp {
   url: string | null;
   subdomain: string | null;
   version: string | null;
+  status?: string;
 }
 
 interface ThemeColors {
@@ -218,6 +219,10 @@ function AppLauncherCard({
           >
             Launch App
           </a>
+        ) : app.status === "DEPLOYING" ? (
+          <div className="block w-full text-center py-2.5 px-4 rounded-xl bg-amber-50 text-amber-600 font-semibold text-sm">
+            <span className="inline-block animate-pulse">Deploying — usually takes 1-2 minutes</span>
+          </div>
         ) : (
           <div className="block w-full text-center py-2.5 px-4 rounded-xl bg-gray-100 text-gray-400 font-semibold text-sm">
             Coming Soon

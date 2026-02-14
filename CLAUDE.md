@@ -456,15 +456,21 @@ flyctl deploy --app go4it-builder
 
 ## Next Steps (Roadmap — in priority order)
 
-1. **Test production preview end-to-end** — Preview was fixed (async deploy + polling), builder redeployed 2026-02-10. Needs testing: generate an app → click Preview → verify loading state appears → verify preview opens after deploy completes.
-2. **Fix custom subdomain DNS** — `*.go4it.live` CNAME points to `fly-global.fly.dev` which returns NXDOMAIN. Options: (a) per-app CNAME records via DNS API, or (b) shared reverse-proxy Fly app for wildcard routing. Currently using `.fly.dev` URLs as workaround.
-3. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
-4. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues and add guardrails.
-5. **Email verification** — Verify email on signup (confirmation link via Resend). Also require email verification for password changes (send code/link before allowing change). Currently password change uses old-password verification only.
-6. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
-7. **Builder hardening** — Garbage collection for old workspaces, rate limiting, error logging/monitoring.
+1. **Fix Resend API key in Vercel** — Team invitation emails fail with "API key is invalid". `RESEND_API_KEY` needs to be added/verified in Vercel dashboard environment variables. Key in local `.env` is `re_FBhdzJce_...` — also verify it's still active at resend.com/api-keys and that `go4it.live` domain is verified at resend.com/domains.
+2. **Improve preview launch speed** — Preview currently uses `next dev` (development mode) which compiles pages on-demand on a shared CPU — slow. Better approach: `next build && next start` (production mode). Build validation already compiled the app, so after auth patching only 2 files changed → fast incremental rebuild, then `next start` serves pages instantly. Also: skip npm install if `node_modules` exists, pre-warm first page after server reports ready.
+3. **Test production preview end-to-end** — Preview was fixed (async deploy + polling, preview gate on COMPLETE status, npm install before dev server, EADDRINUSE process group kill), builder redeployed 2026-02-13. Needs testing: generate an app → click Preview → verify loading state appears → verify preview opens after deploy completes.
+4. **Fix custom subdomain DNS** — `*.go4it.live` CNAME points to `fly-global.fly.dev` which returns NXDOMAIN. Options: (a) per-app CNAME records via DNS API, or (b) shared reverse-proxy Fly app for wildcard routing. Currently using `.fly.dev` URLs as workaround.
+5. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
+6. **Playbook refinement** — Continue improving `playbook/CLAUDE.md` based on generation results. Track common issues and add guardrails.
+7. **Email verification** — Verify email on signup (confirmation link via Resend). Also require email verification for password changes (send code/link before allowing change). Currently password change uses old-password verification only.
+8. **Billing** — Track per-user Fly.io usage, charge 20% premium. Stripe integration.
+9. **Builder hardening** — Garbage collection for old workspaces, rate limiting, error logging/monitoring.
 
 ### Completed
+- ~~Auth modal for unauthenticated users (2026-02-13)~~ — Heart/add interactions on home page show inline auth modal instead of redirect. Create page persists prompt to localStorage across auth flow. "Signup is free" messaging on auth page.
+- ~~Color picker fix (2026-02-13)~~ — Color pickers on signup/auth page were unusable (`appearance: none` on small elements). Fixed with overlay pattern: visible colored div + invisible `<input type="color">` overlay.
+- ~~Builder preview stability (2026-02-13)~~ — Three root causes fixed: (1) preview now gated on `gen.status === "COMPLETE"`, (2) build validation filters middleware deprecation warnings instead of triggering auto-fix, (3) `npm install` + proper env vars before starting dev server. Builder redeployed.
+- ~~Portal deploying status (2026-02-13)~~ — Portal page (`/{slug}`) now shows DEPLOYING and ADDED apps. Deploying apps show amber "Deploying — usually takes 1-2 minutes" with pulse animation instead of "Coming Soon".
 - ~~Deployed app URLs fixed (2026-02-10)~~ — Custom subdomain DNS broken (`fly-global.fly.dev` NXDOMAIN). Switched all deployed apps to `.fly.dev` URLs. Existing DB records migrated via `prisma/fix-fly-urls.ts`. Cert provisioning skipped until DNS is fixed.
 - ~~Production preview fixed (2026-02-10)~~ — Preview was timing out because builder did a synchronous Fly.io deploy (2-5 min) within Vercel's 60s function limit. Converted to async pattern: builder returns 202, deploys in background, frontend polls GET `/preview/:id/status` every 3s until ready.
 - ~~Password management (2026-02-10)~~ — 6-char minimum enforced on platform signup (server + client) and generated app template. Password change added to Account Settings (current + new + confirm, bcrypt verify). API at `/api/account/password`.

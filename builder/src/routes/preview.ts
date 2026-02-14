@@ -102,11 +102,15 @@ function killActivePreview(): Promise<void> {
     activePreview = null;
 
     const forceKillTimeout = setTimeout(() => {
+      // Force kill the process group (negative PID kills all children)
+      try {
+        if (proc.pid) process.kill(-proc.pid, "SIGKILL");
+      } catch {}
       try {
         proc.kill("SIGKILL");
       } catch {}
       resolve();
-    }, 5000);
+    }, 3000);
 
     proc.on("close", () => {
       clearTimeout(forceKillTimeout);
@@ -114,11 +118,13 @@ function killActivePreview(): Promise<void> {
       resolve();
     });
 
+    // Kill the process group (negative PID) to ensure child processes die too
     try {
-      proc.kill("SIGTERM");
+      if (proc.pid) process.kill(-proc.pid, "SIGTERM");
     } catch {
-      clearTimeout(forceKillTimeout);
-      resolve();
+      try {
+        proc.kill("SIGTERM");
+      } catch {}
     }
   });
 }
@@ -156,6 +162,7 @@ async function startPreviewLocal(generationId: string, sourceDir: string) {
 
     const child = spawn("npx", ["next", "dev", "-p", String(PREVIEW_PORT)], {
       cwd: sourceDir,
+      detached: true, // Create process group so we can kill all child processes
       env: {
         ...cleanEnv,
         PREVIEW_MODE: "true",

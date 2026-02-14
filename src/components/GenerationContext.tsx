@@ -218,10 +218,10 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               return;
             }
             if (status.status === "failed") {
-              throw new Error(status.error || "Preview deploy failed");
+              throw new Error(status.error ? `Preview failed: ${status.error}` : "Preview deploy failed");
             }
           } catch (err) {
-            if (err instanceof Error && err.message.includes("failed")) throw err;
+            if (err instanceof Error && err.message.startsWith("Preview failed")) throw err;
           }
         }
         throw new Error("Preview timed out — please try again");

@@ -63,15 +63,18 @@ export async function GET(
   }
 
   const apps = org.apps
-    .filter((oa) => oa.status === "RUNNING")
+    .filter((oa) => oa.status === "RUNNING" || oa.status === "DEPLOYING" || oa.status === "ADDED")
     .map((oa) => ({
       id: oa.id,
       title: oa.app.title,
       description: oa.app.description,
       icon: oa.app.icon,
       category: oa.app.category,
-      url: oa.flyUrl || (oa.subdomain ? `https://${oa.subdomain}.go4it.live` : null),
+      url: oa.status === "RUNNING"
+        ? (oa.flyUrl || (oa.subdomain ? `https://${oa.subdomain}.go4it.live` : null))
+        : null,
       subdomain: oa.subdomain,
+      status: oa.status,
       version: oa.deployedMarketplaceVersion != null
         ? `V${oa.deployedMarketplaceVersion}.${oa.deployedOrgVersion ?? 0}`
         : `V${oa.app.generatedApp?.marketplaceVersion ?? 1}.0`,
