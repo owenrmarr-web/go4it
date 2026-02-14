@@ -18,6 +18,7 @@ interface AppCardProps {
   onToggleHeart: () => void;
   orgs: UserOrg[];
   onAddToOrg: (orgSlug: string, appId: string) => void;
+  onAuthRequired?: () => void;
 }
 
 const categoryColors: Record<string, string> = {
@@ -43,6 +44,7 @@ export default function AppCard({
   onToggleHeart,
   orgs,
   onAddToOrg,
+  onAuthRequired,
 }: AppCardProps) {
   const { data: session } = useSession();
   const [showOrgPicker, setShowOrgPicker] = useState(false);
@@ -63,7 +65,8 @@ export default function AppCard({
   const handleHeart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!session) {
-      toast("Please log in to save apps to your account.");
+      if (onAuthRequired) onAuthRequired();
+      else toast("Please sign in to save apps.");
       return;
     }
     onToggleHeart();
@@ -72,7 +75,8 @@ export default function AppCard({
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!session) {
-      toast("Please log in to add apps to your account.");
+      if (onAuthRequired) onAuthRequired();
+      else toast("Please sign in to add apps.");
       return;
     }
 

@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { spawn, ChildProcess } from "child_process";
+import { spawn, ChildProcess, execSync } from "child_process";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import prisma from "../lib/prisma.js";
@@ -135,6 +135,14 @@ async function startPreviewLocal(generationId: string, sourceDir: string) {
     // Patch auth for preview mode
     patchAuthForPreview(sourceDir);
 
+    // Ensure npm install is complete before starting dev server
+    try {
+      console.log(`[Preview ${generationId}] Ensuring dependencies are installed...`);
+      execSync("npm install", { cwd: sourceDir, stdio: "pipe", timeout: 60000 });
+    } catch {
+      console.log(`[Preview ${generationId}] npm install failed (non-fatal)`);
+    }
+
     // Clean env: remove builder-specific vars that would interfere with the preview app
     const {
       DATABASE_URL: _db,
@@ -152,6 +160,8 @@ async function startPreviewLocal(generationId: string, sourceDir: string) {
         ...cleanEnv,
         PREVIEW_MODE: "true",
         NODE_ENV: "development",
+        DATABASE_URL: "file:./dev.db",
+        NEXT_TELEMETRY_DISABLED: "1",
       },
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -262,6 +272,13 @@ export default async function previewRoute(app: FastifyInstance) {
       return reply
         .status(400)
         .send({ error: "Source directory does not exist on builder" });
+    }
+
+    // Only allow preview after generation is fully complete (npm install, build validation, etc.)
+    if (gen.status !== "COMPLETE") {
+      return reply
+        .status(400)
+        .send({ error: "App is still generating. Please wait until generation completes." });
     }
 
     // Start preview in background

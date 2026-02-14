@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import Header from "@/components/Header";
 import SearchBar from "@/components/SearchBar";
 import AppCard, { type UserOrg } from "@/components/AppCard";
+import AuthModal from "@/components/AuthModal";
 import { useInteractions } from "@/hooks/useInteractions";
 import type { App } from "@/types";
 
@@ -15,6 +16,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [orgs, setOrgs] = useState<UserOrg[]>([]);
   const { hearted, toggle } = useInteractions();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/apps")
@@ -166,11 +168,20 @@ export default function Home() {
                 onToggleHeart={() => toggle(app.id, "HEART")}
                 orgs={orgs}
                 onAddToOrg={handleAddToOrg}
+                onAuthRequired={() => setShowAuthModal(true)}
               />
             ))}
           </div>
         )}
       </section>
+
+      {showAuthModal && (
+        <AuthModal
+          closable
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={() => { setShowAuthModal(false); window.location.reload(); }}
+        />
+      )}
     </div>
   );
 }

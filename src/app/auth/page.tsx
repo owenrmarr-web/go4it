@@ -219,8 +219,13 @@ export default function AuthPage() {
 
         {/* Heading */}
         <h2 className="mt-6 text-center text-xl font-bold text-gray-900">
-          {mode === "login" ? "Welcome back" : "Create an account"}
+          {mode === "login" ? "Welcome back" : "Create a free account"}
         </h2>
+        <p className="mt-1 text-center text-sm text-gray-500">
+          {mode === "login"
+            ? "Sign in to continue"
+            : "It\u2019s free \u2014 no credit card required"}
+        </p>
 
         {/* Form */}
         <form
@@ -385,16 +390,20 @@ export default function AuthPage() {
                     </label>
                     <div className="flex items-center gap-4">
                       {(["primary", "secondary", "accent"] as const).map((key) => (
-                        <label key={key} className="flex items-center gap-1.5 cursor-pointer">
-                          <input
-                            type="color"
-                            value={themeColors[key]}
-                            onChange={(e) => setThemeColors((prev) => ({ ...prev, [key]: e.target.value }))}
-                            className="w-8 h-8 rounded-full border-2 border-gray-200 cursor-pointer p-0 overflow-hidden"
-                            style={{ appearance: "none", WebkitAppearance: "none" }}
-                          />
+                        <div key={key} className="flex items-center gap-1.5">
+                          <div
+                            className="w-8 h-8 rounded-full border-2 border-gray-200 cursor-pointer relative overflow-hidden"
+                            style={{ backgroundColor: themeColors[key] }}
+                          >
+                            <input
+                              type="color"
+                              value={themeColors[key]}
+                              onChange={(e) => setThemeColors((prev) => ({ ...prev, [key]: e.target.value }))}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                          </div>
                           <span className="text-xs text-gray-500 capitalize">{key}</span>
-                        </label>
+                        </div>
                       ))}
                     </div>
                     <p className="text-xs text-gray-400 mt-1">
@@ -585,7 +594,7 @@ export default function AuthPage() {
             onClick={() => setMode(mode === "login" ? "signup" : "login")}
             className="text-purple-600 font-semibold hover:underline"
           >
-            {mode === "login" ? "Sign up" : "Sign in"}
+            {mode === "login" ? "Sign up free" : "Sign in"}
           </button>
         </p>
       </div>

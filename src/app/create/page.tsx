@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import GenerationProgress from "@/components/GenerationProgress";
 import { useGeneration } from "@/components/GenerationContext";
+import AuthModal from "@/components/AuthModal";
+
+const PROMPT_STORAGE_KEY = "go4it_create_prompt";
+const CONTEXT_STORAGE_KEY = "go4it_create_context";
 
 type PageState = "input" | "generating" | "complete" | "refine" | "publish" | "error";
 
@@ -36,7 +40,7 @@ const PROMPT_SUGGESTIONS = [
 ];
 
 export default function CreatePage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const gen = useGeneration();
 
@@ -60,18 +64,52 @@ export default function CreatePage() {
   const [publishing, setPublishing] = useState(false);
   const [businessContext, setBusinessContext] = useState("");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalClosable, setAuthModalClosable] = useState(true);
 
-  // Re-populate if user has a saved business description
+  // Persist prompt and context to localStorage
+  const updatePrompt = useCallback((value: string) => {
+    setPrompt(value);
+    try { localStorage.setItem(PROMPT_STORAGE_KEY, value); } catch {}
+  }, []);
+
+  const updateContext = useCallback((value: string) => {
+    setBusinessContext(value);
+    try { localStorage.setItem(CONTEXT_STORAGE_KEY, value); } catch {}
+  }, []);
+
+  // Restore from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedPrompt = localStorage.getItem(PROMPT_STORAGE_KEY);
+      if (savedPrompt) setPrompt(savedPrompt);
+      const savedContext = localStorage.getItem(CONTEXT_STORAGE_KEY);
+      if (savedContext) setBusinessContext(savedContext);
+    } catch {}
+  }, []);
+
+  // Show auth modal on page load if not signed in (closable)
+  useEffect(() => {
+    if (status === "unauthenticated" && gen.stage === "idle") {
+      setAuthModalClosable(true);
+      setShowAuthModal(true);
+    }
+  }, [status, gen.stage]);
+
+  // Re-populate business context from profile only if no localStorage value
   useEffect(() => {
     if (session?.user) {
-      fetch("/api/account/profile")
-        .then((r) => (r.ok ? r.json() : null))
-        .then((profile) => {
-          if (profile?.businessDescription) {
-            setBusinessContext(profile.businessDescription);
-          }
-        })
-        .catch(() => {});
+      const hasLocal = !!localStorage.getItem(CONTEXT_STORAGE_KEY);
+      if (!hasLocal) {
+        fetch("/api/account/profile")
+          .then((r) => (r.ok ? r.json() : null))
+          .then((profile) => {
+            if (profile?.businessDescription) {
+              setBusinessContext(profile.businessDescription);
+            }
+          })
+          .catch(() => {});
+      }
     }
   }, [session]);
 
@@ -106,8 +144,8 @@ export default function CreatePage() {
 
   const handleGenerate = async () => {
     if (!session?.user) {
-      toast.error("Please sign in to create an app.");
-      router.push("/auth");
+      setAuthModalClosable(false);
+      setShowAuthModal(true);
       return;
     }
 
@@ -236,7 +274,7 @@ export default function CreatePage() {
               </label>
               <textarea
                 value={businessContext}
-                onChange={(e) => setBusinessContext(e.target.value)}
+                onChange={(e) => updateContext(e.target.value)}
                 placeholder='e.g. "I run a plumbing business in California with business and consumer customers"'
                 rows={2}
                 maxLength={500}
@@ -250,7 +288,7 @@ export default function CreatePage() {
 
             <textarea
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={(e) => updatePrompt(e.target.value)}
               placeholder="e.g. Build a CRM for a law firm to track case progress and client communications..."
               rows={5}
               className="mt-4 w-full px-5 py-4 rounded-xl border border-gray-200 shadow-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent text-base"
@@ -279,7 +317,7 @@ export default function CreatePage() {
                 {PROMPT_SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
-                    onClick={() => setPrompt(suggestion)}
+                    onClick={() => updatePrompt(suggestion)}
                     className="text-xs px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 hover:border-purple-300 hover:text-purple-600 transition-colors"
                   >
                     {suggestion.length > 50
@@ -637,6 +675,17 @@ export default function CreatePage() {
           </div>
         )}
       </main>
+
+      {showAuthModal && (
+        <AuthModal
+          closable={authModalClosable}
+          onClose={authModalClosable ? () => setShowAuthModal(false) : undefined}
+          onSuccess={() => {
+            setShowAuthModal(false);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
