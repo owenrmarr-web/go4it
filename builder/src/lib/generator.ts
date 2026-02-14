@@ -397,10 +397,10 @@ export async function startGeneration(
     );
   }
 
-  // Parallel npm install
+  // Parallel npm install (--ignore-scripts to avoid prisma generate failing on incomplete schema)
   const installPromise = new Promise<boolean>((resolve) => {
     console.log(`[Generator ${generationId}] Starting parallel npm install...`);
-    const installChild = spawn("npm", ["install"], {
+    const installChild = spawn("npm", ["install", "--ignore-scripts"], {
       cwd: workspaceDir,
       stdio: "pipe",
     });
@@ -851,7 +851,7 @@ async function prepareForPreview(
         console.log(
           `[Generator ${generationId}] Running incremental npm install...`
         );
-        execSync("npm install", {
+        execSync("npm install --ignore-scripts", {
           cwd: workspaceDir,
           stdio: "pipe",
           timeout: 60000,
@@ -867,7 +867,7 @@ async function prepareForPreview(
         console.log(
           `[Generator ${generationId}] Parallel install failed, running full npm install...`
         );
-        execSync("npm install", {
+        execSync("npm install --ignore-scripts", {
           cwd: workspaceDir,
           stdio: "pipe",
           timeout: 120000,
@@ -882,7 +882,7 @@ async function prepareForPreview(
     }
   } else {
     try {
-      execSync("npm install", {
+      execSync("npm install --ignore-scripts", {
         cwd: workspaceDir,
         stdio: "pipe",
         timeout: 120000,
@@ -894,6 +894,29 @@ async function prepareForPreview(
       );
       return;
     }
+  }
+
+  // Run prisma format to auto-fix schema relation errors, then generate
+  try {
+    execSync("npx prisma format", {
+      cwd: workspaceDir,
+      stdio: "pipe",
+      timeout: 15000,
+      env,
+    });
+  } catch {
+    console.log(`[Generator ${generationId}] prisma format failed (non-fatal)`);
+  }
+
+  try {
+    execSync("npx prisma generate", {
+      cwd: workspaceDir,
+      stdio: "pipe",
+      timeout: 30000,
+      env,
+    });
+  } catch {
+    console.log(`[Generator ${generationId}] prisma generate failed (non-fatal)`);
   }
 
   // prisma db push
@@ -939,11 +962,19 @@ async function prepareForPreview(
 
     // Re-run npm install in case the fix added/changed dependencies
     try {
-      execSync("npm install", {
+      execSync("npm install --ignore-scripts", {
         cwd: workspaceDir,
         stdio: "pipe",
         timeout: 60000,
       });
+    } catch {
+      // non-fatal
+    }
+
+    // Re-run prisma format + generate after fix
+    try {
+      execSync("npx prisma format", { cwd: workspaceDir, stdio: "pipe", timeout: 15000, env });
+      execSync("npx prisma generate", { cwd: workspaceDir, stdio: "pipe", timeout: 30000, env });
     } catch {
       // non-fatal
     }

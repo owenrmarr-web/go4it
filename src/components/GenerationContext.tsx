@@ -282,6 +282,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         }
 
         if (data.status === "GENERATING" || data.status === "PENDING") {
+          // Active generation — resume progress tracking
           setState({
             generationId: savedId,
             stage: "coding",
@@ -292,30 +293,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             previewLoading: false,
           });
           connectSSE(savedId);
-        } else if (data.status === "COMPLETE") {
-          setState({
-            generationId: savedId,
-            stage: "complete",
-            message: "Your app is ready!",
-            title: data.title ?? undefined,
-            description: data.description ?? undefined,
-            iterationCount: data.iterationCount ?? 0,
-            published: !!data.appId,
-            previewUrl: data.previewFlyUrl ?? null,
-            previewLoading: false,
-          });
-        } else if (data.status === "FAILED") {
-          setState({
-            generationId: savedId,
-            stage: "failed",
-            message: "Something went wrong.",
-            error: data.error ?? undefined,
-            iterationCount: data.iterationCount ?? 0,
-            published: false,
-            previewUrl: null,
-            previewLoading: false,
-          });
         } else {
+          // Terminal state (COMPLETE/FAILED) — clear stale state so user sees input form
           localStorage.removeItem(STORAGE_KEY);
         }
       })
