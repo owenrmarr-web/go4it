@@ -784,9 +784,17 @@ function tryBuild(
       .join("\n");
 
     // If no real error lines found, the "failure" was just warnings — treat as pass
+    // BUT verify that standalone output was actually produced
     if (!errorLines.trim()) {
-      console.log(`[Generator ${generationId}] Build exited non-zero but only had warnings — treating as pass`);
-      return null;
+      const standaloneExists = existsSync(path.join(workspaceDir, ".next", "standalone"));
+      if (standaloneExists) {
+        console.log(`[Generator ${generationId}] Build exited non-zero but only had warnings — treating as pass`);
+        return null;
+      }
+      // Standalone not produced — build actually failed, return full output for auto-fix
+      console.log(`[Generator ${generationId}] Build exited non-zero, no error lines found, but .next/standalone missing — treating as failure`);
+      const fallbackError = output.split("\n").slice(-20).join("\n");
+      return fallbackError || "Build failed: .next/standalone not produced (no error details captured)";
     }
 
     const buildError = errorLines;
