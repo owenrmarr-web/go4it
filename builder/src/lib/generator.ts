@@ -250,10 +250,7 @@ function runClaudeCLI(
       await updateProgress(generationId, "finalizing");
       await prepareForPreview(generationId, workspaceDir);
 
-      await updateProgress(generationId, "complete", {
-        title: appMeta.title,
-        description: appMeta.description,
-      });
+      // Deploy happens inside onComplete — don't mark complete until after
       await onComplete(appMeta);
     } else {
       const errorMsg =
@@ -498,10 +495,12 @@ export async function startGeneration(
         }
       }
 
+      // Mark complete only AFTER deploy finishes (SSE reads this)
       await prisma.generatedApp.update({
         where: { id: generationId },
         data: {
           status: "COMPLETE",
+          currentStage: "complete",
           title: appMeta.title,
           description: appMeta.description,
           previewFlyAppId: previewFlyAppId || undefined,
