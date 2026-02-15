@@ -404,7 +404,7 @@ export async function startGeneration(
     console.log(`[Generator ${generationId}] Starting parallel npm install...`);
     const installChild = spawn("npm", ["install", "--ignore-scripts"], {
       cwd: workspaceDir,
-      stdio: "pipe",
+      stdio: "ignore",
     });
     installChild.on("close", (code) => {
       console.log(

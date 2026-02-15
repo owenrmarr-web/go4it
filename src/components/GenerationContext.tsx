@@ -55,6 +55,24 @@ export function useGeneration() {
 }
 
 const STORAGE_KEY = "go4it_active_gen";
+const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+
+function saveGenToStorage(id: string) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ id, startedAt: Date.now() }));
+}
+
+function loadGenFromStorage(): { id: string; startedAt: number } | null {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed?.id) return parsed;
+  } catch {
+    // Legacy format: plain ID string — treat as stale
+  }
+  localStorage.removeItem(STORAGE_KEY);
+  return null;
+}
 
 export function GenerationProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GenerationState>({
@@ -135,7 +153,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         previewUrl: null,
         previewLoading: false,
       });
-      localStorage.setItem(STORAGE_KEY, id);
+      saveGenToStorage(id);
       connectSSE(id);
     },
     [connectSSE]
@@ -270,8 +288,11 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     if (resumedRef.current) return;
     resumedRef.current = true;
 
-    const savedId = localStorage.getItem(STORAGE_KEY);
-    if (!savedId) return;
+    const saved = loadGenFromStorage();
+    if (!saved) return;
+
+    const { id: savedId, startedAt } = saved;
+    const age = Date.now() - startedAt;
 
     fetch(`/api/generate/${savedId}/status`)
       .then((res) => (res.ok ? res.json() : null))
@@ -282,7 +303,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         }
 
         if (data.status === "GENERATING" || data.status === "PENDING") {
-          // Active generation — resume progress tracking
+          // Active generation — always resume regardless of age
           setState({
             generationId: savedId,
             stage: "coding",
@@ -293,8 +314,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             previewLoading: false,
           });
           connectSSE(savedId);
-        } else if (data.status === "COMPLETE") {
-          // Completed generation — show result with preview URL
+        } else if (data.status === "COMPLETE" && age < STALE_THRESHOLD_MS) {
+          // Recently completed — show result with preview URL
           setState({
             generationId: savedId,
             stage: "complete",
@@ -306,8 +327,8 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             previewUrl: data.previewFlyUrl ?? null,
             previewLoading: false,
           });
-        } else if (data.status === "FAILED") {
-          // Failed generation — show error
+        } else if (data.status === "FAILED" && age < STALE_THRESHOLD_MS) {
+          // Recently failed — show error
           setState({
             generationId: savedId,
             stage: "failed",
@@ -319,7 +340,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             previewLoading: false,
           });
         } else {
-          // Unknown state — clear
+          // Stale or unknown — clear
           localStorage.removeItem(STORAGE_KEY);
         }
       })
