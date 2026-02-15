@@ -8,7 +8,8 @@ import previewRoute, {
   PREVIEW_PORT,
 } from "./routes/preview.js";
 import healthRoute from "./routes/health.js";
-import { cleanupExpiredPreviews } from "./lib/cleanup.js";
+import cleanupRoute from "./routes/cleanup.js";
+import { cleanupExpiredPreviews, cleanupStaleWorkspaces } from "./lib/cleanup.js";
 
 const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -18,7 +19,7 @@ const app = Fastify({
 });
 
 // Auth middleware — only require auth for builder API routes, not preview proxy
-const PROTECTED_PATHS = new Set(["generate", "iterate", "deploy", "preview"]);
+const PROTECTED_PATHS = new Set(["generate", "iterate", "deploy", "preview", "workspace"]);
 
 app.addHook("onRequest", async (request, reply) => {
   const firstSegment = request.url.split("?")[0].split("/")[1] || "";
@@ -40,6 +41,7 @@ app.register(iterateRoute);
 app.register(deployRoute);
 app.register(previewRoute);
 app.register(healthRoute);
+app.register(cleanupRoute);
 
 // Preview proxy — forward unmatched routes to active preview app
 // This runs AFTER all registered routes fail to match, so builder API routes
@@ -106,9 +108,12 @@ async function start() {
     await app.listen({ port: PORT, host: "0.0.0.0" });
     console.log(`GO4IT Builder Service listening on port ${PORT}`);
 
-    // Run cleanup every hour for expired preview machines (24h TTL)
-    setInterval(cleanupExpiredPreviews, 60 * 60 * 1000);
-    console.log("Preview cleanup scheduled (hourly)");
+    // Run cleanup every hour for expired preview machines and stale workspaces
+    setInterval(async () => {
+      await cleanupExpiredPreviews();
+      await cleanupStaleWorkspaces();
+    }, 60 * 60 * 1000);
+    console.log("Preview + workspace cleanup scheduled (hourly)");
   } catch (err) {
     app.log.error(err);
     process.exit(1);

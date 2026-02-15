@@ -2,6 +2,20 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
+const BUILDER_URL = process.env.BUILDER_URL;
+const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
+
+/** Best-effort cleanup of builder workspace after publish */
+function cleanupBuilderWorkspace(generationId: string) {
+  if (!BUILDER_URL) return;
+  const headers: Record<string, string> = {};
+  if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
+  fetch(`${BUILDER_URL}/workspace/${generationId}`, {
+    method: "DELETE",
+    headers,
+  }).catch(() => {});
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -97,6 +111,8 @@ export async function POST(
       data: { marketplaceVersion: { increment: 1 } },
     });
 
+    cleanupBuilderWorkspace(id);
+
     return NextResponse.json({
       appId: updatedApp.id,
       marketplaceVersion: updatedGen.marketplaceVersion,
@@ -130,6 +146,8 @@ export async function POST(
     where: { id },
     data: { appId: app.id },
   });
+
+  cleanupBuilderWorkspace(id);
 
   return NextResponse.json({ appId: app.id, marketplaceVersion: 1 }, { status: 201 });
 }
