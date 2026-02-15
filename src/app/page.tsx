@@ -104,7 +104,7 @@ export default function Home() {
         <h1 className="text-5xl md:text-6xl font-extrabold text-white drop-shadow-lg">
           GO4IT
         </h1>
-        <p className="mt-4 text-xl md:text-2xl text-white/90 font-medium max-w-2xl mx-auto">
+        <p className="mt-4 text-xl md:text-2xl text-white/90 font-medium max-w-3xl mx-auto">
           AI-enabled software tools to help small businesses do big things.
         </p>
         <p className="mt-2 text-white/70 text-base max-w-xl mx-auto">
