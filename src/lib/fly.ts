@@ -604,6 +604,95 @@ export default defineConfig({
 }
 
 // ============================================
+// Launch (promote preview → production via secret flip)
+// ============================================
+
+export async function launchApp(
+  orgAppId: string,
+  flyAppName: string,
+  teamMembers: { name: string; email: string; passwordHash?: string }[],
+  subdomain?: string
+): Promise<void> {
+  try {
+    updateDeployProgress(orgAppId, "preparing");
+
+    await prisma.orgApp.update({
+      where: { id: orgAppId },
+      data: { status: "DEPLOYING" },
+    });
+
+    const authSecret = crypto.randomBytes(32).toString("hex");
+
+    const secrets: Record<string, string> = {
+      PREVIEW_MODE: "false",
+      AUTH_SECRET: authSecret,
+    };
+    if (teamMembers.length > 0) {
+      secrets.GO4IT_TEAM_MEMBERS = JSON.stringify(teamMembers);
+    }
+
+    const secretPairs = Object.entries(secrets).map(
+      ([k, v]) => `${k}=${v}`
+    );
+
+    console.log(`[Launch ${orgAppId}] Setting secrets on ${flyAppName}...`);
+    updateDeployProgress(orgAppId, "configuring");
+
+    const result = await flyctl([
+      "secrets",
+      "set",
+      ...secretPairs,
+      "--app",
+      flyAppName,
+    ]);
+
+    if (result.code !== 0) {
+      throw new Error(
+        `Failed to set secrets: ${result.stderr || result.stdout}`
+      );
+    }
+
+    const flyUrl = `https://${flyAppName}.fly.dev`;
+    updateDeployProgress(orgAppId, "running", { flyUrl });
+
+    await prisma.orgApp.update({
+      where: { id: orgAppId },
+      data: {
+        status: "RUNNING",
+        flyUrl,
+        subdomain: subdomain || undefined,
+        deployedAt: new Date(),
+      },
+    });
+
+    // Clear previewExpiresAt so cleanup doesn't destroy this production app
+    const orgApp = await prisma.orgApp.findUnique({
+      where: { id: orgAppId },
+      include: { app: { include: { generatedApp: true } } },
+    });
+    if (orgApp?.app?.generatedApp) {
+      await prisma.generatedApp.update({
+        where: { id: orgApp.app.generatedApp.id },
+        data: { previewExpiresAt: null },
+      });
+    }
+
+    console.log(`[Launch ${orgAppId}] Live at ${flyUrl}`);
+  } catch (err) {
+    const errorMsg =
+      err instanceof Error ? err.message : "Unknown launch error";
+    console.error(`[Launch ${orgAppId}] Failed:`, errorMsg);
+
+    updateDeployProgress(orgAppId, "failed", { error: errorMsg });
+
+    await prisma.orgApp.update({
+      where: { id: orgAppId },
+      data: { status: "FAILED" },
+    });
+  }
+}
+
+// ============================================
 // App management helpers
 // ============================================
 

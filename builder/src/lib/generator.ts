@@ -7,6 +7,7 @@ import {
   existsSync,
   cpSync,
   unlinkSync,
+  rmSync,
 } from "fs";
 import path from "path";
 import prisma from "./prisma.js";
@@ -753,12 +754,17 @@ function extractAppMetadata(workspaceDir: string): {
 // Try to build the app — returns null on success, error string on failure
 function tryBuild(
   generationId: string,
-  workspaceDir: string
+  workspaceDir: string,
+  cleanBuild: boolean = false
 ): string | null {
-  // Remove stale .next/lock from previous builds
-  const lockPath = path.join(workspaceDir, ".next", "lock");
-  if (existsSync(lockPath)) {
-    try { unlinkSync(lockPath); } catch { /* ignore */ }
+  if (cleanBuild) {
+    // Remove entire .next directory — avoids EACCES errors when files inside
+    // .next/build/ are owned by a different user (e.g. root from Claude Code
+    // CLI running `next dev` during generation)
+    const nextDir = path.join(workspaceDir, ".next");
+    if (existsSync(nextDir)) {
+      try { rmSync(nextDir, { recursive: true, force: true }); } catch { /* ignore */ }
+    }
   }
 
   try {
@@ -766,7 +772,7 @@ function tryBuild(
     execSync("npm run build", {
       cwd: workspaceDir,
       stdio: "pipe",
-      timeout: 120000,
+      timeout: 300000, // 5 minutes — cold builds on shared-cpu-4x can take 2-3 min
       env: { ...process.env, DATABASE_URL: "file:./dev.db" },
     });
     console.log(`[Generator ${generationId}] Build passed`);
@@ -911,6 +917,21 @@ async function prepareForPreview(
     }
   }
 
+  // Ensure Prisma schema has binaryTargets for cross-platform preview deploys
+  // (Claude may rewrite the generator block, dropping the template's binaryTargets)
+  const schemaPath = path.join(workspaceDir, "prisma", "schema.prisma");
+  if (existsSync(schemaPath)) {
+    let schema = readFileSync(schemaPath, "utf-8");
+    if (!schema.includes("binaryTargets")) {
+      schema = schema.replace(
+        /provider\s*=\s*"prisma-client-js"/,
+        'provider      = "prisma-client-js"\n  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]'
+      );
+      writeFileSync(schemaPath, schema);
+      console.log(`[Generator ${generationId}] Injected binaryTargets into schema`);
+    }
+  }
+
   // Run prisma format to auto-fix schema relation errors, then generate
   try {
     execSync("npx prisma format", {
@@ -961,8 +982,41 @@ async function prepareForPreview(
     }
   }
 
+  // Fix middleware export if Claude used the broken `export default auth(...)` pattern.
+  // Next.js 16 needs either a named `middleware` export or a proper default function.
+  // The auth() wrapper in preview mode returns a Promise (not a function), breaking middleware.
+  const middlewarePath = path.join(workspaceDir, "src", "middleware.ts");
+  if (existsSync(middlewarePath)) {
+    const mw = readFileSync(middlewarePath, "utf-8");
+    if (mw.includes("export default auth(") || !mw.includes("export function middleware") && !mw.includes("export async function middleware")) {
+      writeFileSync(middlewarePath, `import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export function middleware(req: NextRequest) {
+  if (process.env.PREVIEW_MODE === "true") return NextResponse.next();
+
+  const hasSession =
+    req.cookies.has("authjs.session-token") ||
+    req.cookies.has("__Secure-authjs.session-token");
+
+  if (!hasSession) {
+    return NextResponse.redirect(new URL("/auth", req.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/", "/m/:path*", "/settings/:path*"],
+};
+`);
+      console.log(`[Generator ${generationId}] Fixed middleware export pattern`);
+    }
+  }
+
   // Build validation + auto-fix loop
-  let buildError = tryBuild(generationId, workspaceDir);
+  // First build is a clean build (removes .next from CLI), retries keep cache
+  let buildError = tryBuild(generationId, workspaceDir, true);
   for (let attempt = 1; attempt <= MAX_AUTO_FIX_ATTEMPTS && buildError; attempt++) {
     console.log(
       `[Generator ${generationId}] Auto-fix attempt ${attempt}/${MAX_AUTO_FIX_ATTEMPTS}`

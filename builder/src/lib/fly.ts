@@ -5,6 +5,7 @@ import {
   existsSync,
   unlinkSync,
   mkdirSync,
+  rmSync,
 } from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -270,14 +271,27 @@ function generatePreviewStartScript(): string {
   return `#!/bin/sh
 set -e
 
-echo "=== GO4IT Preview Startup ==="
+echo "=== GO4IT App Startup ==="
 
 # Ensure data directory is writable
 mkdir -p /data 2>/dev/null || true
 
-# Copy seed DB if not already present on volume
-if [ ! -f /data/app.db ]; then
-  cp /app/dev.db /data/app.db 2>/dev/null || echo "Warning: no seed DB found"
+if [ "$PREVIEW_MODE" = "true" ]; then
+  # Preview mode: copy seed DB and start
+  if [ ! -f /data/app.db ]; then
+    cp /app/dev.db /data/app.db 2>/dev/null || echo "Warning: no seed DB found"
+  fi
+else
+  # Production mode: fresh DB + real users
+  rm -f /data/app.db
+
+  echo "Running database setup..."
+  npx prisma db push --accept-data-loss 2>&1 || echo "Warning: prisma db push had issues"
+
+  if [ -n "$GO4IT_TEAM_MEMBERS" ] && [ -f "prisma/provision-users.ts" ]; then
+    echo "Provisioning team members..."
+    npx tsx prisma/provision-users.ts 2>&1 || echo "Warning: user provisioning had issues"
+  fi
 fi
 
 echo "Starting application..."
@@ -289,16 +303,22 @@ function generatePreviewDockerfile(): string {
   return `FROM node:20-slim
 WORKDIR /app
 
+# Install OpenSSL so Prisma can detect the correct engine binary at runtime
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
 # Copy pre-built standalone Next.js output
 COPY .next/standalone ./
 COPY .next/static ./.next/static
 COPY public ./public
 
-# Copy prisma runtime (needed for PrismaClient)
-COPY node_modules/.prisma ./node_modules/.prisma
-COPY node_modules/@prisma ./node_modules/@prisma
+# Full node_modules (overrides standalone subset — needed for prisma CLI + tsx at production startup)
+COPY node_modules ./node_modules
+COPY package.json ./
 
-# Copy seed database with fake data
+# Prisma schema + provisioning scripts
+COPY prisma ./prisma
+
+# Seed database for preview mode
 COPY dev.db ./dev.db
 
 # Copy startup script
@@ -316,10 +336,7 @@ function generatePreviewDockerignore(): string {
 *.md
 .env*
 src/
-prisma/
-node_modules/
-!node_modules/.prisma
-!node_modules/@prisma
+.next/cache
 `;
 }
 
@@ -404,10 +421,10 @@ export async function deployPreviewApp(
     console.log(
       `[Preview ${generationId}] Standalone not found, running npm run build...`
     );
-    // Remove stale .next/lock from previous build attempt
-    const lockPath = path.join(sourceDir, ".next", "lock");
-    if (existsSync(lockPath)) {
-      try { unlinkSync(lockPath); } catch { /* ignore */ }
+    // Remove entire .next directory to avoid EACCES permission errors
+    const nextDir = path.join(sourceDir, ".next");
+    if (existsSync(nextDir)) {
+      try { rmSync(nextDir, { recursive: true, force: true }); } catch { /* ignore */ }
     }
     try {
       execSync("npm run build", {
@@ -853,6 +870,97 @@ export default defineConfig({
         status: "FAILED",
         flyAppId: flyAppName,
       },
+    });
+  }
+}
+
+// ============================================
+// Launch (promote preview → production via secret flip)
+// ============================================
+
+export async function launchApp(
+  orgAppId: string,
+  flyAppName: string,
+  teamMembers: { name: string; email: string; passwordHash?: string }[],
+  subdomain?: string
+): Promise<void> {
+  try {
+    updateDeployProgress(orgAppId, "preparing");
+
+    await prisma.orgApp.update({
+      where: { id: orgAppId },
+      data: { status: "DEPLOYING" },
+    });
+
+    const authSecret = crypto.randomBytes(32).toString("hex");
+
+    // Build secrets — setting without --stage triggers a machine restart
+    const secrets: Record<string, string> = {
+      PREVIEW_MODE: "false",
+      AUTH_SECRET: authSecret,
+    };
+    if (teamMembers.length > 0) {
+      secrets.GO4IT_TEAM_MEMBERS = JSON.stringify(teamMembers);
+    }
+
+    const secretPairs = Object.entries(secrets).map(
+      ([k, v]) => `${k}=${v}`
+    );
+
+    console.log(`[Launch ${orgAppId}] Setting secrets on ${flyAppName}...`);
+    updateDeployProgress(orgAppId, "configuring");
+
+    const result = await flyctl([
+      "secrets",
+      "set",
+      ...secretPairs,
+      "--app",
+      flyAppName,
+    ]);
+
+    if (result.code !== 0) {
+      throw new Error(
+        `Failed to set secrets: ${result.stderr || result.stdout}`
+      );
+    }
+
+    // Success — update DB
+    const flyUrl = `https://${flyAppName}.fly.dev`;
+    updateDeployProgress(orgAppId, "running", { flyUrl });
+
+    await prisma.orgApp.update({
+      where: { id: orgAppId },
+      data: {
+        status: "RUNNING",
+        flyUrl,
+        subdomain: subdomain || undefined,
+        deployedAt: new Date(),
+      },
+    });
+
+    // Clear previewExpiresAt so cleanup doesn't destroy this production app
+    const orgApp = await prisma.orgApp.findUnique({
+      where: { id: orgAppId },
+      include: { app: { include: { generatedApp: true } } },
+    });
+    if (orgApp?.app?.generatedApp) {
+      await prisma.generatedApp.update({
+        where: { id: orgApp.app.generatedApp.id },
+        data: { previewExpiresAt: null },
+      });
+    }
+
+    console.log(`[Launch ${orgAppId}] Live at ${flyUrl}`);
+  } catch (err) {
+    const errorMsg =
+      err instanceof Error ? err.message : "Unknown launch error";
+    console.error(`[Launch ${orgAppId}] Failed:`, errorMsg);
+
+    updateDeployProgress(orgAppId, "failed", { error: errorMsg });
+
+    await prisma.orgApp.update({
+      where: { id: orgAppId },
+      data: { status: "FAILED" },
     });
   }
 }

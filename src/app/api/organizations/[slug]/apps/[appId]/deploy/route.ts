@@ -101,10 +101,14 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  // Determine if this is a re-deploy (app already running on Fly)
-  const existingFlyAppId = orgApp.status === "RUNNING" && orgApp.flyAppId
-    ? orgApp.flyAppId
-    : undefined;
+  // Determine if this is a re-deploy or preview launch
+  const existingFlyAppId =
+    (orgApp.status === "RUNNING" || orgApp.status === "PREVIEW") && orgApp.flyAppId
+      ? orgApp.flyAppId
+      : undefined;
+
+  // Fast-path flag: promote existing preview to production via secret flip
+  const isPreviewLaunch = orgApp.status === "PREVIEW" && !!orgApp.flyAppId;
 
   // Look up the org owner's password hash so they can log in with their platform credentials
   const orgOwner = await prisma.organizationMember.findFirst({
@@ -164,6 +168,7 @@ export async function POST(request: Request, context: RouteContext) {
           teamMembers,
           subdomain: subdomain ?? undefined,
           existingFlyAppId,
+          isPreviewLaunch,
         }),
       });
 
@@ -181,10 +186,17 @@ export async function POST(request: Request, context: RouteContext) {
   } else {
     // Local dev fallback
     try {
-      const { deployApp } = await import("@/lib/fly");
-      deployApp(orgApp.id, slug, sourceDir, teamMembers, subdomain ?? undefined, existingFlyAppId).catch((err) => {
-        console.error(`[Deploy] Unhandled error for ${orgApp.id}:`, err);
-      });
+      if (isPreviewLaunch && existingFlyAppId) {
+        const { launchApp } = await import("@/lib/fly");
+        launchApp(orgApp.id, existingFlyAppId, teamMembers, subdomain ?? undefined).catch((err) => {
+          console.error(`[Launch] Unhandled error for ${orgApp.id}:`, err);
+        });
+      } else {
+        const { deployApp } = await import("@/lib/fly");
+        deployApp(orgApp.id, slug, sourceDir, teamMembers, subdomain ?? undefined, existingFlyAppId).catch((err) => {
+          console.error(`[Deploy] Unhandled error for ${orgApp.id}:`, err);
+        });
+      }
     } catch {
       return NextResponse.json(
         { error: "Builder service not configured and local deployment unavailable" },

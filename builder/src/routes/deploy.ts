@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { deployApp } from "../lib/fly.js";
+import { deployApp, launchApp } from "../lib/fly.js";
 import prisma from "../lib/prisma.js";
 
 export default async function deployRoute(app: FastifyInstance) {
@@ -11,6 +11,7 @@ export default async function deployRoute(app: FastifyInstance) {
       teamMembers: { name: string; email: string; passwordHash?: string }[];
       subdomain?: string;
       existingFlyAppId?: string;
+      isPreviewLaunch?: boolean;
     };
   }>("/deploy", async (request, reply) => {
     const {
@@ -20,6 +21,7 @@ export default async function deployRoute(app: FastifyInstance) {
       teamMembers,
       subdomain,
       existingFlyAppId,
+      isPreviewLaunch,
     } = request.body;
 
     if (!orgAppId || !orgSlug || !generationId) {
@@ -28,7 +30,21 @@ export default async function deployRoute(app: FastifyInstance) {
         .send({ error: "orgAppId, orgSlug, and generationId are required" });
     }
 
-    // Look up source directory from the generation record
+    // Fast path: promote existing preview app to production via secret flip
+    if (isPreviewLaunch && existingFlyAppId) {
+      launchApp(
+        orgAppId,
+        existingFlyAppId,
+        teamMembers || [],
+        subdomain
+      ).catch((err) => {
+        console.error(`[Launch] Unhandled error for ${orgAppId}:`, err);
+      });
+
+      return reply.status(202).send({ status: "accepted", orgAppId });
+    }
+
+    // Full deploy path: build from source
     const gen = await prisma.generatedApp.findUnique({
       where: { id: generationId },
       select: { sourceDir: true },
@@ -40,7 +56,6 @@ export default async function deployRoute(app: FastifyInstance) {
         .send({ error: "No source directory found for this generation" });
     }
 
-    // Start deploy in background
     deployApp(
       orgAppId,
       orgSlug,

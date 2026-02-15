@@ -119,7 +119,7 @@ async function main() {
   for (const mod of modules) {
     for (const entity of mod.entities) {
       const modelKey = entity.prismaModel.charAt(0).toLowerCase() + entity.prismaModel.slice(1);
-      const model = (prisma as Record<string, unknown>)[modelKey] as { create: (args: { data: Record<string, unknown> }) => Promise<{ id: string }> } | undefined;
+      const model = (prisma as unknown as Record<string, unknown>)[modelKey] as { create: (args: { data: Record<string, unknown> }) => Promise<{ id: string }> } | undefined;
       if (!model) {
         console.log(`  Skipping ${entity.prismaModel} (model not found)`);
         continue;
