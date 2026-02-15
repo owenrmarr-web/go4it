@@ -431,7 +431,7 @@ const slides = [
           <p className="text-lg md:text-2xl text-gray-700">
             For a 20-person company, that&apos;s{" "}
             <span className="font-bold text-theme-secondary">$28,000/year</span>{" "}
-            on tools they barely customize.
+            on tools they need to operate.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             Most are paying for features they don&apos;t need, from vendors with inflexible tools.
@@ -448,6 +448,9 @@ const slides = [
           The Solution
         </h2>
         <div className="space-y-4 md:space-y-6">
+          <p className="text-xl md:text-3xl text-gray-500 italic mb-2 md:mb-4">
+            What if your software tools were tailored for your business, at a fraction of the cost?
+          </p>
           <p className="text-lg md:text-2xl text-gray-700">
             GO4IT is a{" "}
             <span className="font-bold gradient-brand-text">
@@ -459,10 +462,10 @@ const slides = [
             Pick from a library of ready-made tools — or describe what you need
             in plain English
             <br />
-            and AI builds it for you.
+            and AI builds it for you. Everything you need, nothing you don&apos;t.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
-            We deploy your applications, directly in your browser. No cloud experience required.
+            Custom applications available directly in your browser. Zero technical expertise required.
           </p>
         </div>
       </div>
@@ -490,7 +493,7 @@ const slides = [
             {
               step: "3",
               title: "Launch",
-              desc: "Your apps are live under your custom URL.",
+              desc: "Your apps are live and secure under your custom web address.",
             },
           ].map((s) => (
             <div key={s.step} className="text-center">
