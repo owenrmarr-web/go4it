@@ -10,7 +10,17 @@ import { extractColorsFromImage } from "@/lib/colorExtractor";
 
 export default function AuthPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  // Read initial mode and callbackUrl from query params
+  const [mode, setMode] = useState<"login" | "signup">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("mode") === "signup" ? "signup" : "login";
+    }
+    return "login";
+  });
+  const callbackUrl = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("callbackUrl") || "/"
+    : "/";
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -157,7 +167,7 @@ export default function AuthPage() {
     if (result?.error) {
       toast.error("Invalid email or password.");
     } else {
-      router.push("/");
+      router.push(callbackUrl);
     }
   };
 
@@ -201,7 +211,7 @@ export default function AuthPage() {
           "Account created but login failed. Please try logging in."
         );
       } else {
-        router.push("/");
+        router.push(callbackUrl);
       }
     } catch {
       toast.error("Something went wrong. Please try again.");

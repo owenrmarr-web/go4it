@@ -112,13 +112,7 @@ export default function CreatePage() {
     } catch {}
   }, []);
 
-  // Show auth modal on page load if not signed in (closable)
-  useEffect(() => {
-    if (status === "unauthenticated" && gen.stage === "idle") {
-      setAuthModalClosable(true);
-      setShowAuthModal(true);
-    }
-  }, [status, gen.stage]);
+  // Auth modal is shown only when user tries to generate without being signed in
 
   // Re-populate business context from profile only if no localStorage value
   useEffect(() => {
@@ -142,7 +136,7 @@ export default function CreatePage() {
 
   const handleGenerate = async () => {
     if (!session?.user) {
-      setAuthModalClosable(false);
+      setAuthModalClosable(true);
       setShowAuthModal(true);
       return;
     }

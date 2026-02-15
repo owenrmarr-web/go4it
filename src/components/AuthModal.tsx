@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 
@@ -11,10 +12,10 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ onClose, onSuccess, closable = true }: AuthModalProps) {
+  const pathname = usePathname();
   const [mode, setMode] = useState<"login" | "signup">("signup");
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
     password: "",
   });
@@ -39,40 +40,9 @@ export default function AuthModal({ onClose, onSuccess, closable = true }: AuthM
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Signup failed.");
-        setLoading(false);
-        return;
-      }
-      const result = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
-      setLoading(false);
-      if (result?.error) {
-        toast.error("Account created but login failed. Please try logging in.");
-      } else {
-        onSuccess?.();
-      }
-    } catch {
-      toast.error("Something went wrong. Please try again.");
-      setLoading(false);
-    }
+  const goToSignup = () => {
+    const callbackUrl = encodeURIComponent(pathname || "/");
+    window.location.href = `/auth?mode=signup&callbackUrl=${callbackUrl}`;
   };
 
   return (
@@ -101,52 +71,45 @@ export default function AuthModal({ onClose, onSuccess, closable = true }: AuthM
             : "It's free — no credit card required"}
         </p>
 
-        <form
-          onSubmit={mode === "login" ? handleLogin : handleSignup}
-          className="mt-5 space-y-3"
-        >
-          {mode === "signup" && (
+        {mode === "login" ? (
+          <form onSubmit={handleLogin} className="mt-5 space-y-3">
             <input
-              type="text"
-              name="name"
-              value={formData.name}
+              type="email"
+              name="email"
+              value={formData.email}
               onChange={handleChange}
               required
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
-              placeholder="Your name"
+              placeholder="you@company.com"
             />
-          )}
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
-            placeholder="you@company.com"
-          />
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            minLength={6}
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
-            placeholder="Password (6+ characters)"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full gradient-brand text-white py-2.5 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60"
-          >
-            {loading
-              ? "Processing..."
-              : mode === "login"
-                ? "Sign In"
-                : "Create Free Account"}
-          </button>
-        </form>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              minLength={6}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+              placeholder="Password (6+ characters)"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full gradient-brand text-white py-2.5 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60"
+            >
+              {loading ? "Processing..." : "Sign In"}
+            </button>
+          </form>
+        ) : (
+          <div className="mt-5">
+            <button
+              onClick={goToSignup}
+              className="w-full gradient-brand text-white py-2.5 rounded-lg font-bold text-base hover:opacity-90 transition-opacity"
+            >
+              Create Free Account
+            </button>
+          </div>
+        )}
 
         <p className="mt-4 text-center text-sm text-gray-500">
           {mode === "login" ? "Don\u2019t have an account?" : "Already have one?"}{" "}
