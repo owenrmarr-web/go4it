@@ -110,6 +110,8 @@ export async function POST(request: Request, context: RouteContext) {
   // Fast-path flag: promote existing preview to production via secret flip
   const isPreviewLaunch = orgApp.status === "PREVIEW" && !!orgApp.flyAppId;
 
+  console.log(`[Deploy Route] orgApp.status=${orgApp.status}, orgApp.flyAppId=${orgApp.flyAppId}, isPreviewLaunch=${isPreviewLaunch}, existingFlyAppId=${existingFlyAppId}`);
+
   // Look up the org owner's password hash so they can log in with their platform credentials
   const orgOwner = await prisma.organizationMember.findFirst({
     where: { organizationId: organization.id, role: "OWNER" },

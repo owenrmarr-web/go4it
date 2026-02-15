@@ -24,6 +24,8 @@ export default async function deployRoute(app: FastifyInstance) {
       isPreviewLaunch,
     } = request.body;
 
+    console.log(`[Deploy Route] Received: orgAppId=${orgAppId}, isPreviewLaunch=${isPreviewLaunch}, existingFlyAppId=${existingFlyAppId}`);
+
     if (!orgAppId || !orgSlug || !generationId) {
       return reply
         .status(400)
