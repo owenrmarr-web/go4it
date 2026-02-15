@@ -319,7 +319,7 @@ COPY package.json ./
 COPY prisma ./prisma
 
 # Seed database for preview mode
-COPY dev.db ./dev.db
+COPY prisma/dev.db ./dev.db
 
 # Copy startup script
 COPY start.sh ./
