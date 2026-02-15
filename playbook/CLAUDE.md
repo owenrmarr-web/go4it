@@ -314,6 +314,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 5. **Don't modify middleware** — Route protection is handled globally by `src/middleware.ts`. All pages except `/auth` require a session. Don't change the middleware matcher.
 6. **bcryptjs not bcrypt** — The template uses `bcryptjs` (pure JS). Don't import from `bcrypt`.
 7. **Sonner for toasts** — Use `import { toast } from "sonner"` for notifications. `Toaster` component is already in the root layout.
+8. **SQLite doesn't support `mode: "insensitive"`** — Prisma's `mode: "insensitive"` on `contains`/`startsWith`/`endsWith` filters is NOT supported with SQLite. For case-insensitive search, convert both sides to lowercase: `where: { name: { contains: query.toLowerCase() } }` combined with storing/comparing lowered values, or simply omit the `mode` option entirely.
 
 ## Default Features
 
