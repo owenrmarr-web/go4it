@@ -62,6 +62,8 @@ export default function CreatePage() {
   const [publishIcon, setPublishIcon] = useState(APP_ICONS[0]);
   const [publishIsPublic, setPublishIsPublic] = useState(true);
   const [publishDeploy, setPublishDeploy] = useState(true);
+  const [teamEmails, setTeamEmails] = useState<string[]>([]);
+  const [teamEmailInput, setTeamEmailInput] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [businessContext, setBusinessContext] = useState("");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -206,6 +208,7 @@ export default function CreatePage() {
           icon: publishIcon,
           isPublic: publishIsPublic,
           deployToOrg: publishDeploy,
+          teamEmails: publishDeploy ? teamEmails : undefined,
         }),
       });
 
@@ -239,6 +242,8 @@ export default function CreatePage() {
     setPublishIcon(APP_ICONS[0]);
     setPublishIsPublic(true);
     setPublishDeploy(true);
+    setTeamEmails([]);
+    setTeamEmailInput("");
     setShowStartOverConfirm(false);
   };
 
@@ -406,6 +411,11 @@ export default function CreatePage() {
                   onClick={() => {
                     setPublishTitle(gen.title || "");
                     setPublishDescription(gen.description || "");
+                    // Pre-populate team with current user's email
+                    const userEmail = session?.user?.email;
+                    if (userEmail && teamEmails.length === 0) {
+                      setTeamEmails([userEmail]);
+                    }
                     setLocalView("publish");
                   }}
                   className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-colors"
@@ -637,6 +647,70 @@ export default function CreatePage() {
                   )}
                 </div>
               </div>
+
+              {/* Team Members (shown when deploy is on) */}
+              {publishDeploy && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Team Members
+                  </label>
+                  <p className="text-xs text-gray-400 mb-2">
+                    Add email addresses for people who should have access. They&apos;ll log in with the default password <code className="bg-gray-100 px-1 rounded">go4it2026</code>.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={teamEmailInput}
+                      onChange={(e) => setTeamEmailInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const email = teamEmailInput.trim().toLowerCase();
+                          if (email && email.includes("@") && !teamEmails.includes(email)) {
+                            setTeamEmails([...teamEmails, email]);
+                            setTeamEmailInput("");
+                          }
+                        }
+                      }}
+                      placeholder="name@company.com"
+                      className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const email = teamEmailInput.trim().toLowerCase();
+                        if (email && email.includes("@") && !teamEmails.includes(email)) {
+                          setTeamEmails([...teamEmails, email]);
+                          setTeamEmailInput("");
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {teamEmails.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {teamEmails.map((email) => (
+                        <span
+                          key={email}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-sm"
+                        >
+                          {email}
+                          {email !== session?.user?.email && (
+                            <button
+                              onClick={() => setTeamEmails(teamEmails.filter((e) => e !== email))}
+                              className="text-purple-400 hover:text-purple-600 ml-0.5"
+                            >
+                              &times;
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="mt-8 flex gap-3 justify-center">

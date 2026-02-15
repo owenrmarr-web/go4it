@@ -1,19 +1,61 @@
 import { NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
 const BUILDER_URL = process.env.BUILDER_URL;
 const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
 
+function builderHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
+  return headers;
+}
+
 /** Best-effort cleanup of builder workspace after publish */
 function cleanupBuilderWorkspace(generationId: string) {
   if (!BUILDER_URL) return;
-  const headers: Record<string, string> = {};
-  if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
   fetch(`${BUILDER_URL}/workspace/${generationId}`, {
     method: "DELETE",
-    headers,
+    headers: builderHeaders(),
   }).catch(() => {});
+}
+
+/**
+ * Flip a preview Fly app to production:
+ * - Set AUTH_SECRET + GO4IT_TEAM_MEMBERS
+ * - Unset PREVIEW_MODE
+ * This triggers a machine restart with the new env vars.
+ */
+async function launchPreviewApp(
+  flyAppId: string,
+  teamEmails: string[],
+  ownerEmail: string,
+  ownerPasswordHash?: string | null
+) {
+  if (!BUILDER_URL) return;
+
+  const teamMembers = teamEmails.map((email) => ({
+    name: email.split("@")[0],
+    email,
+    ...(email === ownerEmail && ownerPasswordHash
+      ? { passwordHash: ownerPasswordHash }
+      : {}),
+  }));
+
+  const authSecret = randomBytes(32).toString("hex");
+
+  await fetch(`${BUILDER_URL}/secrets/${flyAppId}`, {
+    method: "POST",
+    headers: builderHeaders(),
+    body: JSON.stringify({
+      secrets: {
+        AUTH_SECRET: authSecret,
+        GO4IT_TEAM_MEMBERS: JSON.stringify(teamMembers),
+      },
+      unset: ["PREVIEW_MODE"],
+    }),
+  });
 }
 
 export async function POST(
@@ -34,6 +76,7 @@ export async function POST(
     icon?: string;
     isPublic?: boolean;
     deployToOrg?: boolean;
+    teamEmails?: string[];
   };
   try {
     body = await request.json();
@@ -41,7 +84,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { title, description, category, icon, isPublic, deployToOrg } = body;
+  const { title, description, category, icon, isPublic, deployToOrg, teamEmails } = body;
 
   if (!title || title.trim().length < 2) {
     return NextResponse.json(
@@ -121,11 +164,25 @@ export async function POST(
         : { marketplaceVersion: { increment: 1 } },
     });
 
-    // Deploy to org: promote preview OrgApp to RUNNING
-    if (deployToOrg) {
+    // Deploy to org: promote preview OrgApp to RUNNING + set secrets
+    if (deployToOrg && generatedApp.previewFlyAppId) {
       await prisma.orgApp.updateMany({
         where: { appId: updatedApp.id, status: "PREVIEW" },
         data: { status: "RUNNING" },
+      });
+
+      // Flip preview → production (set secrets, unset PREVIEW_MODE)
+      const owner = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { email: true, password: true },
+      });
+      await launchPreviewApp(
+        generatedApp.previewFlyAppId,
+        teamEmails || [owner?.email || ""],
+        owner?.email || "",
+        owner?.password
+      ).catch((err) => {
+        console.error("Failed to set secrets (non-fatal):", err);
       });
     }
 
@@ -166,7 +223,7 @@ export async function POST(
     data: { appId: app.id },
   });
 
-  // Deploy to org: create OrgApp record linked to preview Fly app
+  // Deploy to org: create OrgApp record linked to preview Fly app + set secrets
   let deployed = false;
   if (deployToOrg && generatedApp.previewFlyAppId && generatedApp.previewFlyUrl) {
     const orgMember = await prisma.organizationMember.findFirst({
@@ -185,6 +242,20 @@ export async function POST(
         },
       });
       deployed = true;
+
+      // Flip preview → production
+      const owner = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { email: true, password: true },
+      });
+      await launchPreviewApp(
+        generatedApp.previewFlyAppId,
+        teamEmails || [owner?.email || ""],
+        owner?.email || "",
+        owner?.password
+      ).catch((err) => {
+        console.error("Failed to set secrets (non-fatal):", err);
+      });
     }
   }
 
