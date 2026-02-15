@@ -294,7 +294,7 @@ const slides = [
     content: (
       <div className="flex flex-col items-center justify-center h-full text-center">
         <h1 className="text-7xl font-bold gradient-brand-text mb-6">GO4IT</h1>
-        <p className="text-2xl text-gray-600 max-w-[44rem]">
+        <p className="text-2xl text-gray-600 max-w-[48.4rem]">
           AI-enabled software tools to help small businesses do big things.
         </p>
       </div>
@@ -342,7 +342,9 @@ const slides = [
           </p>
           <p className="text-2xl text-gray-700">
             Pick from a library of ready-made tools — or describe what you need
-            in plain English and AI builds it for you.
+            in plain English
+            <br />
+            and AI builds it for you.
           </p>
           <p className="text-2xl text-gray-700">
             We host everything, directly in your browser. No cloud experience required.
@@ -473,7 +475,7 @@ const slides = [
           <span className="font-bold gradient-brand-text">$20 Billion ARR</span> market.
         </p>
         <p className="text-lg text-gray-400 mt-2 text-center">
-          Across 1,700,000 SaaS-using small businesses in the US.
+          Across 1,270,000 SaaS-using small businesses in the US.
         </p>
       </div>
     ),
@@ -511,13 +513,12 @@ const slides = [
   },
   { id: "financial", content: null },
   {
-    id: "demo",
+    id: "ask",
     content: (
       <div className="flex flex-col items-center justify-center h-full text-center">
-        <h2 className="text-5xl font-bold text-gray-900 mb-10">Live Demo</h2>
-        <p className="text-2xl text-gray-500 mb-8">
-          [ Demo placeholder — add screenshots or embed here ]
-        </p>
+        <h2 className="text-5xl font-bold gradient-brand-text mb-10">
+          Let&apos;s GO4IT
+        </h2>
         <a
           href="https://go4it.live"
           target="_blank"
@@ -526,30 +527,6 @@ const slides = [
         >
           Visit go4it.live
         </a>
-      </div>
-    ),
-  },
-  {
-    id: "team",
-    content: (
-      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
-        <h2 className="text-5xl font-bold text-gray-900 mb-10">Team</h2>
-        <p className="text-2xl text-gray-500">
-          [ Team details placeholder ]
-        </p>
-      </div>
-    ),
-  },
-  {
-    id: "ask",
-    content: (
-      <div className="flex flex-col items-center justify-center h-full text-center">
-        <h2 className="text-5xl font-bold gradient-brand-text mb-10">
-          Let&apos;s GO4IT
-        </h2>
-        <p className="text-2xl text-gray-600 max-w-2xl">
-          [ The ask — funding, partnership, etc. ]
-        </p>
       </div>
     ),
   },
