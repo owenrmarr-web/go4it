@@ -21,6 +21,12 @@ function cleanupBuilderWorkspace(generationId: string) {
   }).catch(() => {});
 }
 
+type TeamMemberInput = {
+  name: string;
+  email: string;
+  role: string;
+};
+
 /**
  * Flip a preview Fly app to production:
  * - Set AUTH_SECRET + GO4IT_TEAM_MEMBERS
@@ -29,16 +35,17 @@ function cleanupBuilderWorkspace(generationId: string) {
  */
 async function launchPreviewApp(
   flyAppId: string,
-  teamEmails: string[],
+  members: TeamMemberInput[],
   ownerEmail: string,
   ownerPasswordHash?: string | null
 ) {
   if (!BUILDER_URL) return;
 
-  const teamMembers = teamEmails.map((email) => ({
-    name: email.split("@")[0],
-    email,
-    ...(email === ownerEmail && ownerPasswordHash
+  const teamMembers = members.map((m) => ({
+    name: m.name,
+    email: m.email,
+    role: m.role || "Member",
+    ...(m.email === ownerEmail && ownerPasswordHash
       ? { passwordHash: ownerPasswordHash }
       : {}),
   }));
@@ -76,7 +83,7 @@ export async function POST(
     icon?: string;
     isPublic?: boolean;
     deployToOrg?: boolean;
-    teamEmails?: string[];
+    teamMembers?: TeamMemberInput[];
   };
   try {
     body = await request.json();
@@ -84,7 +91,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { title, description, category, icon, isPublic, deployToOrg, teamEmails } = body;
+  const { title, description, category, icon, isPublic, deployToOrg, teamMembers } = body;
 
   if (!title || title.trim().length < 2) {
     return NextResponse.json(
@@ -171,14 +178,19 @@ export async function POST(
         data: { status: "RUNNING" },
       });
 
-      // Flip preview → production (set secrets, unset PREVIEW_MODE)
+      // Flip preview → production (fire-and-forget — don't block the response)
       const owner = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { email: true, password: true },
+        select: { email: true, name: true, password: true },
       });
-      await launchPreviewApp(
+      const defaultMembers: TeamMemberInput[] = [{
+        name: owner?.name || owner?.email?.split("@")[0] || "Owner",
+        email: owner?.email || "",
+        role: "Admin",
+      }];
+      launchPreviewApp(
         generatedApp.previewFlyAppId,
-        teamEmails || [owner?.email || ""],
+        teamMembers || defaultMembers,
         owner?.email || "",
         owner?.password
       ).catch((err) => {
@@ -243,14 +255,19 @@ export async function POST(
       });
       deployed = true;
 
-      // Flip preview → production
+      // Flip preview → production (fire-and-forget — don't block the response)
       const owner = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { email: true, password: true },
+        select: { email: true, name: true, password: true },
       });
-      await launchPreviewApp(
+      const defaultMembers: TeamMemberInput[] = [{
+        name: owner?.name || owner?.email?.split("@")[0] || "Owner",
+        email: owner?.email || "",
+        role: "Admin",
+      }];
+      launchPreviewApp(
         generatedApp.previewFlyAppId,
-        teamEmails || [owner?.email || ""],
+        teamMembers || defaultMembers,
         owner?.email || "",
         owner?.password
       ).catch((err) => {

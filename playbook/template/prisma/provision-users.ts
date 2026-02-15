@@ -21,17 +21,18 @@ async function main() {
     return;
   }
 
-  const members: { name: string; email: string; passwordHash?: string }[] = JSON.parse(raw);
+  const members: { name: string; email: string; role?: string; passwordHash?: string }[] = JSON.parse(raw);
 
   for (const member of members) {
     // Use the member's platform password hash if provided, otherwise use default
     const password = member.passwordHash || defaultPassword;
+    const role = member.role || "Member";
     await prisma.user.upsert({
       where: { email: member.email },
       update: { name: member.name, password },
       create: { email: member.email, name: member.name, password },
     });
-    console.log(`Provisioned: ${member.name} (${member.email})${member.passwordHash ? " [platform credentials]" : ""}`);
+    console.log(`Provisioned: ${member.name} (${member.email}) [${role}]${member.passwordHash ? " [platform credentials]" : ""}`);
   }
   console.log(`Done — ${members.length + 1} users provisioned.`);
 }

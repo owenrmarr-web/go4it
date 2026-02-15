@@ -14,6 +14,25 @@ const CONTEXT_STORAGE_KEY = "go4it_create_context";
 
 type PageState = "input" | "generating" | "complete" | "refine" | "publish" | "error";
 
+type OrgMember = {
+  id: string;
+  role: string;
+  user: { id: string; name: string; email: string; image: string | null };
+};
+
+type TeamMemberSelection = {
+  userId: string;
+  role: "Admin" | "Member";
+};
+
+const TEAM_ROLES: TeamMemberSelection["role"][] = ["Admin", "Member"];
+
+const ROLE_COLORS: Record<string, string> = {
+  OWNER: "bg-purple-100 text-purple-700",
+  ADMIN: "bg-blue-100 text-blue-700",
+  MEMBER: "bg-gray-100 text-gray-700",
+};
+
 const APP_CATEGORIES = [
   "CRM / Sales",
   "Project Management",
@@ -62,8 +81,9 @@ export default function CreatePage() {
   const [publishIcon, setPublishIcon] = useState(APP_ICONS[0]);
   const [publishIsPublic, setPublishIsPublic] = useState(true);
   const [publishDeploy, setPublishDeploy] = useState(true);
-  const [teamEmails, setTeamEmails] = useState<string[]>([]);
-  const [teamEmailInput, setTeamEmailInput] = useState("");
+  const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<Map<string, TeamMemberSelection>>(new Map());
+  const [orgMembersLoaded, setOrgMembersLoaded] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [businessContext, setBusinessContext] = useState("");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -117,14 +137,6 @@ export default function CreatePage() {
     }
   }, [session]);
 
-  // Auto-open: when preview URL becomes available (from auto-deploy), open in new tab
-  const [autoOpenedUrl, setAutoOpenedUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (gen.previewUrl && gen.previewUrl !== autoOpenedUrl) {
-      setAutoOpenedUrl(gen.previewUrl);
-      window.open(gen.previewUrl, "_blank");
-    }
-  }, [gen.previewUrl, autoOpenedUrl]);
 
   const pageState = localView === "default" ? derivePageState() : localView;
 
@@ -208,7 +220,15 @@ export default function CreatePage() {
           icon: publishIcon,
           isPublic: publishIsPublic,
           deployToOrg: publishDeploy,
-          teamEmails: publishDeploy ? teamEmails : undefined,
+          teamMembers: publishDeploy
+            ? orgMembers
+                .filter((m) => selectedMembers.has(m.user.id))
+                .map((m) => ({
+                  name: m.user.name || m.user.email.split("@")[0],
+                  email: m.user.email,
+                  role: selectedMembers.get(m.user.id)?.role || "Member",
+                }))
+            : undefined,
         }),
       });
 
@@ -242,8 +262,8 @@ export default function CreatePage() {
     setPublishIcon(APP_ICONS[0]);
     setPublishIsPublic(true);
     setPublishDeploy(true);
-    setTeamEmails([]);
-    setTeamEmailInput("");
+    setSelectedMembers(new Map());
+    setOrgMembersLoaded(false);
     setShowStartOverConfirm(false);
   };
 
@@ -408,13 +428,27 @@ export default function CreatePage() {
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               {!gen.published ? (
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setPublishTitle(gen.title || "");
                     setPublishDescription(gen.description || "");
-                    // Pre-populate team with current user's email
-                    const userEmail = session?.user?.email;
-                    if (userEmail && teamEmails.length === 0) {
-                      setTeamEmails([userEmail]);
+                    // Fetch org members if not loaded
+                    if (!orgMembersLoaded) {
+                      try {
+                        const res = await fetch("/api/account/org");
+                        if (res.ok) {
+                          const data = await res.json();
+                          const members: OrgMember[] = data.members || [];
+                          setOrgMembers(members);
+                          // Auto-select current user as Admin
+                          const userId = session?.user?.id;
+                          if (userId) {
+                            const initial = new Map<string, TeamMemberSelection>();
+                            initial.set(userId, { userId, role: "Admin" });
+                            setSelectedMembers(initial);
+                          }
+                        }
+                      } catch {}
+                      setOrgMembersLoaded(true);
                     }
                     setLocalView("publish");
                   }}
@@ -651,62 +685,115 @@ export default function CreatePage() {
               {/* Team Members (shown when deploy is on) */}
               {publishDeploy && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Team Members
-                  </label>
-                  <p className="text-xs text-gray-400 mb-2">
-                    Add email addresses for people who should have access. They&apos;ll log in with the default password <code className="bg-gray-100 px-1 rounded">go4it2026</code>.
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="email"
-                      value={teamEmailInput}
-                      onChange={(e) => setTeamEmailInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const email = teamEmailInput.trim().toLowerCase();
-                          if (email && email.includes("@") && !teamEmails.includes(email)) {
-                            setTeamEmails([...teamEmails, email]);
-                            setTeamEmailInput("");
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Team Access
+                    </label>
+                    {orgMembers.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedMembers.size === orgMembers.length) {
+                            // Deselect all except current user
+                            const next = new Map<string, TeamMemberSelection>();
+                            const userId = session?.user?.id;
+                            if (userId) next.set(userId, { userId, role: "Admin" });
+                            setSelectedMembers(next);
+                          } else {
+                            // Select all
+                            const next = new Map<string, TeamMemberSelection>();
+                            for (const m of orgMembers) {
+                              const isMe = m.user.id === session?.user?.id;
+                              next.set(m.user.id, {
+                                userId: m.user.id,
+                                role: isMe ? "Admin" : (selectedMembers.get(m.user.id)?.role || "Member"),
+                              });
+                            }
+                            setSelectedMembers(next);
                           }
-                        }
-                      }}
-                      placeholder="name@company.com"
-                      className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const email = teamEmailInput.trim().toLowerCase();
-                        if (email && email.includes("@") && !teamEmails.includes(email)) {
-                          setTeamEmails([...teamEmails, email]);
-                          setTeamEmailInput("");
-                        }
-                      }}
-                      className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition-colors"
-                    >
-                      Add
-                    </button>
+                        }}
+                        className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                      >
+                        {selectedMembers.size === orgMembers.length ? "Deselect All" : "Select All"}
+                      </button>
+                    )}
                   </div>
-                  {teamEmails.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {teamEmails.map((email) => (
-                        <span
-                          key={email}
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-sm"
-                        >
-                          {email}
-                          {email !== session?.user?.email && (
-                            <button
-                              onClick={() => setTeamEmails(teamEmails.filter((e) => e !== email))}
-                              className="text-purple-400 hover:text-purple-600 ml-0.5"
-                            >
-                              &times;
-                            </button>
-                          )}
-                        </span>
-                      ))}
+                  <p className="text-xs text-gray-400 mb-3">
+                    Select who gets access. Default password: <code className="bg-gray-100 px-1 rounded">go4it2026</code>
+                  </p>
+
+                  {orgMembers.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic py-2">
+                      No team members yet. Invite people from My Account.
+                    </p>
+                  ) : (
+                    <div className="space-y-1">
+                      {orgMembers.map((member) => {
+                        const isMe = member.user.id === session?.user?.id;
+                        const isChecked = selectedMembers.has(member.user.id);
+                        const selection = selectedMembers.get(member.user.id);
+                        return (
+                          <label
+                            key={member.user.id}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                if (isMe) return; // Can't uncheck yourself
+                                const next = new Map(selectedMembers);
+                                if (next.has(member.user.id)) {
+                                  next.delete(member.user.id);
+                                } else {
+                                  next.set(member.user.id, { userId: member.user.id, role: "Member" });
+                                }
+                                setSelectedMembers(next);
+                              }}
+                              disabled={isMe}
+                              className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-400 disabled:opacity-60"
+                            />
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-sm font-semibold shrink-0">
+                              {member.user.name?.[0]?.toUpperCase() || "?"}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">
+                                {member.user.name || member.user.email.split("@")[0]}
+                                {isMe && (
+                                  <span className="ml-1.5 text-xs text-gray-400 font-normal">(you)</span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-400 truncate">{member.user.email}</p>
+                            </div>
+                            {/* Org role badge */}
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[member.role] || ROLE_COLORS.MEMBER}`}>
+                              {member.role === "OWNER" ? "Owner" : member.role === "ADMIN" ? "Admin" : "Member"}
+                            </span>
+                            {/* App permission dropdown */}
+                            {isChecked && (
+                              <select
+                                value={isMe ? "Admin" : (selection?.role || "Member")}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  const next = new Map(selectedMembers);
+                                  next.set(member.user.id, {
+                                    userId: member.user.id,
+                                    role: e.target.value as TeamMemberSelection["role"],
+                                  });
+                                  setSelectedMembers(next);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                disabled={isMe}
+                                className="px-2 py-1 rounded-md border border-gray-200 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                {TEAM_ROLES.map((role) => (
+                                  <option key={role} value={role}>{role}</option>
+                                ))}
+                              </select>
+                            )}
+                          </label>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
