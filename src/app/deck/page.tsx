@@ -193,7 +193,7 @@ function MarketSlide({ active }: { active: boolean }) {
 }
 
 function FinancialModelSlide() {
-  const [customers, setCustomers] = useState(1270000);
+  const customers = 1270000;
   const [usersPerCustomer, setUsersPerCustomer] = useState(15);
   const [appsPerUser, setAppsPerUser] = useState(5);
   const [penetration, setPenetration] = useState(1);
@@ -248,8 +248,8 @@ function FinancialModelSlide() {
         <tbody>
           <tr className="border-b border-gray-100">
             <td className="py-3 text-gray-600">Addressable Businesses</td>
-            <td className="py-3 text-right">
-              <StepInput value={customers} onChange={setCustomers} min={0} step={1000} />
+            <td className="py-3 text-right font-bold" style={{ color: "var(--theme-primary)" }}>
+              1,270,000
             </td>
             <td></td>
             <td className="py-3 text-gray-600">Total Businesses</td>
@@ -337,7 +337,7 @@ function FinancialModelSlide() {
             <tbody>
               <tr className="border-b border-gray-100">
                 <td className="py-2 text-gray-600">Businesses</td>
-                <td className="py-2 text-right"><StepInput value={customers} onChange={setCustomers} min={0} step={1000} /></td>
+                <td className="py-2 text-right font-bold" style={{ color: "var(--theme-primary)" }}>1,270,000</td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 text-gray-600">Penetration</td>
@@ -448,7 +448,7 @@ const slides = [
           The Solution
         </h2>
         <div className="space-y-4 md:space-y-6">
-          <p className="text-xl md:text-3xl text-gray-500 italic mb-2 md:mb-4">
+          <p className="text-lg md:text-2xl text-gray-700">
             What if your software tools were tailored for your business, at a fraction of the cost?
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
@@ -499,6 +499,13 @@ const slides = [
             <div key={s.step} className="text-center">
               <div className="w-16 h-16 rounded-full gradient-brand text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
                 {s.step}
+              </div>
+              <div className="w-full aspect-video flex items-end justify-center mb-4">
+                <img
+                  src={`/deck/step-${s.step}.png`}
+                  alt={s.title}
+                  className="max-w-full max-h-full rounded-lg shadow-md"
+                />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
                 {s.title}
