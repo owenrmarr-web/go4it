@@ -331,7 +331,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
               title: data.title ?? undefined,
               description: data.description ?? undefined,
               iterationCount: data.iterationCount ?? 0,
-              published: !!data.appId,
+              published: !!data.published,
               previewUrl: data.previewFlyUrl ?? null,
               previewLoading: false,
             };

@@ -24,6 +24,7 @@ export async function GET(
       appId: true,
       createdById: true,
       previewFlyUrl: true,
+      app: { select: { isPublic: true } },
     },
   });
 
@@ -42,6 +43,7 @@ export async function GET(
     error: generatedApp.error,
     iterationCount: generatedApp.iterationCount,
     appId: generatedApp.appId,
+    published: !!generatedApp.app?.isPublic,
     previewFlyUrl: generatedApp.previewFlyUrl,
   });
 }
