@@ -326,26 +326,47 @@ function buildEnrichedPrompt(
   rawPrompt: string,
   context?: BusinessContext
 ): string {
-  if (!context) return rawPrompt;
+  const sections: string[] = [];
 
-  const parts: string[] = [];
-  if (context.businessContext) parts.push(`Business: ${context.businessContext}`);
-  if (context.companyName) parts.push(`Company name: ${context.companyName}`);
-  if (context.state && context.country)
-    parts.push(`Location: ${context.state}, ${context.country}`);
-  else if (context.country) parts.push(`Location: ${context.country}`);
-  if (context.useCases?.length)
-    parts.push(`Industry focus: ${context.useCases.join(", ")}`);
+  // Business context block (if available)
+  if (context) {
+    const parts: string[] = [];
+    if (context.businessContext) parts.push(`Business: ${context.businessContext}`);
+    if (context.companyName) parts.push(`Company name: ${context.companyName}`);
+    if (context.state && context.country)
+      parts.push(`Location: ${context.state}, ${context.country}`);
+    else if (context.country) parts.push(`Location: ${context.country}`);
+    if (context.useCases?.length)
+      parts.push(`Industry focus: ${context.useCases.join(", ")}`);
 
-  if (parts.length === 0) return rawPrompt;
+    if (parts.length > 0) {
+      sections.push(
+        ["[BUSINESS CONTEXT]", ...parts, "[END BUSINESS CONTEXT]"].join("\n")
+      );
+    }
+  }
 
-  return [
-    "[BUSINESS CONTEXT]",
-    ...parts,
-    "[END BUSINESS CONTEXT]",
-    "",
-    rawPrompt,
-  ].join("\n");
+  // User's prompt
+  sections.push(rawPrompt);
+
+  // Smart defaults — fill in common requirements users forget to mention
+  sections.push(
+    [
+      "[BUILD REQUIREMENTS]",
+      "In addition to the user's request, ensure the app includes:",
+      "- A dashboard home page with summary statistics and quick navigation",
+      "- Full CRUD (create, read/list, update, delete) for every data entity",
+      "- Searchable list views for each entity",
+      "- Form validation on required fields",
+      "- Delete confirmation dialogs before destructive actions",
+      "- Realistic seed data (5-8 records per entity) in prisma/seed.ts",
+      "- Responsive sidebar navigation that works on mobile",
+      "- Empty states with helpful messages when sections have no data",
+      "[END BUILD REQUIREMENTS]",
+    ].join("\n")
+  );
+
+  return sections.join("\n\n");
 }
 
 function buildCLIArgs(prompt: string, useContinue: boolean): string[] {
@@ -823,7 +844,7 @@ function autoFix(
   buildError: string
 ): Promise<boolean> {
   return new Promise((resolve) => {
-    const fixPrompt = `The app failed to build with this error:\n\n${buildError}\n\nFix the build error. Do not change any pre-built template files (auth.ts, auth.config.ts, prisma.ts, middleware.ts, SessionProvider.tsx, layout.tsx, globals.css, auth/page.tsx, or any file under api/auth/). Only fix the files you created.`;
+    const fixPrompt = `The app failed to build with this error:\n\n${buildError}\n\nFix the build error. Do not change any pre-built infrastructure files (src/auth.ts, src/auth.config.ts, src/lib/prisma.ts, src/middleware.ts, src/components/SessionProvider.tsx, src/app/globals.css, src/app/auth/page.tsx, src/types/next-auth.d.ts, or any file under src/app/api/auth/). Only fix the files you created or modified.`;
 
     console.log(`[Generator ${generationId}] Auto-fix: spawning CLI with --continue`);
 
@@ -995,6 +1016,13 @@ import type { NextRequest } from "next/server";
 export function middleware(req: NextRequest) {
   if (process.env.PREVIEW_MODE === "true") return NextResponse.next();
 
+  const path = req.nextUrl.pathname;
+
+  // Skip auth pages and API routes (APIs self-protect via session checks)
+  if (path.startsWith("/auth") || path.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
   const hasSession =
     req.cookies.has("authjs.session-token") ||
     req.cookies.has("__Secure-authjs.session-token");
@@ -1007,7 +1035,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/m/:path*", "/settings/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
 `);
       console.log(`[Generator ${generationId}] Fixed middleware export pattern`);

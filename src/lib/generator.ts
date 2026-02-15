@@ -215,26 +215,47 @@ function buildEnrichedPrompt(
   rawPrompt: string,
   context?: BusinessContext
 ): string {
-  if (!context) return rawPrompt;
+  const sections: string[] = [];
 
-  const parts: string[] = [];
-  if (context.businessContext) parts.push(`Business: ${context.businessContext}`);
-  if (context.companyName) parts.push(`Company name: ${context.companyName}`);
-  if (context.state && context.country)
-    parts.push(`Location: ${context.state}, ${context.country}`);
-  else if (context.country) parts.push(`Location: ${context.country}`);
-  if (context.useCases?.length)
-    parts.push(`Industry focus: ${context.useCases.join(", ")}`);
+  // Business context block (if available)
+  if (context) {
+    const parts: string[] = [];
+    if (context.businessContext) parts.push(`Business: ${context.businessContext}`);
+    if (context.companyName) parts.push(`Company name: ${context.companyName}`);
+    if (context.state && context.country)
+      parts.push(`Location: ${context.state}, ${context.country}`);
+    else if (context.country) parts.push(`Location: ${context.country}`);
+    if (context.useCases?.length)
+      parts.push(`Industry focus: ${context.useCases.join(", ")}`);
 
-  if (parts.length === 0) return rawPrompt;
+    if (parts.length > 0) {
+      sections.push(
+        ["[BUSINESS CONTEXT]", ...parts, "[END BUSINESS CONTEXT]"].join("\n")
+      );
+    }
+  }
 
-  return [
-    "[BUSINESS CONTEXT]",
-    ...parts,
-    "[END BUSINESS CONTEXT]",
-    "",
-    rawPrompt,
-  ].join("\n");
+  // User's prompt
+  sections.push(rawPrompt);
+
+  // Smart defaults — fill in common requirements users forget to mention
+  sections.push(
+    [
+      "[BUILD REQUIREMENTS]",
+      "In addition to the user's request, ensure the app includes:",
+      "- A dashboard home page with summary statistics and quick navigation",
+      "- Full CRUD (create, read/list, update, delete) for every data entity",
+      "- Searchable list views for each entity",
+      "- Form validation on required fields",
+      "- Delete confirmation dialogs before destructive actions",
+      "- Realistic seed data (5-8 records per entity) in prisma/seed.ts",
+      "- Responsive sidebar navigation that works on mobile",
+      "- Empty states with helpful messages when sections have no data",
+      "[END BUILD REQUIREMENTS]",
+    ].join("\n")
+  );
+
+  return sections.join("\n\n");
 }
 
 function buildCLIArgs(prompt: string, useContinue: boolean): string[] {
