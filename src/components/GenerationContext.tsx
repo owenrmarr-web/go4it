@@ -302,47 +302,58 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           return;
         }
 
-        if (data.status === "GENERATING" || data.status === "PENDING") {
-          // Active generation — always resume regardless of age
-          setState({
-            generationId: savedId,
-            stage: "coding",
-            message: "Building your app...",
-            iterationCount: data.iterationCount ?? 0,
-            published: false,
-            previewUrl: null,
-            previewLoading: false,
-          });
-          connectSSE(savedId);
-        } else if (data.status === "COMPLETE" && age < STALE_THRESHOLD_MS) {
-          // Recently completed — show result with preview URL
-          setState({
-            generationId: savedId,
-            stage: "complete",
-            message: "Your app is ready!",
-            title: data.title ?? undefined,
-            description: data.description ?? undefined,
-            iterationCount: data.iterationCount ?? 0,
-            published: !!data.appId,
-            previewUrl: data.previewFlyUrl ?? null,
-            previewLoading: false,
-          });
-        } else if (data.status === "FAILED" && age < STALE_THRESHOLD_MS) {
-          // Recently failed — show error
-          setState({
-            generationId: savedId,
-            stage: "failed",
-            message: "Something went wrong.",
-            error: data.error ?? undefined,
-            iterationCount: data.iterationCount ?? 0,
-            published: false,
-            previewUrl: null,
-            previewLoading: false,
-          });
-        } else {
+        // Use updater function to avoid race condition: if the user started
+        // a new generation while this fetch was in-flight, don't overwrite it
+        setState((prev) => {
+          if (prev.generationId && prev.generationId !== savedId) {
+            // User already started a new generation — don't overwrite
+            return prev;
+          }
+
+          if (data.status === "GENERATING" || data.status === "PENDING") {
+            connectSSE(savedId);
+            return {
+              generationId: savedId,
+              stage: "coding",
+              message: "Building your app...",
+              iterationCount: data.iterationCount ?? 0,
+              published: false,
+              previewUrl: null,
+              previewLoading: false,
+            };
+          }
+
+          if (data.status === "COMPLETE" && age < STALE_THRESHOLD_MS) {
+            return {
+              generationId: savedId,
+              stage: "complete",
+              message: "Your app is ready!",
+              title: data.title ?? undefined,
+              description: data.description ?? undefined,
+              iterationCount: data.iterationCount ?? 0,
+              published: !!data.appId,
+              previewUrl: data.previewFlyUrl ?? null,
+              previewLoading: false,
+            };
+          }
+
+          if (data.status === "FAILED" && age < STALE_THRESHOLD_MS) {
+            return {
+              generationId: savedId,
+              stage: "failed",
+              message: "Something went wrong.",
+              error: data.error ?? undefined,
+              iterationCount: data.iterationCount ?? 0,
+              published: false,
+              previewUrl: null,
+              previewLoading: false,
+            };
+          }
+
           // Stale or unknown — clear
           localStorage.removeItem(STORAGE_KEY);
-        }
+          return prev;
+        });
       })
       .catch(() => {
         localStorage.removeItem(STORAGE_KEY);
