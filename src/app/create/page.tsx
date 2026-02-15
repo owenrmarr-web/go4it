@@ -276,6 +276,31 @@ export default function CreatePage() {
               build it for you.
             </p>
 
+            {/* Auth banner for unauthenticated users */}
+            {status === "unauthenticated" && (
+              <div className="mt-5 gradient-brand rounded-xl p-4 text-center text-white shadow-lg">
+                <p className="font-semibold text-base">
+                  Sign in or create a free account to generate your app
+                </p>
+                <div className="mt-3 flex gap-3 justify-center">
+                  <button
+                    onClick={() => { setShowAuthModal(true); setAuthModalClosable(true); }}
+                    className="px-5 py-2 rounded-lg bg-white text-purple-700 font-bold text-sm hover:bg-gray-100 transition-colors"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => {
+                      window.location.href = `/auth?mode=signup&callbackUrl=${encodeURIComponent("/create")}`;
+                    }}
+                    className="px-5 py-2 rounded-lg bg-white/20 text-white font-bold text-sm border border-white/40 hover:bg-white/30 transition-colors"
+                  >
+                    Sign Up Free
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Business Context */}
             <div className="mt-5">
               <label className="block text-sm font-medium text-gray-700 mb-1">

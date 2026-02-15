@@ -13,7 +13,7 @@ interface AuthModalProps {
 
 export default function AuthModal({ onClose, onSuccess, closable = true }: AuthModalProps) {
   const pathname = usePathname();
-  const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
