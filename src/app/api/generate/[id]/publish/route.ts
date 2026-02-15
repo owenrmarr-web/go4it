@@ -94,6 +94,13 @@ export async function POST(
       ? `@${creator.username}`
       : creator?.name || creator?.email || "Community";
 
+    // Check if App was auto-created (isPublic: false) — first real publish stays at v1
+    const existingApp = await prisma.app.findUnique({
+      where: { id: generatedApp.appId },
+      select: { isPublic: true },
+    });
+    const isFirstPublish = existingApp && !existingApp.isPublic;
+
     const updatedApp = await prisma.app.update({
       where: { id: generatedApp.appId },
       data: {
@@ -108,7 +115,9 @@ export async function POST(
 
     const updatedGen = await prisma.generatedApp.update({
       where: { id },
-      data: { marketplaceVersion: { increment: 1 } },
+      data: isFirstPublish
+        ? { marketplaceVersion: 1 }
+        : { marketplaceVersion: { increment: 1 } },
     });
 
     cleanupBuilderWorkspace(id);
