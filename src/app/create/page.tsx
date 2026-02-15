@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -77,17 +77,6 @@ export default function CreatePage() {
     setBusinessContext(value);
     try { localStorage.setItem(CONTEXT_STORAGE_KEY, value); } catch {}
   }, []);
-
-  // Clear stale terminal state on page mount (handles client-side navigation
-  // where GenerationProvider in root layout keeps in-memory state from previous gen)
-  const didClearStaleRef = useRef(false);
-  useEffect(() => {
-    if (didClearStaleRef.current) return;
-    didClearStaleRef.current = true;
-    if (gen.stage === "complete" || gen.stage === "failed") {
-      gen.reset();
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Restore from localStorage on mount
   useEffect(() => {
