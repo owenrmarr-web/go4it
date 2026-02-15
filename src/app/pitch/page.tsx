@@ -11,15 +11,18 @@ const hideSpinners = `
 function StepInput({ value, onChange, min = 0, max = Infinity, step = 1 }: {
   value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number;
 }) {
+  // Round to step precision to avoid floating point artifacts (0.7999999 → 0.8)
+  const decimals = step < 1 ? Math.ceil(-Math.log10(step)) : 0;
+  const clamp = (v: number) => parseFloat(Math.min(max, Math.max(min, v)).toFixed(decimals));
   return (
     <div className="flex items-center gap-1 justify-end">
       <div className="flex flex-col -my-1">
         <button
-          onClick={() => onChange(Math.min(max, value + step))}
+          onClick={() => onChange(clamp(value + step))}
           className="text-gray-400 hover:text-purple-500 leading-none text-xs px-1"
         >&#9650;</button>
         <button
-          onClick={() => onChange(Math.max(min, value - step))}
+          onClick={() => onChange(clamp(value - step))}
           className="text-gray-400 hover:text-purple-500 leading-none text-xs px-1"
         >&#9660;</button>
       </div>
@@ -29,7 +32,7 @@ function StepInput({ value, onChange, min = 0, max = Infinity, step = 1 }: {
         min={min}
         max={max}
         step={step}
-        onChange={(e) => onChange(Math.min(max, Math.max(min, parseFloat(e.target.value) || min)))}
+        onChange={(e) => onChange(clamp(parseFloat(e.target.value) || min))}
         className="w-28 md:w-36 text-right font-bold text-sm md:text-base rounded-lg border border-gray-300 px-2 md:px-3 py-1 focus:outline-none focus:border-purple-400"
         style={{ color: "var(--theme-primary)" }}
       />
@@ -102,7 +105,7 @@ function MarketSlide({ active }: { active: boolean }) {
                 className="text-lg font-semibold text-right leading-snug transition-opacity duration-[2000ms]"
                 style={{ color: "var(--theme-accent)", opacity: showTagline2 ? 1 : 0 }}
               >
-                Smart enough not to overpay for it.
+                Smart enough to not overpay for it.
               </p>
             </th>
           </tr>
@@ -181,7 +184,7 @@ function MarketSlide({ active }: { active: boolean }) {
             Big enough to need software.
           </p>
           <p className="text-sm font-semibold transition-opacity duration-[2000ms]" style={{ color: "var(--theme-accent)", opacity: showTagline2 ? 1 : 0 }}>
-            Smart enough not to overpay for it.
+            Smart enough to not overpay for it.
           </p>
         </div>
       </div>
@@ -307,7 +310,7 @@ function FinancialModelSlide() {
               {fmt(effectivePerUser * usersPerCustomer)}
             </td>
             <td></td>
-            <td className="py-3 text-gray-600">Annual Gross Profit</td>
+            <td className="py-3 text-gray-600 font-semibold">Annual Gross Profit</td>
             <td className="py-3 text-right font-bold" style={{ color: "var(--theme-accent)" }}>
               {fmt(annualGrossProfit)}
             </td>
@@ -459,7 +462,7 @@ const slides = [
             and AI builds it for you.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
-            We host everything, directly in your browser. No cloud experience required.
+            We deploy your applications, directly in your browser. No cloud experience required.
           </p>
         </div>
       </div>
