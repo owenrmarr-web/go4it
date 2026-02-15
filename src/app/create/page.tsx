@@ -61,9 +61,11 @@ export default function CreatePage() {
   const [publishCategory, setPublishCategory] = useState(APP_CATEGORIES[0]);
   const [publishIcon, setPublishIcon] = useState(APP_ICONS[0]);
   const [publishIsPublic, setPublishIsPublic] = useState(true);
+  const [publishDeploy, setPublishDeploy] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [businessContext, setBusinessContext] = useState("");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showStartOverConfirm, setShowStartOverConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalClosable, setAuthModalClosable] = useState(true);
 
@@ -203,6 +205,7 @@ export default function CreatePage() {
           category: publishCategory,
           icon: publishIcon,
           isPublic: publishIsPublic,
+          deployToOrg: publishDeploy,
         }),
       });
 
@@ -213,7 +216,10 @@ export default function CreatePage() {
       }
 
       gen.setPublished();
-      toast.success("Published to the marketplace!");
+      const msg = publishDeploy
+        ? "Published and deployed to your account!"
+        : "Published to the marketplace!";
+      toast.success(msg);
       setLocalView("default");
     } catch {
       toast.error("Failed to connect to the server.");
@@ -232,6 +238,8 @@ export default function CreatePage() {
     setPublishCategory(APP_CATEGORIES[0]);
     setPublishIcon(APP_ICONS[0]);
     setPublishIsPublic(true);
+    setPublishDeploy(true);
+    setShowStartOverConfirm(false);
   };
 
   return (
@@ -419,12 +427,39 @@ export default function CreatePage() {
                 Refine with Follow-Up
               </button>
               <button
-                onClick={handleStartOver}
+                onClick={() => {
+                  if (!gen.published) {
+                    setShowStartOverConfirm(true);
+                  } else {
+                    handleStartOver();
+                  }
+                }}
                 className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-colors"
               >
                 Create Another
               </button>
             </div>
+            {showStartOverConfirm && (
+              <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 max-w-md mx-auto">
+                <p className="text-sm text-amber-800 mb-3">
+                  Your app hasn&apos;t been published yet. Starting over will discard it. Are you sure?
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={handleStartOver}
+                    className="px-5 py-1.5 rounded-lg bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors"
+                  >
+                    Discard & Start Over
+                  </button>
+                  <button
+                    onClick={() => setShowStartOverConfirm(false)}
+                    className="px-5 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
             {gen.published && (
               <p className="mt-3 text-sm text-green-600 font-medium">
                 Published to the marketplace!
@@ -576,6 +611,31 @@ export default function CreatePage() {
                     ? "Public — visible to everyone"
                     : "Private — only you can see it"}
                 </span>
+              </div>
+
+              {/* Deploy to org */}
+              <div className="flex items-center gap-3">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={publishDeploy}
+                    onChange={(e) => setPublishDeploy(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600" />
+                </label>
+                <div>
+                  <span className="text-sm text-gray-700">
+                    {publishDeploy
+                      ? "Deploy to My Account"
+                      : "Marketplace only — deploy later from My Account"}
+                  </span>
+                  {publishDeploy && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Your app will appear in My Apps, ready to use
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

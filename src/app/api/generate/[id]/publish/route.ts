@@ -33,6 +33,7 @@ export async function POST(
     category?: string;
     icon?: string;
     isPublic?: boolean;
+    deployToOrg?: boolean;
   };
   try {
     body = await request.json();
@@ -40,7 +41,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { title, description, category, icon, isPublic } = body;
+  const { title, description, category, icon, isPublic, deployToOrg } = body;
 
   if (!title || title.trim().length < 2) {
     return NextResponse.json(
@@ -120,12 +121,21 @@ export async function POST(
         : { marketplaceVersion: { increment: 1 } },
     });
 
+    // Deploy to org: promote preview OrgApp to RUNNING
+    if (deployToOrg) {
+      await prisma.orgApp.updateMany({
+        where: { appId: updatedApp.id, status: "PREVIEW" },
+        data: { status: "RUNNING" },
+      });
+    }
+
     cleanupBuilderWorkspace(id);
 
     return NextResponse.json({
       appId: updatedApp.id,
       marketplaceVersion: updatedGen.marketplaceVersion,
       republished: true,
+      deployed: !!deployToOrg,
     });
   }
 
@@ -156,7 +166,29 @@ export async function POST(
     data: { appId: app.id },
   });
 
+  // Deploy to org: create OrgApp record linked to preview Fly app
+  let deployed = false;
+  if (deployToOrg && generatedApp.previewFlyAppId && generatedApp.previewFlyUrl) {
+    const orgMember = await prisma.organizationMember.findFirst({
+      where: { userId: session.user.id, role: { in: ["OWNER", "ADMIN"] } },
+      include: { organization: { select: { id: true } } },
+    });
+    if (orgMember) {
+      await prisma.orgApp.create({
+        data: {
+          organizationId: orgMember.organization.id,
+          appId: app.id,
+          status: "RUNNING",
+          flyAppId: generatedApp.previewFlyAppId,
+          flyUrl: generatedApp.previewFlyUrl,
+          deployedAt: new Date(),
+        },
+      });
+      deployed = true;
+    }
+  }
+
   cleanupBuilderWorkspace(id);
 
-  return NextResponse.json({ appId: app.id, marketplaceVersion: 1 }, { status: 201 });
+  return NextResponse.json({ appId: app.id, marketplaceVersion: 1, deployed }, { status: 201 });
 }
