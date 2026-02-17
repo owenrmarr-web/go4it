@@ -360,7 +360,7 @@ function buildEnrichedPrompt(
       "- Form validation on required fields",
       "- Delete confirmation dialogs before destructive actions",
       "- Realistic seed data (5-8 records per entity) in prisma/seed.ts",
-      "- Responsive sidebar navigation that works on mobile",
+      "- Responsive navigation that works on mobile (choose the layout style that best fits the app)",
       "- Empty states with helpful messages when sections have no data",
       "[END BUILD REQUIREMENTS]",
     ].join("\n")
