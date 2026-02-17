@@ -17,6 +17,7 @@ export async function GET(
     where: { id },
     select: {
       status: true,
+      currentStage: true,
       title: true,
       description: true,
       error: true,
@@ -38,6 +39,7 @@ export async function GET(
 
   return NextResponse.json({
     status: generatedApp.status,
+    currentStage: generatedApp.currentStage,
     title: generatedApp.title,
     description: generatedApp.description,
     error: generatedApp.error,

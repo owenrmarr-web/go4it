@@ -976,6 +976,14 @@ async function prepareForPreview(
     console.log(`[Generator ${generationId}] prisma generate failed (non-fatal)`);
   }
 
+  // Delete stale dev.db before db push + seed to prevent duplicate records across iterations
+  const devDbPath = path.join(workspaceDir, "dev.db");
+  try {
+    unlinkSync(devDbPath);
+  } catch {
+    // File may not exist on first generation — that's fine
+  }
+
   // prisma db push
   try {
     execSync("npx prisma db push --accept-data-loss", {

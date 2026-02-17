@@ -62,7 +62,7 @@ Add models below the `// === Add app-specific models below this line ===` marker
 ### Seed Data — `prisma/seed.ts`
 
 Replace the existing stub with seed data for your app:
-- Always create the admin user first: `email: "admin@go4it.live"`, password: bcrypt hash of `"go4it2026"`, `role: "admin"`
+- Always create the admin user first: `id: "preview"`, `email: "admin@go4it.live"`, password: bcrypt hash of `"go4it2026"`, `role: "admin"`. The `id: "preview"` is required — it must match the preview session user ID.
 - Create 5–8 realistic sample records per main entity, all with `userId` set to the admin user's ID
 - Use industry-appropriate names, values, and statuses
 - Use `createMany` for efficiency where possible
@@ -77,6 +77,8 @@ Replace the existing stub with seed data for your app:
 6. **bcryptjs not bcrypt** — The template uses `bcryptjs` (pure JS). Don't import from `bcrypt`.
 7. **Sonner for toasts** — Use `import { toast } from "sonner"` for notifications. `Toaster` is already in the root layout.
 8. **SQLite doesn't support `mode: "insensitive"`** — For case-insensitive search, convert both sides to lowercase or omit the `mode` option entirely.
+9. **Don't redefine Prisma types** — Never create local TypeScript interfaces that duplicate Prisma model names (e.g., a local `Booking` interface when `Booking` is a Prisma model). Use `import { Booking } from "@prisma/client"` instead. Duplicate type names cause `Type 'X[]' is not assignable to type 'X[]'` errors.
+10. **No external theme/dark-mode libraries** — Do not install `next-themes` or similar packages. The template does not include a ThemeProvider. Use Tailwind CSS classes for all styling. If you need a dark/light toggle, implement it with a simple React context and CSS variables — don't add third-party theme providers.
 
 ---
 
@@ -262,7 +264,7 @@ export default function MyForm() {
 - [ ] **API routes** in `src/app/api/` (NOT under `api/auth/` — those exist already)
 - [ ] **Components** in `src/components/` — only `SessionProvider.tsx` exists, everything else is yours
 - [ ] **Seed data** in `prisma/seed.ts` — admin user + realistic sample data
-- [ ] **Package metadata** — update `name` and `description` in `package.json`
+- [ ] **Package metadata** — update `name` and `description` in `package.json`. The description must be **generic** — describe what the app does, not the specific business or industry. Example: "Event scheduling and booking management" not "Event scheduling for Acme Corp party planning"
 
 ## Business Context
 

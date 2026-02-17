@@ -924,6 +924,12 @@ export async function launchApp(
       );
     }
 
+    // Force a full machine restart so start.sh re-runs with PREVIEW_MODE=false
+    // (clears seed data, runs prisma db push, provisions real team members)
+    console.log(`[Launch ${orgAppId}] Restarting machine for clean production startup...`);
+    updateDeployProgress(orgAppId, "deploying");
+    await flyctl(["machines", "restart", "--app", flyAppName]);
+
     // Success — update DB
     const flyUrl = `https://${flyAppName}.fly.dev`;
     updateDeployProgress(orgAppId, "running", { flyUrl });

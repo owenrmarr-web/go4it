@@ -131,7 +131,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
             ...prev,
             stage: data.stage as GenStage,
             message: data.message || prev.message,
-            detail: data.detail,
+            detail: data.detail ?? (data.stage !== prev.stage ? undefined : prev.detail),
           };
         });
       } catch {
@@ -148,6 +148,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
         generationId: id,
         stage: "pending",
         message: "Preparing to build your app...",
+        detail: undefined,
         iterationCount: 0,
         published: false,
         previewUrl: null,
@@ -312,10 +313,18 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
 
           if (data.status === "GENERATING" || data.status === "PENDING") {
             connectSSE(savedId);
+            const resumeStage = (data.currentStage as GenStage) || "coding";
+            const stageMessages: Record<string, string> = {
+              designing: "Designing your app...",
+              coding: "Building your app...",
+              finalizing: "Finalizing your app...",
+              deploying: "Deploying preview...",
+            };
             return {
               generationId: savedId,
-              stage: "coding",
-              message: "Building your app...",
+              stage: resumeStage,
+              message: stageMessages[resumeStage] || "Building your app...",
+              detail: undefined,
               iterationCount: data.iterationCount ?? 0,
               published: false,
               previewUrl: null,

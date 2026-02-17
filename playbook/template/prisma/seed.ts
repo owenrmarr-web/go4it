@@ -9,6 +9,7 @@ async function main() {
     where: { email: "admin@go4it.live" },
     update: {},
     create: {
+      id: "preview",
       email: "admin@go4it.live",
       name: "GO4IT Admin",
       password,
