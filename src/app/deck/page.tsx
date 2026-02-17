@@ -146,21 +146,33 @@ function MarketSlide({ active }: { active: boolean }) {
 
       {/* Mobile: circles + focused data */}
       <div className="md:hidden">
-        <div className="flex justify-center items-end gap-4 mb-4" style={{ height: 130 }}>
-          <div className="rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ width: 110, height: 110, backgroundColor: "var(--theme-primary)" }}>$350B</div>
-          <div className="rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ width: 60, height: 60, backgroundColor: "var(--theme-secondary)" }}>$105B</div>
-          <div className="relative">
-            <div
-              className="absolute border-2 rounded-lg transition-opacity duration-[2000ms]"
-              style={{ borderColor: "var(--theme-accent)", opacity: showHighlight ? 1 : 0, top: -6, bottom: -6, left: -6, right: -6, pointerEvents: "none" }}
-            />
-            <div className="rounded-full flex items-center justify-center text-white font-bold text-xs" style={{ width: 44, height: 44, backgroundColor: "var(--theme-accent)" }}>$44B</div>
+        <div className="flex justify-center items-end gap-4 mb-2">
+          <div className="flex flex-col items-center">
+            <div className="rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ width: 110, height: 110, backgroundColor: "var(--theme-primary)" }}>$350B</div>
+            <span className="text-xs font-semibold mt-1" style={{ color: "var(--theme-primary)" }}>Global</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ width: 60, height: 60, backgroundColor: "var(--theme-secondary)" }}>$105B</div>
+            <span className="text-xs font-semibold mt-1" style={{ color: "var(--theme-secondary)" }}>US 5–500</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="relative">
+              <div
+                className="absolute border-2 rounded-lg transition-opacity duration-[2000ms]"
+                style={{ borderColor: "var(--theme-accent)", opacity: showHighlight ? 1 : 0, top: -6, bottom: -6, left: -6, right: -6, pointerEvents: "none" }}
+              />
+              <div className="rounded-full flex items-center justify-center text-white font-bold text-xs" style={{ width: 44, height: 44, backgroundColor: "var(--theme-accent)" }}>$44B</div>
+            </div>
+            <span className="text-xs font-semibold mt-1" style={{ color: "var(--theme-accent)" }}>US 5–50</span>
           </div>
         </div>
-        <div className="flex justify-around text-xs font-semibold mb-4">
-          <span style={{ color: "var(--theme-primary)" }}>Global</span>
-          <span style={{ color: "var(--theme-secondary)" }}>US 5–500</span>
-          <span style={{ color: "var(--theme-accent)" }}>US 5–50</span>
+        <div className="mt-2 mb-4 text-center">
+          <p className="text-sm font-semibold transition-opacity duration-[2000ms]" style={{ color: "var(--theme-accent)", opacity: showTagline1 ? 1 : 0 }}>
+            Big enough to need software.
+          </p>
+          <p className="text-sm font-semibold transition-opacity duration-[2000ms]" style={{ color: "var(--theme-accent)", opacity: showTagline2 ? 1 : 0 }}>
+            Smart enough to not overpay for it.
+          </p>
         </div>
         <table className="w-full text-sm border-collapse">
           <tbody className="text-gray-700">
@@ -179,14 +191,6 @@ function MarketSlide({ active }: { active: boolean }) {
             ))}
           </tbody>
         </table>
-        <div className="mt-4 text-center">
-          <p className="text-sm font-semibold transition-opacity duration-[2000ms]" style={{ color: "var(--theme-accent)", opacity: showTagline1 ? 1 : 0 }}>
-            Big enough to need software.
-          </p>
-          <p className="text-sm font-semibold transition-opacity duration-[2000ms]" style={{ color: "var(--theme-accent)", opacity: showTagline2 ? 1 : 0 }}>
-            Smart enough to not overpay for it.
-          </p>
-        </div>
       </div>
     </div>
   );
@@ -474,7 +478,7 @@ const slides = [
   {
     id: "how",
     content: (
-      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
+      <div className="flex flex-col md:justify-center md:h-full max-w-5xl mx-auto">
         <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
           How It Works
         </h2>
@@ -708,7 +712,7 @@ export default function DeckPage() {
       onTouchEnd={handleTouchEnd}
     >
       {/* Slide */}
-      <div className="h-full px-4 py-6 md:px-16 md:py-12">
+      <div className="h-full px-4 pt-6 pb-20 md:px-16 md:py-12 overflow-y-auto">
         {slides[current].id === "market"
           ? <MarketSlide active={slides[current].id === "market"} />
           : slides[current].id === "financial"
