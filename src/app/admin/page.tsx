@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import Header from "@/components/Header";
 
 interface AdminUser {
@@ -31,6 +32,19 @@ interface AdminGeneration {
   app: { id: string } | null;
 }
 
+interface AdminSubmission {
+  id: string;
+  title: string | null;
+  description: string | null;
+  status: string;
+  manifestJson: string | null;
+  uploadBlobUrl: string | null;
+  appId: string | null;
+  error: string | null;
+  createdAt: string;
+  createdBy: { id: string; name: string; email: string | null; username: string | null };
+}
+
 interface AdminOrg {
   id: string;
   name: string;
@@ -49,13 +63,15 @@ interface AdminOrg {
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"users" | "organizations" | "creations">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "organizations" | "creations" | "submissions">("users");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [orgs, setOrgs] = useState<AdminOrg[]>([]);
   const [generations, setGenerations] = useState<AdminGeneration[]>([]);
+  const [submissions, setSubmissions] = useState<AdminSubmission[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [orgsLoading, setOrgsLoading] = useState(true);
   const [generationsLoading, setGenerationsLoading] = useState(true);
+  const [submissionsLoading, setSubmissionsLoading] = useState(true);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -81,6 +97,12 @@ export default function AdminPage() {
       .then((data) => setGenerations(data))
       .catch(() => {})
       .finally(() => setGenerationsLoading(false));
+
+    fetch("/api/admin/submissions")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => setSubmissions(data))
+      .catch(() => {})
+      .finally(() => setSubmissionsLoading(false));
   }, [session, status, router]);
 
   if (status === "loading" || !session?.user?.isAdmin) {
@@ -140,6 +162,16 @@ export default function AdminPage() {
             }`}
           >
             Creations ({generations.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("submissions")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "submissions"
+                ? "bg-white shadow-sm text-gray-900"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Submissions ({submissions.length})
           </button>
         </div>
 
@@ -418,6 +450,190 @@ export default function AdminPage() {
                         </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Submissions Tab */}
+        {activeTab === "submissions" && (
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            {submissionsLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+              </div>
+            ) : submissions.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                No developer submissions yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        App
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Submitted By
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Category
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Uploaded
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {submissions.map((sub) => {
+                      const manifest = sub.manifestJson
+                        ? JSON.parse(sub.manifestJson)
+                        : null;
+                      return (
+                        <tr key={sub.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              {manifest?.icon && (
+                                <span className="text-xl">{manifest.icon}</span>
+                              )}
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-900 truncate">
+                                  {sub.title || "Untitled"}
+                                </p>
+                                <p className="text-sm text-gray-400 truncate max-w-xs">
+                                  {sub.description}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+                                {sub.createdBy.name?.[0]?.toUpperCase() || "?"}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm text-gray-900 truncate">{sub.createdBy.name}</p>
+                                <p className="text-xs text-gray-400 truncate">
+                                  {sub.createdBy.username ? `@${sub.createdBy.username}` : sub.createdBy.email}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600 text-center">
+                            {manifest?.category || "—"}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
+                              sub.status === "PENDING"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : sub.status === "COMPLETE"
+                                ? "bg-green-100 text-green-700"
+                                : sub.status === "FAILED"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}>
+                              {sub.status === "PENDING"
+                                ? "Pending Review"
+                                : sub.status === "COMPLETE"
+                                ? "Approved"
+                                : sub.status === "FAILED"
+                                ? "Rejected"
+                                : sub.status}
+                            </span>
+                            {sub.status === "FAILED" && sub.error && (
+                              <p className="mt-1 text-xs text-red-500">{sub.error}</p>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            {new Date(sub.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {sub.uploadBlobUrl && (
+                                <a
+                                  href={sub.uploadBlobUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2.5 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                                >
+                                  Download
+                                </a>
+                              )}
+                              {sub.status === "PENDING" && (
+                                <>
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        const res = await fetch(`/api/admin/submissions/${sub.id}/approve`, { method: "POST" });
+                                        if (res.ok) {
+                                          toast.success("Submission approved and published!");
+                                          setSubmissions((prev) =>
+                                            prev.map((s) =>
+                                              s.id === sub.id ? { ...s, status: "COMPLETE" } : s
+                                            )
+                                          );
+                                        } else {
+                                          const data = await res.json();
+                                          toast.error(data.error || "Failed to approve");
+                                        }
+                                      } catch {
+                                        toast.error("Failed to approve");
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      const reason = prompt("Rejection reason (optional):");
+                                      try {
+                                        const res = await fetch(`/api/admin/submissions/${sub.id}/reject`, {
+                                          method: "POST",
+                                          headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ reason: reason || undefined }),
+                                        });
+                                        if (res.ok) {
+                                          toast.success("Submission rejected");
+                                          setSubmissions((prev) =>
+                                            prev.map((s) =>
+                                              s.id === sub.id
+                                                ? { ...s, status: "FAILED", error: reason || "Submission rejected" }
+                                                : s
+                                            )
+                                          );
+                                        } else {
+                                          toast.error("Failed to reject");
+                                        }
+                                      } catch {
+                                        toast.error("Failed to reject");
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                              {sub.appId && (
+                                <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                                  Published
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

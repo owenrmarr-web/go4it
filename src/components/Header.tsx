@@ -55,6 +55,11 @@ export default function Header() {
               Create
             </button>
           </Link>
+          <Link href="/developers">
+            <button className="px-5 py-2 rounded-lg border-2 border-theme-accent text-theme-accent font-semibold hover:opacity-80 transition-opacity">
+              Developers
+            </button>
+          </Link>
           <Link href="/leaderboard">
             <button className="px-2.5 py-2 rounded-lg border-2 border-theme-accent text-theme-accent hover:opacity-80 transition-opacity text-base leading-none" title="Leaderboard">
               🏅

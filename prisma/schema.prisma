@@ -130,6 +130,9 @@ model GeneratedApp {
   previewFlyUrl      String?                      // e.g., https://go4it-zenith-abc12345.fly.dev
   previewExpiresAt   DateTime?                    // 24h TTL — cleanup destroys Fly machine, not source
   screenshot         String?                      // Base64 PNG screenshot of home page with seed data
+  source             String           @default("generated") // "generated" or "uploaded"
+  uploadBlobUrl      String?                      // Vercel Blob URL for uploaded zip
+  manifestJson       String?                      // Raw go4it.json contents (JSON string)
   iterations         AppIteration[]
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
