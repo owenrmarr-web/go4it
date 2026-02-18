@@ -88,7 +88,7 @@ export default function GenerationProgress({
         <p className="mt-2 text-sm text-gray-400">
           {isIteration
             ? "Refining your app. This is usually faster than the initial build."
-            : "This may take 5\u201310 minutes. Feel free to grab a coffee."}
+            : "This may take 10\u201315 minutes. Feel free to grab a coffee."}
         </p>
       </div>
 

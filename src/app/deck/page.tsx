@@ -196,6 +196,295 @@ function MarketSlide({ active }: { active: boolean }) {
   );
 }
 
+function DCFSlide() {
+  const customers = 1270000;
+  const [penetration, setPenetration] = useState(1);
+  const [usersPerCustomer, setUsersPerCustomer] = useState(15);
+  const [appsPerUser, setAppsPerUser] = useState(5);
+  const [discountRate, setDiscountRate] = useState(30);
+  const [growthRate, setGrowthRate] = useState(50);
+  const [terminalGrowth, setTerminalGrowth] = useState(3);
+  const years = 5;
+
+  // Revenue model (mirrors FinancialModelSlide)
+  const pricePerUserApp = 1;
+  const minPerUser = 5;
+  const hostingCostPerApp = 2.68;
+  const costPerGeneration = 1.50;
+  const gensPerWeek = 1;
+
+  const penetratedCustomers = customers * (penetration / 100);
+  const totalUsers = penetratedCustomers * usersPerCustomer;
+  const effectivePerUser = Math.max(appsPerUser * pricePerUserApp, minPerUser);
+  const year1AppRevenue = totalUsers * effectivePerUser * 12;
+  const year1HostingRevenue = penetratedCustomers * appsPerUser * hostingCostPerApp * 12 * 1.20;
+  const year1Revenue = year1AppRevenue + year1HostingRevenue;
+
+  // Costs
+  const year1HostingCost = penetratedCustomers * appsPerUser * hostingCostPerApp * 12;
+  const year1InferenceCost = penetratedCustomers * gensPerWeek * costPerGeneration * 52;
+  const year1FixedCosts = (20 + 6) * 12; // Vercel + Builder
+  const year1TotalCost = year1HostingCost + year1InferenceCost + year1FixedCosts;
+  const year1FCF = year1Revenue - year1TotalCost;
+
+  // Project FCF over years with growth rate
+  const projections = Array.from({ length: years }, (_, i) => {
+    const g = growthRate / 100;
+    const biz = penetratedCustomers * Math.pow(1 + g, i);
+    const revenue = year1Revenue * Math.pow(1 + g, i);
+    const cost = year1TotalCost * Math.pow(1 + g * 0.7, i); // costs grow slower (economies of scale)
+    const fcf = revenue - cost;
+    const discounted = fcf / Math.pow(1 + discountRate / 100, i + 1);
+    return { year: i + 1, biz, revenue, cost, fcf, discounted };
+  });
+
+  // Terminal value (Gordon Growth Model on final year FCF)
+  const finalFCF = projections[years - 1].fcf;
+  const terminalValue = finalFCF * (1 + terminalGrowth / 100) / (discountRate / 100 - terminalGrowth / 100);
+  const discountedTerminal = terminalValue / Math.pow(1 + discountRate / 100, years);
+
+  const sumDiscountedFCF = projections.reduce((s, p) => s + p.discounted, 0);
+  const enterpriseValue = sumDiscountedFCF + discountedTerminal;
+
+  const fmt = (n: number) => {
+    const abs = Math.abs(n);
+    const sign = n < 0 ? "-" : "";
+    if (abs >= 1_000_000_000) return `${sign}$${(abs / 1_000_000_000).toFixed(1)}B`;
+    if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
+    if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(0)}K`;
+    return `${sign}$${abs.toFixed(0)}`;
+  };
+
+  return (
+    <div className="flex flex-col justify-center h-full max-w-5xl mx-auto overflow-y-auto">
+      <style dangerouslySetInnerHTML={{ __html: hideSpinners }} />
+      <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-6">DCF Valuation</h2>
+
+      {/* Desktop */}
+      <div className="hidden md:block">
+        {/* Inputs row */}
+        <div className="grid grid-cols-3 gap-6 mb-6">
+          <div>
+            <h3 className="text-sm font-bold text-gray-500 uppercase mb-2">Market</h3>
+            <table className="w-full text-sm border-collapse">
+              <tbody>
+                <tr className="border-b border-gray-100">
+                  <td className="py-1.5 text-gray-600">Addressable Businesses</td>
+                  <td className="py-1.5 text-right font-bold" style={{ color: "var(--theme-primary)" }}>1,270,000</td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="py-1.5 text-gray-600">Market Penetration</td>
+                  <td className="py-1.5 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <StepInput value={penetration} onChange={setPenetration} min={0} max={100} step={penetration < 1 ? 0.1 : 1} />
+                      <span className="font-bold text-xs" style={{ color: "var(--theme-primary)" }}>%</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="py-1.5 text-gray-600">Seats / Business</td>
+                  <td className="py-1.5 text-right"><StepInput value={usersPerCustomer} onChange={setUsersPerCustomer} min={1} /></td>
+                </tr>
+                <tr>
+                  <td className="py-1.5 text-gray-600">Apps / Business</td>
+                  <td className="py-1.5 text-right"><StepInput value={appsPerUser} onChange={setAppsPerUser} min={1} /></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-500 uppercase mb-2">DCF Assumptions</h3>
+            <table className="w-full text-sm border-collapse">
+              <tbody>
+                <tr className="border-b border-gray-100">
+                  <td className="py-1.5 text-gray-600">Revenue Growth</td>
+                  <td className="py-1.5 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <StepInput value={growthRate} onChange={setGrowthRate} min={0} max={200} step={5} />
+                      <span className="font-bold text-xs" style={{ color: "var(--theme-primary)" }}>%</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="py-1.5 text-gray-600">Discount Rate (WACC)</td>
+                  <td className="py-1.5 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <StepInput value={discountRate} onChange={setDiscountRate} min={5} max={50} step={1} />
+                      <span className="font-bold text-xs" style={{ color: "var(--theme-primary)" }}>%</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-1.5 text-gray-600">Terminal Growth</td>
+                  <td className="py-1.5 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <StepInput value={terminalGrowth} onChange={setTerminalGrowth} min={0} max={10} step={0.5} />
+                      <span className="font-bold text-xs" style={{ color: "var(--theme-primary)" }}>%</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-500 uppercase mb-2">Year 1 Base</h3>
+            <table className="w-full text-sm border-collapse">
+              <tbody>
+                <tr className="border-b border-gray-100">
+                  <td className="py-1.5 text-gray-600">Revenue</td>
+                  <td className="py-1.5 text-right font-bold" style={{ color: "var(--theme-secondary)" }}>{fmt(year1Revenue)}</td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="py-1.5 text-gray-600">Total Costs</td>
+                  <td className="py-1.5 text-right font-bold text-gray-500">{fmt(year1TotalCost)}</td>
+                </tr>
+                <tr>
+                  <td className="py-1.5 text-gray-600">Free Cash Flow</td>
+                  <td className="py-1.5 text-right font-bold" style={{ color: year1FCF >= 0 ? "var(--theme-accent)" : "#ef4444" }}>{fmt(year1FCF)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Projection table */}
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="border-b-2" style={{ borderColor: "var(--theme-primary)" }}>
+              <th className="py-2 text-left font-bold text-gray-800">Year</th>
+              {projections.map(p => (
+                <th key={p.year} className="py-2 text-right font-bold text-gray-800">{p.year}</th>
+              ))}
+              <th className="py-2 text-right font-bold text-gray-800">Terminal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-gray-100">
+              <td className="py-2 text-gray-600">Businesses</td>
+              {projections.map(p => (
+                <td key={p.year} className="py-2 text-right font-semibold" style={{ color: "var(--theme-primary)" }}>{Math.round(p.biz).toLocaleString()}</td>
+              ))}
+              <td className="py-2 text-right text-gray-400">—</td>
+            </tr>
+            <tr className="border-b border-gray-100">
+              <td className="py-2 text-gray-600">Revenue</td>
+              {projections.map(p => (
+                <td key={p.year} className="py-2 text-right font-semibold" style={{ color: "var(--theme-secondary)" }}>{fmt(p.revenue)}</td>
+              ))}
+              <td className="py-2 text-right text-gray-400">—</td>
+            </tr>
+            <tr className="border-b border-gray-100">
+              <td className="py-2 text-gray-600">Costs</td>
+              {projections.map(p => (
+                <td key={p.year} className="py-2 text-right text-gray-500">{fmt(p.cost)}</td>
+              ))}
+              <td className="py-2 text-right text-gray-400">—</td>
+            </tr>
+            <tr className="border-b border-gray-100">
+              <td className="py-2 text-gray-600">Free Cash Flow</td>
+              {projections.map(p => (
+                <td key={p.year} className="py-2 text-right font-semibold" style={{ color: p.fcf >= 0 ? "var(--theme-accent)" : "#ef4444" }}>{fmt(p.fcf)}</td>
+              ))}
+              <td className="py-2 text-right font-semibold" style={{ color: "var(--theme-accent)" }}>{fmt(terminalValue)}</td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <td className="py-2 text-gray-600">Discounted FCF</td>
+              {projections.map(p => (
+                <td key={p.year} className="py-2 text-right text-gray-500">{fmt(p.discounted)}</td>
+              ))}
+              <td className="py-2 text-right text-gray-500">{fmt(discountedTerminal)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Enterprise Value */}
+        <div className="mt-4 flex items-center justify-between border-t-2 pt-4" style={{ borderColor: "var(--theme-primary)" }}>
+          <span className="text-lg font-bold text-gray-800">Enterprise Value</span>
+          <span className="text-3xl font-extrabold gradient-brand-text">{fmt(enterpriseValue)}</span>
+        </div>
+      </div>
+
+      {/* Mobile */}
+      <div className="md:hidden space-y-3">
+        <div>
+          <h3 className="text-xs font-bold text-gray-500 uppercase mb-1">Market</h3>
+          <table className="w-full text-xs border-collapse">
+            <tbody>
+              <tr className="border-b border-gray-100">
+                <td className="py-1 text-gray-600">Businesses</td>
+                <td className="py-1 text-right font-bold" style={{ color: "var(--theme-primary)" }}>1,270,000</td>
+              </tr>
+              <tr className="border-b border-gray-100">
+                <td className="py-1 text-gray-600">Penetration</td>
+                <td className="py-1 text-right"><div className="flex items-center justify-end gap-1"><StepInput value={penetration} onChange={setPenetration} min={0} max={100} step={penetration < 1 ? 0.1 : 1} /><span className="font-bold" style={{ color: "var(--theme-primary)" }}>%</span></div></td>
+              </tr>
+              <tr className="border-b border-gray-100">
+                <td className="py-1 text-gray-600">Seats/Biz</td>
+                <td className="py-1 text-right"><StepInput value={usersPerCustomer} onChange={setUsersPerCustomer} min={1} /></td>
+              </tr>
+              <tr>
+                <td className="py-1 text-gray-600">Apps/Biz</td>
+                <td className="py-1 text-right"><StepInput value={appsPerUser} onChange={setAppsPerUser} min={1} /></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 className="text-xs font-bold text-gray-500 uppercase mb-1">DCF Assumptions</h3>
+          <table className="w-full text-xs border-collapse">
+            <tbody>
+              <tr className="border-b border-gray-100">
+                <td className="py-1 text-gray-600">Growth</td>
+                <td className="py-1 text-right"><div className="flex items-center justify-end gap-1"><StepInput value={growthRate} onChange={setGrowthRate} min={0} max={200} step={5} /><span className="font-bold" style={{ color: "var(--theme-primary)" }}>%</span></div></td>
+              </tr>
+              <tr className="border-b border-gray-100">
+                <td className="py-1 text-gray-600">WACC</td>
+                <td className="py-1 text-right"><div className="flex items-center justify-end gap-1"><StepInput value={discountRate} onChange={setDiscountRate} min={5} max={50} step={1} /><span className="font-bold" style={{ color: "var(--theme-primary)" }}>%</span></div></td>
+              </tr>
+              <tr>
+                <td className="py-1 text-gray-600">Terminal Growth</td>
+                <td className="py-1 text-right"><div className="flex items-center justify-end gap-1"><StepInput value={terminalGrowth} onChange={setTerminalGrowth} min={0} max={10} step={0.5} /><span className="font-bold" style={{ color: "var(--theme-primary)" }}>%</span></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse min-w-[400px]">
+            <thead>
+              <tr className="border-b-2" style={{ borderColor: "var(--theme-primary)" }}>
+                <th className="py-1 text-left font-bold text-gray-800">Yr</th>
+                {projections.map(p => <th key={p.year} className="py-1 text-right font-bold text-gray-800">{p.year}</th>)}
+                <th className="py-1 text-right font-bold text-gray-800">TV</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-gray-100">
+                <td className="py-1 text-gray-600">Biz</td>
+                {projections.map(p => <td key={p.year} className="py-1 text-right" style={{ color: "var(--theme-primary)" }}>{Math.round(p.biz).toLocaleString()}</td>)}
+                <td className="py-1 text-right text-gray-400">—</td>
+              </tr>
+              <tr className="border-b border-gray-100">
+                <td className="py-1 text-gray-600">Rev</td>
+                {projections.map(p => <td key={p.year} className="py-1 text-right" style={{ color: "var(--theme-secondary)" }}>{fmt(p.revenue)}</td>)}
+                <td className="py-1 text-right text-gray-400">—</td>
+              </tr>
+              <tr className="border-b border-gray-100">
+                <td className="py-1 text-gray-600">FCF</td>
+                {projections.map(p => <td key={p.year} className="py-1 text-right" style={{ color: p.fcf >= 0 ? "var(--theme-accent)" : "#ef4444" }}>{fmt(p.fcf)}</td>)}
+                <td className="py-1 text-right" style={{ color: "var(--theme-accent)" }}>{fmt(terminalValue)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between border-t-2 pt-2" style={{ borderColor: "var(--theme-primary)" }}>
+          <span className="text-base font-bold text-gray-800">Enterprise Value</span>
+          <span className="text-2xl font-extrabold gradient-brand-text">{fmt(enterpriseValue)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FinancialModelSlide() {
   const customers = 1270000;
   const [usersPerCustomer, setUsersPerCustomer] = useState(15);
@@ -497,7 +786,7 @@ const slides = [
             {
               step: "3",
               title: "Launch",
-              desc: "Your apps are live and secure under your custom web address.",
+              desc: "Securely access your apps from your custom web address.",
             },
           ].map((s) => (
             <div key={s.step} className="text-center">
@@ -659,6 +948,190 @@ const slides = [
       </div>
     ),
   },
+  {
+    id: "addendum",
+    content: (
+      <div className="flex items-center justify-center h-full">
+        <h1 className="text-4xl md:text-7xl font-extrabold gradient-brand-text">
+          Addendum Slides
+        </h1>
+      </div>
+    ),
+  },
+  // { id: "dcf", content: null },
+  {
+    id: "marketplace",
+    content: (
+      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
+        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
+          Why a Marketplace?
+        </h2>
+
+        <div className="space-y-4 md:space-y-6">
+          <p className="text-lg md:text-2xl text-gray-700">
+            Other AI app builders expect users to be <span className="text-gray-400">prompt engineers</span> and{" "}
+            <span className="text-gray-400">architects</span>.
+          </p>
+          <p className="text-lg md:text-2xl text-gray-700">
+            <span className="gradient-brand-text font-bold">GO4IT</span> lets users focus on{" "}
+            <span className="font-semibold" style={{ color: "var(--theme-primary)" }}>operating their business</span>.
+          </p>
+          <p className="text-lg md:text-2xl text-gray-700">
+            Most small businesses need the same tools — CRM, invoicing, scheduling, project management.
+            Our curated library means they can{" "}
+            <span className="font-semibold" style={{ color: "var(--theme-primary)" }}>browse, select, and launch in minutes</span> —
+            not describe from scratch and wait.
+          </p>
+        </div>
+
+        <p className="text-base md:text-xl text-gray-600 text-center mt-6 md:mt-8 italic">
+          We preserve the freedom to create unique apps, while market meritocracy ensures the best common apps reach more users, leading to better products and faster deployments.
+        </p>
+
+        {/* Flywheel */}
+        <div className="mt-6 md:mt-8">
+          {/* Desktop: horizontal flywheel */}
+          <div className="hidden md:flex items-center justify-center gap-3">
+            {[
+              { icon: "🛠️", label: "Creators build apps" },
+              { icon: "⭐", label: "Best apps rise to the top" },
+              { icon: "👥", label: "Users quickly find and deploy the best tools" },
+              { icon: "🔄", label: "Product quality attracts more users" },
+            ].map((step, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="flex flex-col items-center text-center w-40">
+                  <div className="text-3xl mb-2">{step.icon}</div>
+                  <p className="text-sm font-medium text-gray-600">{step.label}</p>
+                </div>
+                {i < 3 && (
+                  <div className="text-2xl font-bold gradient-brand-text">→</div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile: vertical flywheel */}
+          <div className="md:hidden flex flex-col items-center gap-2">
+            {[
+              { icon: "🛠️", label: "Creators build apps" },
+              { icon: "⭐", label: "Best apps rise to the top" },
+              { icon: "👥", label: "Users quickly find and deploy the best tools" },
+              { icon: "🔄", label: "Product quality attracts more users" },
+            ].map((step, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <div className="flex items-center gap-3">
+                  <div className="text-2xl">{step.icon}</div>
+                  <p className="text-sm font-medium text-gray-600">{step.label}</p>
+                </div>
+                {i < 3 && (
+                  <div className="text-lg font-bold gradient-brand-text my-1">↓</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    ),
+  },
+  {
+    id: "competition",
+    content: (
+      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
+        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
+          Competitive Landscape
+        </h2>
+
+        {/* Desktop comparison grid */}
+        <div className="hidden md:block">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b-2 border-gray-200">
+                <th className="py-3 px-4 text-base font-semibold text-gray-500 w-[200px]"></th>
+                <th className="py-3 px-3 text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-lg font-bold gradient-brand-text">GO4IT</span>
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-center">
+                  <span className="text-lg font-bold text-gray-700">Base44</span>
+                </th>
+                <th className="py-3 px-3 text-center">
+                  <span className="text-lg font-bold text-gray-700">Softr</span>
+                </th>
+                <th className="py-3 px-3 text-center">
+                  <span className="text-lg font-bold text-gray-700">Bolt.new</span>
+                </th>
+                <th className="py-3 px-3 text-center">
+                  <span className="text-lg font-bold text-gray-700">Replit</span>
+                </th>
+                <th className="py-3 px-3 text-center">
+                  <span className="text-lg font-bold text-gray-700">Lovable</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="text-base text-gray-700">
+              {[
+                { feature: "App Marketplace", go4it: true, base44: false, lovable: false, bolt: false, replit: false, softr: false },
+                { feature: "AI Generation", go4it: true, base44: true, lovable: true, bolt: true, replit: true, softr: true },
+                { feature: "Managed Hosting", go4it: true, base44: true, lovable: true, bolt: true, replit: true, softr: true },
+                { feature: "Team Provisioning", go4it: true, base44: false, lovable: false, bolt: false, replit: false, softr: true },
+                { feature: "No Code Required", go4it: true, base44: true, lovable: true, bolt: true, replit: true, softr: true },
+                { feature: "Auto-Deploy Pipeline", go4it: true, base44: true, lovable: true, bolt: true, replit: true, softr: true },
+                { feature: "Business-Focused Pricing", go4it: true, base44: false, lovable: false, bolt: false, replit: false, softr: false },
+              ].map((row, i) => (
+                <tr key={i} className={i < 6 ? "border-b border-gray-100" : ""}>
+                  <td className="py-3 px-4 font-medium text-gray-600">{row.feature}</td>
+                  <td className="py-3 px-3 text-center">
+                    {row.go4it ? (
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-sm" style={{ background: "linear-gradient(135deg, #f97316, #ec4899, #9333ea)" }}>&#10003;</span>
+                    ) : (
+                      <span className="text-gray-300 text-lg">—</span>
+                    )}
+                  </td>
+                  {[row.base44, row.softr, row.bolt, row.replit, row.lovable].map((val, j) => (
+                    <td key={j} className="py-3 px-3 text-center">
+                      {val ? (
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-200 text-gray-500 text-sm">&#10003;</span>
+                      ) : (
+                        <span className="text-gray-300 text-lg">—</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile comparison */}
+        <div className="md:hidden space-y-3">
+          {[
+            { feature: "App Marketplace", go4it: true, others: "None" },
+            { feature: "AI Generation", go4it: true, others: "All" },
+            { feature: "Managed Hosting", go4it: true, others: "All" },
+            { feature: "Team Provisioning", go4it: true, others: "Softr" },
+            { feature: "No Code Required", go4it: true, others: "All" },
+            { feature: "Auto-Deploy Pipeline", go4it: true, others: "All" },
+            { feature: "Business-Focused Pricing", go4it: true, others: "None" },
+          ].map((row, i) => (
+            <div key={i} className="flex items-center justify-between py-2 border-b border-gray-100">
+              <span className="text-sm font-medium text-gray-600">{row.feature}</span>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-xs" style={{ background: "linear-gradient(135deg, #f97316, #ec4899, #9333ea)" }}>&#10003;</span>
+                <span className="text-xs text-gray-400">{row.others === "None" ? "Only GO4IT" : `Also: ${row.others}`}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-lg md:text-2xl font-semibold text-gray-700 mt-6 md:mt-10 text-center">
+          Others build tools for <span className="text-gray-500">developers</span>.{" "}
+          <span className="gradient-brand-text font-bold">GO4IT</span> builds tools for <span className="gradient-brand-text font-bold">businesses</span>.
+        </p>
+      </div>
+    ),
+  },
 ];
 
 export default function DeckPage() {
@@ -717,7 +1190,9 @@ export default function DeckPage() {
           ? <MarketSlide active={slides[current].id === "market"} />
           : slides[current].id === "financial"
             ? <FinancialModelSlide />
-            : slides[current].content}
+            : slides[current].id === "dcf"
+              ? <DCFSlide />
+              : slides[current].content}
       </div>
 
       {/* Navigation */}

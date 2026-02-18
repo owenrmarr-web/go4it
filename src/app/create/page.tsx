@@ -90,6 +90,7 @@ export default function CreatePage() {
   const [showStartOverConfirm, setShowStartOverConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalClosable, setAuthModalClosable] = useState(true);
+  const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
 
   // Persist prompt and context to localStorage
   const updatePrompt = useCallback((value: string) => {
@@ -334,7 +335,22 @@ export default function CreatePage() {
 
             <div className="mt-3 flex justify-center">
               <button
-                onClick={handleGenerate}
+                onClick={() => {
+                  if (!session?.user) {
+                    setAuthModalClosable(true);
+                    setShowAuthModal(true);
+                    return;
+                  }
+                  if (!businessContext.trim()) {
+                    toast.error("Please describe your business to personalize your app.");
+                    return;
+                  }
+                  if (prompt.trim().length < 10) {
+                    toast.error("Please describe your app in at least 10 characters.");
+                    return;
+                  }
+                  setShowGenerateConfirm(true);
+                }}
                 disabled={!businessContext.trim() || prompt.trim().length < 10}
                 className="gradient-brand text-white px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -870,6 +886,39 @@ export default function CreatePage() {
           </div>
         )}
       </main>
+
+      {showGenerateConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 text-center">
+            <div className="text-5xl mb-4">🚀</div>
+            <h2 className="text-2xl font-extrabold text-gray-900">
+              Ready to build?
+            </h2>
+            <p className="mt-3 text-gray-600 leading-relaxed">
+              GO4IT generates a <span className="font-semibold">full-stack application</span> from
+              scratch — this takes about <span className="font-semibold" style={{ color: "var(--theme-primary, #9333ea)" }}>10-15 minutes</span>.
+              You can always iterate afterwards!
+            </p>
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setShowGenerateConfirm(false);
+                  handleGenerate();
+                }}
+                className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all"
+              >
+                Let&apos;s GO4IT!
+              </button>
+              <button
+                onClick={() => setShowGenerateConfirm(false)}
+                className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                Go back and edit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAuthModal && (
         <AuthModal
