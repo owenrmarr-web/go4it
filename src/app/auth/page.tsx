@@ -42,6 +42,26 @@ export default function AuthPage() {
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const usernameCheckTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
+  // Handle verification callback query params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("verified") === "true") {
+      toast.success("Email verified! Please sign in to continue.");
+      window.history.replaceState({}, "", "/auth");
+    }
+    const error = params.get("error");
+    if (error === "invalid-token") {
+      toast.error("Invalid verification link. Please request a new one.");
+      window.history.replaceState({}, "", "/auth");
+    } else if (error === "expired-token") {
+      toast.error("Verification link has expired. Please request a new one.");
+      window.history.replaceState({}, "", "/auth");
+    } else if (error === "missing-token") {
+      toast.error("Invalid verification link.");
+      window.history.replaceState({}, "", "/auth");
+    }
+  }, []);
+
   const [stateSearch, setStateSearch] = useState("");
   const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
   const stateInputRef = useRef<HTMLInputElement>(null);
@@ -166,7 +186,7 @@ export default function AuthPage() {
     });
     setLoading(false);
     if (result?.error) {
-      toast.error("Invalid email or password.");
+      toast.error("Sign in failed. Please check your credentials or verify your email first.");
     } else {
       router.push(callbackUrl);
     }
@@ -200,20 +220,9 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
-      // Sign in after successful signup
-      const result = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
+      // Redirect to verify-email page
       setLoading(false);
-      if (result?.error) {
-        toast.error(
-          "Account created but login failed. Please try logging in."
-        );
-      } else {
-        router.push(callbackUrl);
-      }
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch {
       toast.error("Something went wrong. Please try again.");
       setLoading(false);

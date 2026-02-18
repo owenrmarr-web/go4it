@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { generateSlug, isReservedSlug } from "@/lib/slug";
 import { validateUsername } from "@/lib/username";
+import { createAndSendVerificationToken } from "@/lib/verification";
 
 export async function POST(request: Request) {
   try {
@@ -100,7 +101,14 @@ export async function POST(request: Request) {
       }
     });
 
-    return NextResponse.json({ success: true });
+    // Send verification email (outside transaction — user exists, they can resend if this fails)
+    try {
+      await createAndSendVerificationToken(email);
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+    }
+
+    return NextResponse.json({ success: true, email });
   } catch (error) {
     console.error("Signup error:", error);
     if (error instanceof Error && (

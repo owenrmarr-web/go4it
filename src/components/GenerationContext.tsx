@@ -86,17 +86,39 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   });
   const eventSourceRef = useRef<EventSource | null>(null);
   const resumedRef = useRef(false);
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const MAX_SSE_RECONNECT = 5;
+  const SSE_RECONNECT_BASE_MS = 2000;
+
+  // Fetch authoritative status from the API (used as fallback / verification)
+  const fetchStatus = useCallback(async (genId: string) => {
+    try {
+      const res = await fetch(`/api/generate/${genId}/status`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }, []);
 
   // Connect SSE stream for active generation
   const connectSSE = useCallback((genId: string) => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
 
     const es = new EventSource(`/api/generate/${genId}/stream`);
     eventSourceRef.current = es;
 
     es.onmessage = (event) => {
+      // Successful message resets reconnection counter
+      reconnectAttemptRef.current = 0;
+
       try {
         const data = JSON.parse(event.data);
         setState((prev) => {
@@ -105,6 +127,20 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
           if (data.stage === "complete") {
             es.close();
             eventSourceRef.current = null;
+
+            // If SSE complete event is missing previewFlyUrl, verify via status API
+            if (!data.previewFlyUrl) {
+              fetchStatus(genId).then((status) => {
+                if (status?.previewFlyUrl) {
+                  setState((p) =>
+                    p.generationId === genId
+                      ? { ...p, previewUrl: status.previewFlyUrl }
+                      : p
+                  );
+                }
+              });
+            }
+
             return {
               ...prev,
               stage: "complete",
@@ -139,8 +175,56 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       }
     };
 
-    es.onerror = () => {};
-  }, []);
+    es.onerror = () => {
+      es.close();
+      eventSourceRef.current = null;
+
+      // Reconnect with exponential backoff
+      if (reconnectAttemptRef.current >= MAX_SSE_RECONNECT) return;
+
+      const delay = SSE_RECONNECT_BASE_MS * Math.pow(2, reconnectAttemptRef.current);
+      reconnectAttemptRef.current++;
+
+      reconnectTimerRef.current = setTimeout(() => {
+        // Before reconnecting, check if generation finished while disconnected
+        fetchStatus(genId).then((status) => {
+          if (!status) {
+            connectSSE(genId);
+            return;
+          }
+          if (status.status === "COMPLETE") {
+            setState((p) =>
+              p.generationId === genId
+                ? {
+                    ...p,
+                    stage: "complete",
+                    message: "Your app is ready!",
+                    title: status.title ?? p.title,
+                    description: status.description ?? p.description,
+                    previewUrl: status.previewFlyUrl ?? p.previewUrl,
+                    previewLoading: false,
+                  }
+                : p
+            );
+          } else if (status.status === "FAILED") {
+            setState((p) =>
+              p.generationId === genId
+                ? {
+                    ...p,
+                    stage: "failed",
+                    message: "Something went wrong.",
+                    error: status.error,
+                  }
+                : p
+            );
+          } else {
+            // Still in progress — reconnect SSE
+            connectSSE(genId);
+          }
+        });
+      }, delay);
+    };
+  }, [fetchStatus]);
 
   const startGeneration = useCallback(
     (id: string) => {
@@ -273,6 +357,11 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    reconnectAttemptRef.current = 0;
     localStorage.removeItem(STORAGE_KEY);
     setState({
       generationId: null,
@@ -373,6 +462,9 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
     return () => {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
       }
     };
   }, []);

@@ -643,6 +643,7 @@ export async function startIteration(
         where: { id: generationId },
         data: {
           status: "COMPLETE",
+          currentStage: "complete",
           title: appMeta.title,
           description: appMeta.description,
           previewFlyUrl: previewFlyUrl || undefined,

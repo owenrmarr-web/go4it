@@ -910,6 +910,9 @@ export async function launchApp(
     console.log(`[Launch ${orgAppId}] Setting secrets on ${flyAppName}...`);
     updateDeployProgress(orgAppId, "configuring");
 
+    // secrets set (without --stage) atomically sets secrets and triggers a
+    // machine restart. start.sh re-runs with PREVIEW_MODE=false which deletes
+    // the seed DB, runs prisma db push, and provisions real team members.
     const result = await flyctl([
       "secrets",
       "set",
@@ -924,14 +927,38 @@ export async function launchApp(
       );
     }
 
-    // Force a full machine restart so start.sh re-runs with PREVIEW_MODE=false
-    // (clears seed data, runs prisma db push, provisions real team members)
-    console.log(`[Launch ${orgAppId}] Restarting machine for clean production startup...`);
-    updateDeployProgress(orgAppId, "deploying");
-    await flyctl(["machines", "restart", "--app", flyAppName]);
-
-    // Success — update DB
+    // Wait for the app to become healthy after restart
     const flyUrl = `https://${flyAppName}.fly.dev`;
+    updateDeployProgress(orgAppId, "deploying");
+    console.log(`[Launch ${orgAppId}] Waiting for app to become healthy...`);
+
+    const HEALTH_TIMEOUT = 90_000;
+    const HEALTH_INTERVAL = 3_000;
+    const healthStart = Date.now();
+    let healthy = false;
+
+    while (Date.now() - healthStart < HEALTH_TIMEOUT) {
+      await new Promise((r) => setTimeout(r, HEALTH_INTERVAL));
+      try {
+        const res = await fetch(flyUrl, {
+          method: "GET",
+          signal: AbortSignal.timeout(5_000),
+        });
+        if (res.ok || res.status === 302 || res.status === 307) {
+          healthy = true;
+          console.log(`[Launch ${orgAppId}] App is healthy (${res.status})`);
+          break;
+        }
+        console.log(`[Launch ${orgAppId}] Health check: ${res.status}`);
+      } catch {
+        // App not ready yet — keep polling
+      }
+    }
+
+    if (!healthy) {
+      console.warn(`[Launch ${orgAppId}] Health check timed out — marking as running anyway`);
+    }
+
     updateDeployProgress(orgAppId, "running", { flyUrl });
 
     await prisma.orgApp.update({

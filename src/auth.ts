@@ -41,6 +41,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
         if (!passwordMatch) return null;
 
+        // Require email verification (bypass for admin demo account)
+        if (user.email !== "admin@go4it.live" && !user.emailVerified) {
+          return null;
+        }
+
         return { id: user.id, email: user.email!, name: user.name, isAdmin: user.isAdmin };
       },
     }),

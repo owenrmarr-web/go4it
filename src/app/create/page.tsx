@@ -441,7 +441,7 @@ export default function CreatePage() {
               </p>
             )}
             {/* Preview URL (auto-deployed) */}
-            {gen.previewUrl && (
+            {gen.previewUrl ? (
               <div className="mt-6">
                 <a
                   href={gen.previewUrl}
@@ -457,6 +457,27 @@ export default function CreatePage() {
                     {gen.previewUrl.replace("https://", "")}
                   </a>
                 </p>
+              </div>
+            ) : (
+              <div className="mt-6">
+                <button
+                  onClick={async () => {
+                    try {
+                      await gen.startPreview();
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Failed to start preview");
+                    }
+                  }}
+                  disabled={gen.previewLoading}
+                  className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity inline-block disabled:opacity-50"
+                >
+                  {gen.previewLoading ? "Deploying Preview..." : "Deploy Preview"}
+                </button>
+                {gen.previewLoading && (
+                  <p className="mt-2 text-sm text-gray-400">
+                    Deploying your app — this may take a couple minutes...
+                  </p>
+                )}
               </div>
             )}
 
