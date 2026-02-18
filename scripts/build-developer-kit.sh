@@ -121,6 +121,21 @@ These files are pre-configured in the template and must not be modified:
 - `Dockerfile` — deployment configuration
 
 See `playbook/CLAUDE.md` for the complete list.
+
+## Cross-App AI Queries (REQUIRED)
+
+Every GO4IT app must include a working `/api/ai-query` endpoint. This enables the AI coworker (in GoChat and other apps) to query your app's data — for example, "What deals closed this month?" or "Any overdue invoices?"
+
+The template already includes the endpoint scaffolding at `src/app/api/ai-query/route.ts` with:
+- **Dual authentication** — user sessions + org secret for app-to-app calls
+- **GET** — returns the app's query capabilities
+- **POST** — accepts `{ query: string }`, routes to a matching handler
+
+**Your job:** Add query handlers to the `handlers` object for each data model in your app. See the `playbook/CLAUDE.md` "AI Query Endpoint" section for the full spec, naming conventions, and examples.
+
+### Quick Example
+
+For an invoicing app, you'd add handlers like `list_invoices`, `overdue_invoices`, and `payment_summary`. Each returns `{ type, items, summary }` where `summary` is a one-line natural language description the AI can relay to users.
 WRAPPER_EOF
 
 # Write go4it.json.example

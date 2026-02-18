@@ -256,6 +256,86 @@ export default function MyForm() {
 
 ---
 
+## AI Query Endpoint (`/api/ai-query`)
+
+Every GO4IT app includes a cross-app data query endpoint at `src/app/api/ai-query/route.ts`. The template provides the authentication scaffolding and response format. **Your job is to add query handlers** for each data model in the app.
+
+### What the Template Provides (don't change)
+
+- **Dual auth:** User session (for in-app calls) + org secret via `X-GO4IT-Secret` header (for app-to-app calls on Fly.io)
+- **GET handler:** Returns the app's `capabilities` array
+- **POST handler:** Accepts `{ query: string }`, matches to a handler by keyword, returns structured data
+- **Error handling:** Auth failures, invalid input, handler errors
+
+### What You Add
+
+Add a handler to the `handlers` object for each main data model. Each handler queries the database and returns `{ type, items, summary }`.
+
+**Naming convention:** `verb_model` — e.g., `list_contacts`, `overdue_invoices`, `search_deals`, `recent_bookings`
+
+**Every app should have at minimum:**
+- A `list_` handler for each main model (returns recent records)
+- Filtered/status handlers where relevant (e.g., `overdue_invoices`, `open_deals`, `upcoming_bookings`)
+
+### Example: CRM App Handlers
+
+```typescript
+const handlers: Record<
+  string,
+  (userId: string) => Promise<{ type: string; items: unknown[]; summary: string }>
+> = {
+  list_contacts: async (userId) => {
+    const contacts = await prisma.contact.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    return {
+      type: "contacts",
+      items: contacts,
+      summary: `${contacts.length} contacts`,
+    };
+  },
+
+  list_deals: async (userId) => {
+    const deals = await prisma.deal.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { contact: { select: { name: true } } },
+    });
+    return {
+      type: "deals",
+      items: deals,
+      summary: `${deals.length} deals`,
+    };
+  },
+
+  open_deals: async (userId) => {
+    const deals = await prisma.deal.findMany({
+      where: { userId, status: { not: "closed" } },
+      orderBy: { value: "desc" },
+    });
+    const total = deals.reduce((sum, d) => sum + d.value, 0);
+    return {
+      type: "open_deals",
+      items: deals,
+      summary: `${deals.length} open deals worth $${total.toLocaleString()}`,
+    };
+  },
+};
+```
+
+### Rules
+
+1. **Don't modify the `authenticate` function** — it handles both session and org secret auth
+2. **Always filter by `userId`** — unless `userId === "org"` (app-to-app call), in which case return all records
+3. **Always include a `summary` string** — this is what the AI coworker shows to users
+4. **Keep `capabilities` in sync** — it's auto-derived from `Object.keys(handlers)`
+5. **Return useful data** — include related records via `include` where it adds context (e.g., contact name on a deal)
+
+---
+
 ## What You Build (Checklist)
 
 - [ ] **Data models** in `prisma/schema.prisma` (below the marker line)
@@ -264,6 +344,7 @@ export default function MyForm() {
 - [ ] **API routes** in `src/app/api/` (NOT under `api/auth/` — those exist already)
 - [ ] **Components** in `src/components/` — only `SessionProvider.tsx` exists, everything else is yours
 - [ ] **Seed data** in `prisma/seed.ts` — admin user + realistic sample data
+- [ ] **AI query handlers** in `src/app/api/ai-query/route.ts` — add handlers for each data model (see "AI Query Endpoint" section above)
 - [ ] **Package metadata** — update `name` and `description` in `package.json`. The description must be **generic** — describe what the app does, not the specific business or industry. Example: "Event scheduling and booking management" not "Event scheduling for Acme Corp party planning"
 
 ## Business Context
