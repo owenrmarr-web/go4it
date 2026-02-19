@@ -335,7 +335,7 @@ export default function AuthPage() {
                       <span className="text-gray-400 font-normal">(customizable)</span>
                     </label>
                     <div className="flex items-center gap-0">
-                      <span className="px-3 py-2.5 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-sm text-gray-400">
+                      <span className="px-2 sm:px-3 py-2.5 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-xs sm:text-sm text-gray-400 flex-shrink-0">
                         go4it.live/
                       </span>
                       <input

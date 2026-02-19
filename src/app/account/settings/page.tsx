@@ -256,7 +256,7 @@ export default function SettingsPage() {
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Company Logo
             </label>
-            <div className="flex items-start gap-6">
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
               <div className="relative">
                 {logoPreview ? (
                   <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-200 bg-white flex items-center justify-center">

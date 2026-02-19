@@ -179,14 +179,14 @@ export default function AppCard({
           </p>
         )}
 
-        {/* Description — invisible until hover, but always occupies space */}
-        <p className="mt-2 text-sm text-gray-500 leading-relaxed flex-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        {/* Description — visible on mobile (no hover), hidden until hover on desktop */}
+        <p className="mt-2 text-sm text-gray-500 leading-relaxed flex-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300">
           {app.description}
         </p>
       </div>
 
-      {/* Heart + Try + Add buttons — invisible until hover */}
-      <div className="px-5 pb-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 relative">
+      {/* Heart + Try + Add buttons — visible on mobile, hidden until hover on desktop */}
+      <div className="px-5 pb-4 flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 relative">
         <button
           onClick={handleHeart}
           className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${

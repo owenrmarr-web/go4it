@@ -664,7 +664,7 @@ export default function AccountPage() {
       <Header />
       <main className="max-w-5xl mx-auto px-4 pt-28 pb-16">
         {/* Header row */}
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
           <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900">
             My Account
           </h1>
@@ -701,11 +701,11 @@ export default function AccountPage() {
               {org && (
                 <div className="mb-4 bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-sm font-semibold text-gray-800 mb-4">Branding</h3>
-                  <div className="flex items-start gap-6">
+                  <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                     {/* Logo */}
-                    <div className="flex flex-col items-center gap-2">
+                    <div className="flex sm:flex-col items-center gap-3 sm:gap-2">
                       <div
-                        className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50 cursor-pointer hover:border-purple-300 transition-colors"
+                        className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50 cursor-pointer hover:border-purple-300 transition-colors flex-shrink-0"
                         onClick={() => brandingFileRef.current?.click()}
                       >
                         {brandingLogo ? (
@@ -752,7 +752,7 @@ export default function AccountPage() {
                     <button
                       onClick={handleSaveBranding}
                       disabled={savingBranding}
-                      className="px-4 py-2 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 self-center"
+                      className="px-4 py-2 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 self-start sm:self-center w-full sm:w-auto"
                     >
                       {savingBranding ? "Saving..." : "Save"}
                     </button>
@@ -793,10 +793,10 @@ export default function AccountPage() {
                       key={orgApp.id}
                       className="bg-white rounded-2xl shadow-sm overflow-hidden"
                     >
-                      <div className="p-6 flex items-center justify-between">
-                        <div className="flex items-center gap-5">
-                          <span className="text-4xl">{orgApp.app.icon}</span>
-                          <div>
+                      <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 sm:gap-5 min-w-0">
+                          <span className="text-3xl sm:text-4xl flex-shrink-0">{orgApp.app.icon}</span>
+                          <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <h3 className="font-bold text-gray-900 text-lg">
                                 {orgApp.app.title}
@@ -833,7 +833,7 @@ export default function AccountPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                           {deployingAppId === orgApp.appId ? (
                             <div className="flex items-center gap-2">
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600" />
@@ -1091,7 +1091,7 @@ export default function AccountPage() {
               ) : (
                 <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                   {/* Header bar with count + invite */}
-                  <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                     <p className="text-sm text-gray-600">
                       {members.length} member
                       {members.length !== 1 && "s"}
@@ -1115,7 +1115,7 @@ export default function AccountPage() {
                       return (
                         <div
                           key={member.id}
-                          className="px-6 py-4 flex items-center justify-between"
+                          className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                         >
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
@@ -1190,7 +1190,7 @@ export default function AccountPage() {
                     {invitations.map((invite) => (
                       <div
                         key={`inv-${invite.id}`}
-                        className="px-6 py-4 flex items-center justify-between bg-gray-50/50"
+                        className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/50"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-semibold">
@@ -1408,7 +1408,7 @@ function PortalBanner({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100 flex items-center justify-between">
+    <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div className="flex items-center gap-3">
         <span className="text-lg">🏠</span>
         <div>
@@ -1419,12 +1419,12 @@ function PortalBanner({ slug }: { slug: string }) {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <code className="text-sm text-purple-700 bg-white/70 px-3 py-1.5 rounded-lg border border-purple-200">
+        <code className="text-xs sm:text-sm text-purple-700 bg-white/70 px-2 sm:px-3 py-1.5 rounded-lg border border-purple-200 truncate">
           {portalUrl}
         </code>
         <button
           onClick={handleCopy}
-          className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+          className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors flex-shrink-0"
         >
           {copied ? "Copied!" : "Copy"}
         </button>
@@ -1432,7 +1432,7 @@ function PortalBanner({ slug }: { slug: string }) {
           href={`/${slug}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+          className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
         >
           Visit
         </a>

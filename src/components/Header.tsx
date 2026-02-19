@@ -1,6 +1,6 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useGeneration } from "./GenerationContext";
 
@@ -24,8 +24,23 @@ export default function Header() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const gen = useGeneration();
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
   const isGenerating =
     gen.stage !== "idle" && gen.stage !== "complete" && gen.stage !== "failed";
+
+  // Close mobile menu on outside click
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        setMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (session?.user) {
@@ -43,8 +58,25 @@ export default function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-gray-100">
       <nav className="max-w-7xl mx-auto px-4 py-4 relative flex items-center justify-between">
-        {/* Left side */}
-        <div className="flex items-center gap-2">
+        {/* Mobile hamburger */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden p-2 -ml-2 text-gray-600 hover:text-gray-900 transition-colors"
+          aria-label="Toggle menu"
+        >
+          {mobileMenuOpen ? (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          )}
+        </button>
+
+        {/* Left side — desktop only */}
+        <div className="hidden md:flex items-center gap-2">
           <Link href="/">
             <button className="px-5 py-2 rounded-lg border-2 border-theme-accent text-theme-accent font-semibold hover:opacity-80 transition-opacity">
               App Store
@@ -102,7 +134,7 @@ export default function Header() {
           )}
         </div>
 
-        {/* Center - absolutely positioned to stay centered */}
+        {/* Center logo */}
         <Link
           href="/"
           className="absolute left-1/2 -translate-x-1/2 flex items-center"
@@ -114,6 +146,26 @@ export default function Header() {
 
         {/* Right side */}
         <div className="flex items-center gap-3">
+          {/* Generation progress chip — mobile only */}
+          {gen.generationId && gen.stage !== "idle" && (
+            <Link
+              href={`/create?gen=${gen.generationId}`}
+              className="md:hidden flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-orange-50 to-purple-50 border border-purple-200"
+            >
+              {isGenerating && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
+                </span>
+              )}
+              {gen.stage === "complete" && (
+                <span className="text-green-500 text-xs">&#10003;</span>
+              )}
+              {gen.stage === "failed" && (
+                <span className="text-red-500 text-xs">&#10007;</span>
+              )}
+            </Link>
+          )}
           {session && profile?.logo && (
             <img
               src={profile.logo}
@@ -127,12 +179,35 @@ export default function Header() {
             </span>
           )}
           <Link href={session ? "/account" : "/auth"}>
-            <button className="gradient-brand px-5 py-2 rounded-lg text-white font-semibold hover:opacity-90 transition-opacity shadow-sm">
+            <button className="gradient-brand px-4 py-2 rounded-lg text-white font-semibold hover:opacity-90 transition-opacity shadow-sm text-sm md:text-base md:px-5">
               My Account
             </button>
           </Link>
         </div>
       </nav>
+
+      {/* Mobile menu dropdown */}
+      {mobileMenuOpen && (
+        <div ref={mobileMenuRef} className="md:hidden border-t border-gray-100 bg-white px-4 pb-4 pt-2 space-y-1">
+          <Link href="/" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+            App Store
+          </Link>
+          <Link href="/create" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+            Create
+          </Link>
+          <Link href="/developers" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+            Developers
+          </Link>
+          <Link href="/leaderboard" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+            🏅 Leaderboard
+          </Link>
+          {isAdmin && (
+            <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-purple-600 font-medium hover:bg-purple-50 transition-colors">
+              Admin
+            </Link>
+          )}
+        </div>
+      )}
     </header>
   );
 }

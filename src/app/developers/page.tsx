@@ -130,11 +130,11 @@ export default function DevelopersPage() {
       <Header />
 
       {/* Hero */}
-      <section className="gradient-brand pt-32 pb-14 px-4 text-center">
-        <h1 className="text-5xl md:text-6xl font-extrabold text-white drop-shadow-lg">
+      <section className="gradient-brand pt-24 sm:pt-32 pb-10 sm:pb-14 px-4 text-center">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white drop-shadow-lg">
           Build for GO4IT
         </h1>
-        <p className="mt-4 text-xl md:text-2xl text-white/90 font-medium max-w-2xl mx-auto">
+        <p className="mt-3 sm:mt-4 text-lg sm:text-xl md:text-2xl text-white/90 font-medium max-w-2xl mx-auto">
           Create apps for the GO4IT marketplace and help small businesses thrive
         </p>
       </section>
@@ -285,7 +285,7 @@ export default function DevelopersPage() {
           ) : (
             <div className="mt-6">
               <label
-                className={`block border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
+                className={`block border-2 border-dashed rounded-xl p-6 sm:p-10 text-center cursor-pointer transition-colors ${
                   dragOver
                     ? "border-purple-400 bg-purple-50"
                     : "border-gray-200 hover:border-purple-300 hover:bg-gray-50"
@@ -357,7 +357,33 @@ export default function DevelopersPage() {
                 No submissions yet. Upload your first app above!
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+              {/* Mobile card view */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {submissions.map((sub) => {
+                  const manifest = sub.manifestJson ? JSON.parse(sub.manifestJson) : null;
+                  return (
+                    <div key={sub.id} className="p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        {manifest?.icon && <span className="text-xl">{manifest.icon}</span>}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-gray-900 truncate">{sub.title || "Untitled"}</p>
+                          <p className="text-sm text-gray-500 truncate">{sub.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        {statusBadge(sub.status)}
+                        <span>{new Date(sub.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      {sub.status === "FAILED" && sub.error && (
+                        <p className="text-xs text-red-500">{sub.error}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Desktop table view */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-100">
@@ -416,6 +442,7 @@ export default function DevelopersPage() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </section>
         )}
