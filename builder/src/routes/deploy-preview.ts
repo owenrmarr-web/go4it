@@ -96,20 +96,7 @@ async function runPreviewPipeline(
 
   const env = { ...process.env, DATABASE_URL: "file:./dev.db" };
 
-  // 2. npm install
-  log("Running npm install...");
-  try {
-    execSync("npm install --ignore-scripts", {
-      cwd: sourceDir,
-      stdio: "pipe",
-      timeout: 120000,
-    });
-  } catch (err) {
-    log(`npm install failed: ${(err as Error).message?.slice(0, 200)}`);
-    throw err;
-  }
-
-  // 3. Inject binaryTargets into Prisma schema if missing
+  // 2. Inject binaryTargets into Prisma schema if missing (BEFORE npm install so postinstall prisma generate picks them up)
   const schemaPath = path.join(sourceDir, "prisma", "schema.prisma");
   if (existsSync(schemaPath)) {
     let schema = readFileSync(schemaPath, "utf-8");
@@ -123,13 +110,27 @@ async function runPreviewPipeline(
     }
   }
 
+  // 3. npm install (full — postinstall runs prisma generate which downloads engine binaries)
+  log("Running npm install...");
+  try {
+    execSync("npm install", {
+      cwd: sourceDir,
+      stdio: "pipe",
+      timeout: 180000, // 3 min — includes prisma engine download
+      env,
+    });
+  } catch (err) {
+    log(`npm install failed: ${(err as Error).message?.slice(0, 200)}`);
+    throw err;
+  }
+
   // 4. Prisma setup: format → generate → db push → seed
   const prismaSteps = [
-    { cmd: "npx prisma format", timeout: 15000, label: "prisma format" },
-    { cmd: "npx prisma generate", timeout: 30000, label: "prisma generate" },
+    { cmd: "npx prisma format", timeout: 60000, label: "prisma format" },
+    { cmd: "npx prisma generate", timeout: 60000, label: "prisma generate" },
     {
       cmd: "npx prisma db push --accept-data-loss",
-      timeout: 30000,
+      timeout: 60000,
       label: "prisma db push",
     },
   ];
@@ -137,8 +138,10 @@ async function runPreviewPipeline(
   for (const step of prismaSteps) {
     try {
       execSync(step.cmd, { cwd: sourceDir, stdio: "pipe", timeout: step.timeout, env });
-    } catch {
-      log(`${step.label} failed (non-fatal)`);
+      log(`${step.label} OK`);
+    } catch (err: unknown) {
+      const stderr = (err as { stderr?: Buffer })?.stderr?.toString()?.slice(0, 500) || "";
+      log(`${step.label} failed: ${stderr || (err as Error).message?.slice(0, 300)}`);
     }
   }
 
@@ -153,8 +156,9 @@ async function runPreviewPipeline(
         env,
       });
       log("Seed data applied");
-    } catch {
-      log("Seed failed (non-fatal)");
+    } catch (err: unknown) {
+      const stderr = (err as { stderr?: Buffer })?.stderr?.toString()?.slice(0, 500) || "";
+      log(`Seed failed: ${stderr || (err as Error).message?.slice(0, 300)}`);
     }
   }
 

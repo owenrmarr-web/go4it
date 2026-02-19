@@ -2,8 +2,11 @@ import "dotenv/config";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@prisma/client";
 
+const dbUrl = process.env.DATABASE_URL || "";
+const tursoUrl = dbUrl.includes("libsql") ? dbUrl : "libsql://go4it-owenrmarr.aws-us-west-2.turso.io";
+
 const adapter = new PrismaLibSql({
-  url: process.env.DATABASE_URL!,
+  url: tursoUrl,
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 

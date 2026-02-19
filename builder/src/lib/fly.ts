@@ -430,12 +430,16 @@ export async function deployPreviewApp(
       execSync("npm run build", {
         cwd: sourceDir,
         stdio: "pipe",
-        timeout: 180000,
+        timeout: 300000, // 5 minutes — cold builds on shared-cpu can be slow
         env: { ...process.env, DATABASE_URL: "file:./dev.db" },
       });
     } catch (err) {
       // Check if standalone was created despite non-zero exit (warnings)
       if (!existsSync(standalonePath)) {
+        const stderr = (err as { stderr?: Buffer })?.stderr?.toString()?.slice(0, 1000) || "";
+        const stdout = (err as { stdout?: Buffer })?.stdout?.toString()?.slice(-1000) || "";
+        console.error(`[Preview ${generationId}] Build stderr: ${stderr}`);
+        console.error(`[Preview ${generationId}] Build stdout (tail): ${stdout}`);
         throw new Error(
           `Build failed to produce standalone output at ${standalonePath}: ${(err as Error).message?.slice(0, 200)}`
         );
