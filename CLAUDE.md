@@ -152,6 +152,7 @@ src/
     colorExtractor.ts    — Extract theme colors from uploaded logos
     slug.ts              — Slug generation for org URLs
     subdomain.ts         — Subdomain generation and validation
+    team-sync.ts         — Sync team members to Fly.io apps via builder /secrets endpoint
     username.ts          — Username validation (reserved names, uniqueness check via Prisma)
     username-utils.ts    — Pure username utilities (safe for client-side import)
     constants.ts         — Use case options, country list
@@ -457,8 +458,8 @@ flyctl deploy --app go4it-builder
 
 ## Next Steps (Roadmap — in priority order)
 
-1. **Team member sync without redeploy** — When org members are added/removed, sync the team member list to all running Fly.io apps via `flyctl secrets set GO4IT_TEAM_MEMBERS=...` (triggers automatic restart + re-provisioning via `start.sh`). No full redeploy needed — just a secret update. Needs: API endpoint or hook on member add/remove, iterate over org's running OrgApps, update the secret.
-2. **Persistent app previews in marketplace** — Every published app keeps a running preview machine on Fly.io (not just 24h TTL). Preview URL shown on the marketplace app card so users can try before deploying. Cost: ~$2.50/mo per app (shared-cpu-1x suspended). Prevents source code loss from cleanup and enables "try it" UX in the app store. Needs: skip preview expiration for published apps, add preview URL to app cards, ensure cleanup doesn't destroy published previews.
+1. ~~Team member sync without redeploy (DONE)~~ — See "Completed" section below.
+2. ~~Persistent app previews in marketplace (DONE)~~ — See "Completed" section below.
 3. ~~Fix Create page UI to show preview URL (FIXED)~~ — See "Completed" section below.
 4. ~~Instant launch via secret flip (FIXED)~~ — See "Completed" section below.
 5. ~~Email verification (DONE)~~ — See "Completed" section below.
@@ -472,6 +473,8 @@ flyctl deploy --app go4it-builder
 13. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
 
 ### Completed
+- ~~Team member sync without redeploy (2026-02-18)~~ — Created `src/lib/team-sync.ts` with `syncTeamMembersToFly()` — updates `GO4IT_TEAM_MEMBERS` Fly.io secret via builder `/secrets/:flyAppId` endpoint when app members change. Hooked into OrgApp member PUT endpoint (syncs after member list update) and org member DELETE endpoint (cascades removal from all OrgAppMember records and syncs each affected running app). Secret update triggers Fly machine restart → `start.sh` re-provisions users. No full redeploy needed.
+- ~~Persistent app previews in marketplace (2026-02-18)~~ — Published apps now keep their preview machines running indefinitely. Three changes: (1) `cleanupExpiredPreviews()` in builder now filters `appId: null` — skips published apps, (2) publish route clears `previewExpiresAt` so preview never expires, (3) marketplace API returns `previewFlyUrl` and AppCard shows a "Try it" button linking to the preview URL. Files: `builder/src/lib/cleanup.ts`, `src/app/api/generate/[id]/publish/route.ts`, `src/app/api/apps/route.ts`, `src/types/index.ts`, `src/components/AppCard.tsx`.
 - ~~Instant launch via secret flip (2026-02-18)~~ — Two issues fixed in `launchApp()` (both `builder/src/lib/fly.ts` and `src/lib/fly.ts`): (1) Removed redundant `flyctl machines restart` — `flyctl secrets set` (without `--stage`) already triggers an automatic machine restart, so the explicit restart was causing a double-restart race condition. (2) Added health check polling after secret flip — after `flyctl secrets set` returns, the function now polls the app's URL (GET request, 3s interval, 90s timeout, accepts 200/302/307) to confirm the app is actually serving before marking it as RUNNING. Previously it marked RUNNING immediately after the restart command, before `start.sh` had finished provisioning. **Remaining:** end-to-end production testing of the full launch flow.
 - ~~Email verification (2026-02-18)~~ — Full email verification flow on signup: user submits signup form → redirected to `/verify-email?email=...` ("Check your email" page) → Resend sends branded verification email with link → clicking link validates token, sets `emailVerified`, redirects to `/auth?verified=true` with success toast. Unverified users cannot sign in (admin@go4it.live bypassed). Anti-enumeration on resend endpoint. Files: `src/lib/verification.ts` (token helper), `src/app/api/auth/verify/route.ts`, `src/app/api/auth/resend-verification/route.ts`, `src/app/verify-email/page.tsx`, modified `src/auth.ts` (block unverified), `src/app/auth/page.tsx` (redirect + toasts), `src/app/api/auth/signup/route.ts` (wire in token), `src/lib/email.ts` (verification template).
 - ~~Fix Create page preview URL (2026-02-18)~~ — Three root causes fixed: (1) SSE auto-reconnect with exponential backoff — if SSE connection drops mid-generation, client now reconnects (up to 5 retries) and checks status API before reconnecting to catch completed/failed generations, (2) status API verification — when SSE complete event arrives without `previewFlyUrl`, client fetches from status API as fallback, (3) manual preview fallback — when auto-deploy doesn't produce a URL (no org, deploy failed), Create page now shows a "Deploy Preview" button that triggers manual preview flow. Also fixed: builder iteration path now sets `currentStage: "complete"` in final DB update for consistency.
