@@ -81,17 +81,21 @@ export async function POST(request: Request, context: RouteContext) {
 
   // Find the source directory — prefer org's forked source, fall back to original
   let sourceDir = orgApp.orgSourceDir || orgApp.app.generatedApp?.sourceDir;
+  let uploadBlobUrl = orgApp.app.generatedApp?.uploadBlobUrl;
 
   // Fallback: look for a GeneratedApp record by appId
   if (!sourceDir) {
     const generatedApp = await prisma.generatedApp.findFirst({
       where: { appId },
-      select: { sourceDir: true, id: true },
+      select: { sourceDir: true, id: true, uploadBlobUrl: true },
     });
     sourceDir = generatedApp?.sourceDir ?? undefined;
+    if (!uploadBlobUrl) {
+      uploadBlobUrl = generatedApp?.uploadBlobUrl ?? undefined;
+    }
   }
 
-  if (!sourceDir) {
+  if (!sourceDir && !uploadBlobUrl) {
     return NextResponse.json(
       {
         error:
@@ -149,7 +153,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   // Delegate to builder service if configured, otherwise fall back to local
   if (BUILDER_URL) {
-    if (!generationId) {
+    if (!generationId && !uploadBlobUrl) {
       return NextResponse.json(
         { error: "No generation record found. Only generated apps can be deployed via the builder." },
         { status: 400 }
@@ -167,6 +171,7 @@ export async function POST(request: Request, context: RouteContext) {
           orgAppId: orgApp.id,
           orgSlug: slug,
           generationId,
+          uploadBlobUrl,
           teamMembers,
           subdomain: subdomain ?? undefined,
           existingFlyAppId,
@@ -194,8 +199,50 @@ export async function POST(request: Request, context: RouteContext) {
           console.error(`[Launch] Unhandled error for ${orgApp.id}:`, err);
         });
       } else {
+        // For uploaded apps without sourceDir, download blob to temp directory
+        let resolvedSourceDir = sourceDir;
+        if (!resolvedSourceDir && uploadBlobUrl) {
+          const os = await import("os");
+          const path = await import("path");
+          const fs = await import("fs");
+          const JSZip = (await import("jszip")).default;
+
+          const res = await fetch(uploadBlobUrl);
+          if (!res.ok) throw new Error(`Failed to download blob: ${res.statusText}`);
+          const buffer = await res.arrayBuffer();
+          const zip = await JSZip.loadAsync(buffer);
+
+          const tmpBase = path.join(os.tmpdir(), `go4it-deploy-${orgApp.id}`);
+          fs.mkdirSync(tmpBase, { recursive: true });
+
+          for (const [relativePath, file] of Object.entries(zip.files)) {
+            if (file.dir) {
+              fs.mkdirSync(path.join(tmpBase, relativePath), { recursive: true });
+              continue;
+            }
+            const content = await file.async("nodebuffer");
+            const filePath = path.join(tmpBase, relativePath);
+            fs.mkdirSync(path.dirname(filePath), { recursive: true });
+            fs.writeFileSync(filePath, content);
+          }
+
+          // Find package.json (root or one level deep)
+          const fileNames = Object.keys(zip.files);
+          const nested = fileNames.find((e) => /^[^/]+\/package\.json$/.test(e));
+          resolvedSourceDir = nested
+            ? path.join(tmpBase, nested.split("/")[0])
+            : tmpBase;
+        }
+
+        if (!resolvedSourceDir) {
+          return NextResponse.json(
+            { error: "No source code available for deployment" },
+            { status: 400 }
+          );
+        }
+
         const { deployApp } = await import("@/lib/fly");
-        deployApp(orgApp.id, slug, sourceDir, teamMembers, subdomain ?? undefined, existingFlyAppId).catch((err) => {
+        deployApp(orgApp.id, slug, resolvedSourceDir, teamMembers, subdomain ?? undefined, existingFlyAppId).catch((err) => {
           console.error(`[Deploy] Unhandled error for ${orgApp.id}:`, err);
         });
       }
