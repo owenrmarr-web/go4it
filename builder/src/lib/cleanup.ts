@@ -46,11 +46,14 @@ export async function cleanupStaleWorkspaces(): Promise<void> {
         if (!stat.isDirectory()) continue;
         if (stat.mtimeMs > cutoff) continue;
 
-        // Check DB — only clean up finished generations
+        // Check DB — only clean up finished generations that aren't published
         const gen = await prisma.generatedApp.findUnique({
           where: { id: entry },
-          select: { status: true },
+          select: { status: true, appId: true },
         });
+
+        // Preserve source for published apps (appId set) — they need it for deployment
+        if (gen?.appId) continue;
 
         if (!gen || gen.status === "COMPLETE" || gen.status === "FAILED") {
           rmSync(fullPath, { recursive: true, force: true });

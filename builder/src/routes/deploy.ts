@@ -1,4 +1,5 @@
 import { FastifyInstance } from "fastify";
+import { existsSync } from "fs";
 import { deployApp, launchApp } from "../lib/fly.js";
 import prisma from "../lib/prisma.js";
 import { downloadAndExtractBlob } from "../lib/blob.js";
@@ -63,13 +64,21 @@ export default async function deployRoute(app: FastifyInstance) {
         where: { id: generationId },
         select: { sourceDir: true, uploadBlobUrl: true },
       });
-      sourceDir = gen?.sourceDir ?? undefined;
 
-      // Fallback: if no sourceDir, check for blob on the record itself
-      if (!sourceDir && (gen?.uploadBlobUrl || uploadBlobUrl)) {
+      // Verify sourceDir actually exists on disk (cleanup may have deleted it)
+      const dbSourceDir = gen?.sourceDir ?? undefined;
+      if (dbSourceDir && existsSync(dbSourceDir)) {
+        sourceDir = dbSourceDir;
+      } else {
+        if (dbSourceDir) {
+          console.log(`[Deploy ${orgAppId}] sourceDir ${dbSourceDir} no longer exists on disk`);
+        }
+        // Fallback to blob download
         const blobUrl = gen?.uploadBlobUrl || uploadBlobUrl;
-        console.log(`[Deploy ${orgAppId}] No sourceDir, downloading from blob...`);
-        sourceDir = await downloadAndExtractBlob(blobUrl!, orgAppId);
+        if (blobUrl) {
+          console.log(`[Deploy ${orgAppId}] Downloading from blob...`);
+          sourceDir = await downloadAndExtractBlob(blobUrl, orgAppId);
+        }
       }
     } else if (uploadBlobUrl) {
       // No generationId at all — direct blob deploy
