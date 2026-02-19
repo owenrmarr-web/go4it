@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { syncTeamMembersToFly } from "@/lib/team-sync";
 
 type RouteContext = { params: Promise<{ slug: string; appId: string }> };
 
@@ -133,6 +134,11 @@ export async function PUT(request: Request, context: RouteContext) {
         select: { id: true, name: true, email: true, image: true },
       },
     },
+  });
+
+  // Sync team members to Fly.io (fire-and-forget — don't block the response)
+  syncTeamMembersToFly(orgApp.id).catch((err) => {
+    console.error(`[TeamSync] Failed to sync after member update:`, err);
   });
 
   return NextResponse.json(updatedMembers);

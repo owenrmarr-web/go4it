@@ -90,6 +90,7 @@ export async function cleanupExpiredPreviews(): Promise<void> {
       where: {
         previewFlyAppId: { not: null },
         previewExpiresAt: { lt: new Date() },
+        appId: null, // Skip published apps — their previews persist for the marketplace
       },
       select: {
         id: true,

@@ -165,7 +165,7 @@ export default function AppCard({
         </p>
       </div>
 
-      {/* Heart + Add buttons — invisible until hover */}
+      {/* Heart + Try + Add buttons — invisible until hover */}
       <div className="px-5 pb-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 relative">
         <button
           onClick={handleHeart}
@@ -177,6 +177,17 @@ export default function AppCard({
         >
           {isHearted ? "♥" : "♡"} {app.heartCount > 0 ? app.heartCount : isHearted ? "Saved" : "Save"}
         </button>
+        {app.previewUrl && (
+          <a
+            href={app.previewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
+          >
+            Try it
+          </a>
+        )}
         <div className="relative flex-1" ref={pickerRef}>
           <button
             onClick={handleAdd}

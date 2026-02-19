@@ -16,6 +16,7 @@ export async function GET(request: Request) {
         select: {
           marketplaceVersion: true,
           screenshot: true,
+          previewFlyUrl: true,
           createdBy: { select: { username: true } },
         },
       },
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
     creatorUsername: generatedApp?.createdBy?.username || null,
     screenshot: generatedApp?.screenshot || null,
     heartCount: _count?.interactions ?? 0,
+    previewUrl: generatedApp?.previewFlyUrl || null,
   }));
 
   return NextResponse.json(result);

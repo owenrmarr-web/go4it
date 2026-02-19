@@ -13,6 +13,7 @@ export interface App {
   creatorUsername: string | null;
   screenshot: string | null;
   heartCount: number;
+  previewUrl: string | null;
 }
 
 export type InteractionType = "HEART" | "STAR";

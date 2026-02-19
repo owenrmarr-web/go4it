@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { removeUserFromOrgApps } from "@/lib/team-sync";
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
@@ -183,6 +184,11 @@ export async function DELETE(request: Request, context: RouteContext) {
         );
       }
     }
+
+    // Remove user from all OrgApp memberships in this org and sync Fly apps
+    removeUserFromOrgApps(member.organizationId, member.userId).catch((err) => {
+      console.error(`[TeamSync] Failed to cascade member removal:`, err);
+    });
 
     await prisma.organizationMember.delete({
       where: { id: memberId },

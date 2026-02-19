@@ -167,8 +167,8 @@ export async function POST(
     const updatedGen = await prisma.generatedApp.update({
       where: { id },
       data: isFirstPublish
-        ? { marketplaceVersion: 1 }
-        : { marketplaceVersion: { increment: 1 } },
+        ? { marketplaceVersion: 1, previewExpiresAt: null }
+        : { marketplaceVersion: { increment: 1 }, previewExpiresAt: null },
     });
 
     // Deploy to org: promote preview OrgApp to RUNNING + set secrets
@@ -232,7 +232,7 @@ export async function POST(
 
   await prisma.generatedApp.update({
     where: { id },
-    data: { appId: app.id },
+    data: { appId: app.id, previewExpiresAt: null },
   });
 
   // Deploy to org: create OrgApp record linked to preview Fly app + set secrets
