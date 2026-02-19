@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
+const BUILDER_URL = process.env.BUILDER_URL;
+const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
+
+function builderHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
+  return headers;
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -66,6 +75,15 @@ export async function POST(
     where: { id },
     data: { status: "COMPLETE" },
   });
+
+  // Trigger preview deployment on builder (fire-and-forget)
+  if (BUILDER_URL && submission.uploadBlobUrl) {
+    fetch(`${BUILDER_URL}/deploy-preview`, {
+      method: "POST",
+      headers: builderHeaders(),
+      body: JSON.stringify({ generationId: submission.id }),
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ success: true, appId: app.id });
 }

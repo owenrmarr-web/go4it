@@ -74,6 +74,8 @@ model App {
   author           String
   tags             String
   isPublic         Boolean           @default(true)
+  previewUrl       String?
+  screenshot       String?
   createdAt        DateTime          @default(now())
   interactions     UserInteraction[]
   generatedApp     GeneratedApp?

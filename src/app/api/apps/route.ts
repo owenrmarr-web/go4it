@@ -47,9 +47,9 @@ export async function GET(request: Request) {
     ...app,
     version: generatedApp ? `V${generatedApp.marketplaceVersion}.0` : null,
     creatorUsername: generatedApp?.createdBy?.username || null,
-    screenshot: generatedApp?.screenshot || null,
+    screenshot: app.screenshot || generatedApp?.screenshot || null,
     heartCount: _count?.interactions ?? 0,
-    previewUrl: generatedApp?.previewFlyUrl || null,
+    previewUrl: app.previewUrl || generatedApp?.previewFlyUrl || null,
   }));
 
   return NextResponse.json(result);

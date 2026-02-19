@@ -119,14 +119,34 @@ export default function AppCard({
 
   return (
     <div className="group bg-white rounded-xl shadow-md hover:shadow-xl hover:scale-[1.03] transition-all duration-300 cursor-pointer overflow-hidden flex flex-col">
-      {/* Screenshot header image */}
+      {/* Screenshot header image with preview overlay */}
       {app.screenshot && (
-        <div className="w-full h-36 overflow-hidden bg-gray-100">
+        <div className="relative w-full h-36 overflow-hidden bg-gray-100">
           <img
             src={app.screenshot}
             alt={`${app.title} screenshot`}
             className="w-full h-full object-cover object-top"
           />
+          {app.previewUrl && (
+            <a
+              href={app.previewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all duration-300"
+            >
+              <div className="opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-300">
+                <div className="w-14 h-14 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                  <svg className="w-6 h-6 text-gray-800 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+                <p className="mt-2 text-white text-xs font-semibold tracking-wide text-center">
+                  Try Demo
+                </p>
+              </div>
+            </a>
+          )}
         </div>
       )}
       <div className="p-5 flex flex-col flex-1">
@@ -177,7 +197,7 @@ export default function AppCard({
         >
           {isHearted ? "♥" : "♡"} {app.heartCount > 0 ? app.heartCount : isHearted ? "Saved" : "Save"}
         </button>
-        {app.previewUrl && (
+        {app.previewUrl && !app.screenshot && (
           <a
             href={app.previewUrl}
             target="_blank"

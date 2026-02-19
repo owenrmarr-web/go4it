@@ -161,6 +161,8 @@ export async function POST(
         icon: icon || "🚀",
         author: authorDisplay,
         isPublic: isPublic !== false,
+        previewUrl: generatedApp.previewFlyUrl || null,
+        screenshot: generatedApp.screenshot || null,
       },
     });
 
@@ -227,6 +229,8 @@ export async function POST(
       author: authorDisplay,
       tags: JSON.stringify([]),
       isPublic: isPublic !== false,
+      previewUrl: generatedApp.previewFlyUrl || null,
+      screenshot: generatedApp.screenshot || null,
     },
   });
 
