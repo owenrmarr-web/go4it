@@ -60,18 +60,34 @@ interface AdminOrg {
   };
 }
 
+interface AdminMachine {
+  flyAppId: string;
+  flyStatus: string;
+  hostname: string;
+  type: "production" | "preview" | "store-preview" | "builder" | "unknown";
+  appTitle: string | null;
+  orgSlug: string | null;
+  version: string | null;
+  platformStatus: string | null;
+  releaseVersion: number | null;
+  releaseCreatedAt: string | null;
+  previewExpiresAt: string | null;
+}
+
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"users" | "organizations" | "creations" | "submissions">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "organizations" | "creations" | "submissions" | "machines">("users");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [orgs, setOrgs] = useState<AdminOrg[]>([]);
   const [generations, setGenerations] = useState<AdminGeneration[]>([]);
   const [submissions, setSubmissions] = useState<AdminSubmission[]>([]);
+  const [machines, setMachines] = useState<AdminMachine[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [orgsLoading, setOrgsLoading] = useState(true);
   const [generationsLoading, setGenerationsLoading] = useState(true);
   const [submissionsLoading, setSubmissionsLoading] = useState(true);
+  const [machinesLoading, setMachinesLoading] = useState(true);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -103,6 +119,12 @@ export default function AdminPage() {
       .then((data) => setSubmissions(data))
       .catch(() => {})
       .finally(() => setSubmissionsLoading(false));
+
+    fetch("/api/admin/machines")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => setMachines(data))
+      .catch(() => {})
+      .finally(() => setMachinesLoading(false));
   }, [session, status, router]);
 
   if (status === "loading" || !session?.user?.isAdmin) {
@@ -172,6 +194,16 @@ export default function AdminPage() {
             }`}
           >
             Submissions ({submissions.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("machines")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "machines"
+                ? "bg-white shadow-sm text-gray-900"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Machines ({machines.length})
           </button>
         </div>
 
@@ -869,6 +901,193 @@ export default function AdminPage() {
                         </tr>
                       );
                     })}
+                  </tbody>
+                </table>
+              </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Machines Tab */}
+        {activeTab === "machines" && (
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            {machinesLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+              </div>
+            ) : machines.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                No Fly.io machines found.
+              </div>
+            ) : (
+              <>
+              {/* Mobile card view */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {machines.map((m) => (
+                  <div key={m.flyAppId} className="p-4 space-y-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        <a
+                          href={`https://${m.hostname}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline"
+                        >
+                          {m.flyAppId}
+                        </a>
+                      </p>
+                      {m.appTitle && (
+                        <p className="text-sm text-gray-500 truncate">{m.appTitle}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                      <span className={`inline-block px-2 py-0.5 font-medium rounded-full ${
+                        m.type === "production"
+                          ? "bg-green-100 text-green-700"
+                          : m.type === "preview"
+                          ? "bg-blue-100 text-blue-700"
+                          : m.type === "store-preview"
+                          ? "bg-purple-100 text-purple-700"
+                          : m.type === "builder"
+                          ? "bg-gray-100 text-gray-600"
+                          : "bg-red-100 text-red-700"
+                      }`}>
+                        {m.type}
+                      </span>
+                      <span className={`inline-block px-2 py-0.5 font-medium rounded-full ${
+                        m.flyStatus === "deployed"
+                          ? "bg-green-100 text-green-700"
+                          : m.flyStatus === "suspended"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}>
+                        {m.flyStatus}
+                      </span>
+                      {m.orgSlug && <span className="text-gray-500">{m.orgSlug}</span>}
+                      {m.version && <span className="text-gray-500">{m.version}</span>}
+                      {m.platformStatus && (
+                        <span className={`inline-block px-2 py-0.5 font-medium rounded-full ${
+                          m.platformStatus === "RUNNING"
+                            ? "bg-green-100 text-green-700"
+                            : m.platformStatus === "DEPLOYING"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : m.platformStatus === "FAILED"
+                            ? "bg-red-100 text-red-700"
+                            : m.platformStatus === "PREVIEW"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-600"
+                        }`}>
+                          {m.platformStatus}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table view */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Fly App
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        App Title
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Org
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Version
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Fly Status
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Platform Status
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Release
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {machines.map((m) => (
+                      <tr key={m.flyAppId} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <a
+                            href={`https://${m.hostname}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium text-purple-600 hover:text-purple-800 hover:underline"
+                          >
+                            {m.flyAppId}
+                          </a>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
+                            m.type === "production"
+                              ? "bg-green-100 text-green-700"
+                              : m.type === "preview"
+                              ? "bg-blue-100 text-blue-700"
+                              : m.type === "store-preview"
+                              ? "bg-purple-100 text-purple-700"
+                              : m.type === "builder"
+                              ? "bg-gray-100 text-gray-600"
+                              : "bg-red-100 text-red-700"
+                          }`}>
+                            {m.type}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {m.appTitle || <span className="text-gray-300">—</span>}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {m.orgSlug || <span className="text-gray-300">—</span>}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 text-center">
+                          {m.version || <span className="text-gray-300">—</span>}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
+                            m.flyStatus === "deployed"
+                              ? "bg-green-100 text-green-700"
+                              : m.flyStatus === "suspended"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}>
+                            {m.flyStatus}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {m.platformStatus ? (
+                            <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
+                              m.platformStatus === "RUNNING"
+                                ? "bg-green-100 text-green-700"
+                                : m.platformStatus === "DEPLOYING"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : m.platformStatus === "FAILED"
+                                ? "bg-red-100 text-red-700"
+                                : m.platformStatus === "PREVIEW"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}>
+                              {m.platformStatus}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 text-center">
+                          {m.releaseVersion != null ? `v${m.releaseVersion}` : <span className="text-gray-300">—</span>}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
