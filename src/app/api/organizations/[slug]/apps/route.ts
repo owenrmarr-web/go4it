@@ -147,12 +147,13 @@ export async function POST(request: Request, context: RouteContext) {
       });
     }
 
-    // Collect team members for deployment
+    // Collect team members for deployment (all org members auto-assigned on add)
     const teamMembers = allMembers
       .filter((m) => m.user.email)
       .map((m) => ({
         name: m.user.name || m.user.email!,
         email: m.user.email!,
+        assigned: true,
       }));
 
     const BUILDER_URL = process.env.BUILDER_URL;

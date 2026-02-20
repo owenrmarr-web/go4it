@@ -37,6 +37,7 @@ Breaking any of these will cause build or deployment failures.
 | `tsconfig.json` | TypeScript strict mode, `@/` path alias |
 | `Dockerfile` | Multi-stage production Docker build |
 | `prisma/provision-users.ts` | Team member provisioning (runs at deploy time) |
+| `src/app/api/access-requests/route.ts` | Access request API (seat upsell for unassigned members) |
 
 ### Infrastructure Rules
 
@@ -58,6 +59,22 @@ Add models below the `// === Add app-specific models below this line ===` marker
 - Add a relation field on the User model for each new model (e.g., `contacts Contact[]`)
 - Both sides of every relation must be defined
 - Use `String` for text, `Int` or `Float` for numbers, `Boolean` for flags, `DateTime` for dates
+
+### Team Member Awareness
+
+The User table is the **staff roster**. At deploy time, GO4IT provisions all organization members as User records. Each user has an `isAssigned` boolean:
+- `isAssigned: true` — Active team member with full access (can log in)
+- `isAssigned: false` — Organization member not on this app's plan (visible but cannot log in)
+
+**Rules for generated apps:**
+1. **Use the User table for staff/team assignment** — do NOT create separate Employee, Staff, or TeamMember models. Build assignment relationships (e.g., `assignedToId`) pointing to `User`.
+2. **Show ALL users** in staff dropdowns, assignment lists, and team rosters — both assigned and unassigned.
+3. **Badge unassigned users** with a gray "Not on plan" pill: `<span className="bg-gray-100 text-gray-500 text-xs rounded-full px-2 py-0.5">Not on plan</span>`
+4. **Interaction with unassigned users** — when a user tries to assign work to or interact with an unassigned member, show an inline notification: _"[Name] doesn't have access to this app yet"_ with a **"Request Access"** button.
+5. **Request Access button** — `POST /api/access-requests` with `{ requestedFor: user.email }`. The API route is pre-built in the template.
+6. **Admin notification badge** — Admin/owner users should see a notification indicator (e.g., bell icon or badge on nav) showing the count of pending access requests. Query `GET /api/access-requests` to get the list.
+7. **Link to seat management** — Access request notifications should include a link to `https://go4it.live/account` where the business owner manages app seats.
+8. **The `AccessRequest` model and `/api/access-requests` route are pre-built** — use them directly, do not recreate them.
 
 ### Seed Data — `prisma/seed.ts`
 

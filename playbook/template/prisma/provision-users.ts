@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -21,18 +22,20 @@ async function main() {
     return;
   }
 
-  const members: { name: string; email: string; role?: string; passwordHash?: string }[] = JSON.parse(raw);
+  const members: { name: string; email: string; role?: string; passwordHash?: string; assigned?: boolean }[] = JSON.parse(raw);
 
   for (const member of members) {
-    // Use the member's platform password hash if provided, otherwise use default
-    const password = member.passwordHash || defaultPassword;
-    const role = member.role || "Member";
+    const isAssigned = member.assigned !== false; // backward compat: missing = assigned
+    const password = isAssigned
+      ? (member.passwordHash || defaultPassword)
+      : await bcrypt.hash(crypto.randomUUID(), 12); // random unusable password
+    const role = member.role || "member";
     await prisma.user.upsert({
       where: { email: member.email },
-      update: { name: member.name, password },
-      create: { email: member.email, name: member.name, password },
+      update: { name: member.name, password, isAssigned },
+      create: { email: member.email, name: member.name, password, isAssigned, role },
     });
-    console.log(`Provisioned: ${member.name} (${member.email}) [${role}]${member.passwordHash ? " [platform credentials]" : ""}`);
+    console.log(`Provisioned: ${member.name} (${member.email}) [${role}]${isAssigned ? "" : " [unassigned]"}${member.passwordHash ? " [platform credentials]" : ""}`);
   }
   console.log(`Done — ${members.length + 1} users provisioned.`);
 }

@@ -14,15 +14,13 @@ export async function syncTeamMembersToFly(orgAppId: string): Promise<void> {
       organization: {
         include: {
           members: {
-            where: { role: "OWNER" },
-            take: 1,
-            include: { user: { select: { email: true, password: true } } },
+            include: { user: { select: { id: true, name: true, email: true, password: true } } },
           },
         },
       },
       members: {
         include: {
-          user: { select: { name: true, email: true } },
+          user: { select: { id: true, email: true } },
         },
       },
     },
@@ -31,16 +29,24 @@ export async function syncTeamMembersToFly(orgAppId: string): Promise<void> {
   if (!orgApp?.flyAppId) return;
   if (orgApp.status !== "RUNNING" && orgApp.status !== "PREVIEW") return;
 
-  const ownerMember = orgApp.organization.members[0];
+  // Build set of assigned user IDs (those with OrgAppMember records for this app)
+  const assignedUserIds = new Set(
+    orgApp.members.map((m) => m.user.id)
+  );
+
+  // Find org owner for password hash passthrough
+  const ownerMember = orgApp.organization.members.find((m) => m.role === "OWNER");
   const ownerEmail = ownerMember?.user.email;
   const ownerPasswordHash = ownerMember?.user.password;
 
-  const teamMembers = orgApp.members
+  // Full org roster with assigned flag — drives seat expansion in deployed apps
+  const teamMembers = orgApp.organization.members
     .filter((m) => m.user.email)
     .map((m) => ({
       name: m.user.name || m.user.email!,
       email: m.user.email!,
-      ...(m.user.email === ownerEmail && ownerPasswordHash
+      assigned: assignedUserIds.has(m.user.id),
+      ...(m.user.email === ownerEmail && ownerPasswordHash && assignedUserIds.has(m.user.id)
         ? { passwordHash: ownerPasswordHash }
         : {}),
     }));

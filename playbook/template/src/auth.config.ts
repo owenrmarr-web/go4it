@@ -19,6 +19,9 @@ export default {
 
         if (!user) return null;
 
+        // Block unassigned org members from logging in
+        if (!user.isAssigned) return null;
+
         const valid = await bcrypt.compare(
           credentials.password as string,
           user.password

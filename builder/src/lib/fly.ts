@@ -498,6 +498,156 @@ export async function deployPreviewApp(
 }
 
 // ============================================
+// Template infrastructure upgrade
+// Patches older apps with latest template files at deploy time.
+// Idempotent — safe to run on apps that already have the changes.
+// ============================================
+
+function upgradeTemplateInfra(sourceDir: string): void {
+  console.log(`[TemplateUpgrade] Upgrading template infrastructure in ${sourceDir}`);
+
+  // --- 1. Patch schema.prisma: add isAssigned + AccessRequest ---
+  const schemaPath = path.join(sourceDir, "prisma", "schema.prisma");
+  if (existsSync(schemaPath)) {
+    let schema = readFileSync(schemaPath, "utf-8");
+    let patched = false;
+
+    // Add isAssigned field to User model if missing
+    if (!schema.includes("isAssigned")) {
+      schema = schema.replace(
+        /(role\s+String\s+@default\("member"\)[^\n]*\n)/,
+        "$1  isAssigned     Boolean          @default(true)\n"
+      );
+      patched = true;
+      console.log("[TemplateUpgrade] Added isAssigned to User model");
+    }
+
+    // Add accessRequests relation to User model if missing
+    if (!schema.includes("accessRequests")) {
+      schema = schema.replace(
+        /(sessions\s+Session\[\][^\n]*\n)/,
+        "$1  accessRequests AccessRequest[]\n"
+      );
+      patched = true;
+      console.log("[TemplateUpgrade] Added accessRequests relation to User model");
+    }
+
+    // Add AccessRequest model if missing
+    if (!schema.includes("model AccessRequest")) {
+      const accessRequestModel = `model AccessRequest {
+  id            String   @id @default(cuid())
+  requestedBy   String
+  requestedFor  String
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [requestedBy], references: [id])
+}
+
+`;
+      if (schema.includes("// === Add app-specific models below this line ===")) {
+        schema = schema.replace(
+          "// === Add app-specific models below this line ===",
+          accessRequestModel + "// === Add app-specific models below this line ==="
+        );
+      } else {
+        schema = schema.trimEnd() + "\n\n" + accessRequestModel;
+      }
+      patched = true;
+      console.log("[TemplateUpgrade] Added AccessRequest model");
+    }
+
+    if (patched) {
+      writeFileSync(schemaPath, schema);
+    }
+  }
+
+  // --- 2. Patch auth.config.ts: block unassigned users ---
+  const authConfigPath = path.join(sourceDir, "src", "auth.config.ts");
+  if (existsSync(authConfigPath)) {
+    let authConfig = readFileSync(authConfigPath, "utf-8");
+
+    if (!authConfig.includes("isAssigned")) {
+      authConfig = authConfig.replace(
+        "if (!user) return null;",
+        "if (!user) return null;\n\n        // Block unassigned org members from logging in\n        if (!user.isAssigned) return null;"
+      );
+      writeFileSync(authConfigPath, authConfig);
+      console.log("[TemplateUpgrade] Added isAssigned check to auth.config.ts");
+    }
+  }
+
+  // --- 3. Add access-requests API route if missing ---
+  const accessRequestsDir = path.join(sourceDir, "src", "app", "api", "access-requests");
+  const accessRequestsPath = path.join(accessRequestsDir, "route.ts");
+  if (!existsSync(accessRequestsPath)) {
+    mkdirSync(accessRequestsDir, { recursive: true });
+    writeFileSync(
+      accessRequestsPath,
+      `import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import prisma from "@/lib/prisma";
+
+export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { requestedFor } = await request.json();
+  if (!requestedFor || typeof requestedFor !== "string") {
+    return NextResponse.json({ error: "requestedFor email is required" }, { status: 400 });
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { email: requestedFor },
+  });
+  if (!targetUser || targetUser.isAssigned) {
+    return NextResponse.json({ error: "User not found or already assigned" }, { status: 400 });
+  }
+
+  const existing = await prisma.accessRequest.findFirst({
+    where: { requestedFor, status: "pending" },
+  });
+  if (existing) {
+    return NextResponse.json({ error: "A pending request already exists" }, { status: 409 });
+  }
+
+  const accessRequest = await prisma.accessRequest.create({
+    data: { requestedBy: session.user.id, requestedFor },
+  });
+  return NextResponse.json(accessRequest, { status: 201 });
+}
+
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+  if (user?.role !== "admin") {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+
+  const requests = await prisma.accessRequest.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { user: { select: { name: true, email: true } } },
+  });
+  return NextResponse.json(requests);
+}
+`
+    );
+    console.log("[TemplateUpgrade] Added access-requests API route");
+  }
+
+  console.log("[TemplateUpgrade] Done");
+}
+
+// ============================================
 // Main deploy function (go-live / full deploy)
 // ============================================
 
@@ -505,7 +655,7 @@ export async function deployApp(
   orgAppId: string,
   orgSlug: string,
   sourceDir: string,
-  teamMembers: { name: string; email: string; passwordHash?: string }[],
+  teamMembers: { name: string; email: string; assigned?: boolean; passwordHash?: string }[],
   subdomain?: string,
   existingFlyAppId?: string
 ): Promise<void> {
@@ -663,6 +813,7 @@ export default prisma;
           `import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 const adapter = new PrismaLibSql({ url: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -681,16 +832,19 @@ async function main() {
   const raw = process.env.GO4IT_TEAM_MEMBERS;
   if (!raw) { console.log("No GO4IT_TEAM_MEMBERS set, skipping."); return; }
 
-  const members: { name: string; email: string; passwordHash?: string }[] = JSON.parse(raw);
+  const members: { name: string; email: string; assigned?: boolean; passwordHash?: string }[] = JSON.parse(raw);
 
   for (const member of members) {
-    const password = member.passwordHash || defaultPassword;
+    const isAssigned = member.assigned !== false;
+    const password = isAssigned
+      ? (member.passwordHash || defaultPassword)
+      : await bcrypt.hash(crypto.randomUUID(), 12);
     await prisma.user.upsert({
       where: { email: member.email },
-      update: { name: member.name, password },
-      create: { email: member.email, name: member.name, password },
+      update: { name: member.name, password, isAssigned },
+      create: { email: member.email, name: member.name, password, isAssigned },
     });
-    console.log(\`Provisioned: \${member.name} (\${member.email})\${member.passwordHash ? " [platform credentials]" : ""}\`);
+    console.log(\`Provisioned: \${member.name} (\${member.email})\${isAssigned ? "" : " [unassigned]"}\${member.passwordHash ? " [platform credentials]" : ""}\`);
   }
   console.log(\`Done — \${members.length + 1} users provisioned.\`);
 }
@@ -745,6 +899,9 @@ export default defineConfig({
         }
       }
     }
+
+    // ---- Upgrade template infrastructure (idempotent) ----
+    upgradeTemplateInfra(sourceDir);
 
     // ---- Stage: Creating ----
     updateDeployProgress(orgAppId, isRedeploy ? "building" : "creating");
@@ -885,7 +1042,7 @@ export default defineConfig({
 export async function launchApp(
   orgAppId: string,
   flyAppName: string,
-  teamMembers: { name: string; email: string; passwordHash?: string }[],
+  teamMembers: { name: string; email: string; assigned?: boolean; passwordHash?: string }[],
   subdomain?: string
 ): Promise<void> {
   try {

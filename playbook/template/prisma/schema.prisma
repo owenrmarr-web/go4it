@@ -11,15 +11,17 @@ datasource db {
 // --- Auth models (do not remove) ---
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  password  String
-  name      String?
-  role      String    @default("member") // "admin" or "member"
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  accounts  Account[]
-  sessions  Session[]
+  id             String           @id @default(cuid())
+  email          String           @unique
+  password       String
+  name           String?
+  role           String           @default("member") // "admin" or "member"
+  isAssigned     Boolean          @default(true) // false = org member not on this app's plan
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  accounts       Account[]
+  sessions       Session[]
+  accessRequests AccessRequest[]
 }
 
 model Account {
@@ -54,6 +56,16 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model AccessRequest {
+  id            String   @id @default(cuid())
+  requestedBy   String
+  requestedFor  String   // email of unassigned org member
+  status        String   @default("pending") // pending, approved, dismissed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [requestedBy], references: [id])
 }
 
 // === Add app-specific models below this line ===

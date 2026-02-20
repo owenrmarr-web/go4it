@@ -11,7 +11,7 @@ export default async function deployRoute(app: FastifyInstance) {
       orgSlug: string;
       generationId?: string;
       uploadBlobUrl?: string;
-      teamMembers: { name: string; email: string; passwordHash?: string }[];
+      teamMembers: { name: string; email: string; assigned?: boolean; passwordHash?: string }[];
       subdomain?: string;
       existingFlyAppId?: string;
       isPreviewLaunch?: boolean;

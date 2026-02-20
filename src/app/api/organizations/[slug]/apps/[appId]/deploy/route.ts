@@ -122,14 +122,25 @@ export async function POST(request: Request, context: RouteContext) {
     include: { user: { select: { email: true, password: true } } },
   });
 
-  // Collect team members who have access
-  const teamMembers = orgApp.members
+  // Fetch ALL org members — not just those assigned to this app
+  const allOrgMembers = await prisma.organizationMember.findMany({
+    where: { organizationId: organization.id },
+    include: { user: { select: { name: true, email: true } } },
+  });
+
+  // Build set of assigned emails (those with OrgAppMember records for this app)
+  const assignedEmails = new Set(
+    orgApp.members.map((m) => m.user.email).filter(Boolean)
+  );
+
+  // Full roster with assigned flag — drives seat expansion in deployed apps
+  const teamMembers = allOrgMembers
     .filter((m) => m.user.email)
     .map((m) => ({
       name: m.user.name || m.user.email!,
       email: m.user.email!,
-      // Include the owner's password hash so they can use their platform credentials
-      ...(orgOwner?.user.email === m.user.email && orgOwner.user.password
+      assigned: assignedEmails.has(m.user.email!),
+      ...(orgOwner?.user.email === m.user.email && orgOwner.user.password && assignedEmails.has(m.user.email!)
         ? { passwordHash: orgOwner.user.password }
         : {}),
     }));
