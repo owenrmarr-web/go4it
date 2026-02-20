@@ -90,12 +90,12 @@ export async function cleanupExpiredPreviews(): Promise<void> {
       where: {
         previewFlyAppId: { not: null },
         previewExpiresAt: { lt: new Date() },
-        appId: null, // Skip published apps — their previews persist for the marketplace
+        // Draft previews on both published and unpublished apps get cleaned up.
+        // Store previews (App.previewFlyAppId) are managed separately and never expire.
       },
       select: {
         id: true,
         previewFlyAppId: true,
-        appId: true,
       },
     });
 
@@ -112,7 +112,7 @@ export async function cleanupExpiredPreviews(): Promise<void> {
         );
         await destroyApp(gen.previewFlyAppId!);
 
-        // Clear preview fields on GeneratedApp (keep source code)
+        // Clear draft preview fields on GeneratedApp (keep source code)
         await prisma.generatedApp.update({
           where: { id: gen.id },
           data: {
@@ -121,21 +121,6 @@ export async function cleanupExpiredPreviews(): Promise<void> {
             previewExpiresAt: null,
           },
         });
-
-        // Update OrgApp status to STOPPED if one exists
-        if (gen.appId) {
-          await prisma.orgApp.updateMany({
-            where: {
-              appId: gen.appId,
-              status: "PREVIEW",
-            },
-            data: {
-              status: "STOPPED",
-              flyAppId: null,
-              flyUrl: null,
-            },
-          });
-        }
 
         console.log(
           `[Cleanup] Preview ${gen.previewFlyAppId} destroyed for generation ${gen.id}`

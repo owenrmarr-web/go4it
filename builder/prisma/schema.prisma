@@ -76,6 +76,7 @@ model App {
   isPublic         Boolean           @default(true)
   previewUrl       String?
   screenshot       String?
+  previewFlyAppId  String?
   createdAt        DateTime          @default(now())
   interactions     UserInteraction[]
   generatedApp     GeneratedApp?

@@ -15,9 +15,9 @@ import prisma from "../lib/prisma.js";
  */
 export default async function deployPreviewRoute(app: FastifyInstance) {
   app.post<{
-    Body: { generationId: string };
+    Body: { generationId: string; type?: "store" | "draft" };
   }>("/deploy-preview", async (request, reply) => {
-    const { generationId } = request.body;
+    const { generationId, type = "store" } = request.body;
 
     if (!generationId) {
       return reply.status(400).send({ error: "generationId is required" });
@@ -52,7 +52,7 @@ export default async function deployPreviewRoute(app: FastifyInstance) {
     }
 
     // Run async — return 202 immediately
-    runPreviewPipeline(generationId, gen.uploadBlobUrl, gen.sourceDir, gen.appId).catch(
+    runPreviewPipeline(generationId, gen.uploadBlobUrl, gen.sourceDir, gen.appId, type).catch(
       (err) => {
         console.error(
           `[DeployPreview ${generationId}] Unhandled error:`,
@@ -69,7 +69,8 @@ async function runPreviewPipeline(
   generationId: string,
   uploadBlobUrl: string | null,
   existingSourceDir: string | null,
-  appId: string | null
+  appId: string | null,
+  type: "store" | "draft" = "store"
 ) {
   const log = (msg: string) =>
     console.log(`[DeployPreview ${generationId}] ${msg}`);
@@ -116,7 +117,7 @@ async function runPreviewPipeline(
     execSync("npm install", {
       cwd: sourceDir,
       stdio: "pipe",
-      timeout: 180000, // 3 min — includes prisma engine download
+      timeout: 300000, // 5 min — includes prisma engine download
       env,
     });
   } catch (err) {
@@ -189,21 +190,24 @@ async function runPreviewPipeline(
     data: {
       previewFlyAppId: flyAppName,
       previewFlyUrl: flyUrl,
-      previewExpiresAt: null, // Persist indefinitely (approved app)
+      previewExpiresAt: type === "draft"
+        ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7-day TTL for drafts
+        : null, // Store previews persist indefinitely
       ...(screenshot ? { screenshot } : {}),
     },
   });
 
-  // 9. Update App record if it exists
-  if (appId) {
+  // 9. Update App record (store previews only — drafts stay private)
+  if (appId && type !== "draft") {
     await prisma.app.update({
       where: { id: appId },
       data: {
         previewUrl: flyUrl,
+        previewFlyAppId: flyAppName,
         ...(screenshot ? { screenshot } : {}),
       },
     });
-    log(`App record ${appId} updated with preview URL and screenshot`);
+    log(`App record ${appId} updated with store preview URL and screenshot`);
   }
 
   log("Preview pipeline complete!");

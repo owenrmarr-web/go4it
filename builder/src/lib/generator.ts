@@ -564,7 +564,7 @@ export async function startGeneration(
           previewFlyAppId: previewFlyAppId || undefined,
           previewFlyUrl: previewFlyUrl || undefined,
           previewExpiresAt: previewFlyAppId
-            ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+            ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             : undefined,
         },
       });
@@ -648,7 +648,7 @@ export async function startIteration(
           description: appMeta.description,
           previewFlyUrl: previewFlyUrl || undefined,
           previewExpiresAt: existingFlyAppName
-            ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+            ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             : undefined,
         },
       });

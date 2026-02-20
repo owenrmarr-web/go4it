@@ -131,8 +131,8 @@ function MarketSlide({ active }: { active: boolean }) {
           </tr>
           <tr className="border-b border-gray-100">
             <td className="py-3 px-4 text-center">—</td>
-            <td className="py-3 px-4 text-center">61.6M</td>
-            <td className="py-3 px-4 text-center">31.1M</td>
+            <td className="py-3 px-4 text-center">61.1M</td>
+            <td className="py-3 px-4 text-center">31.8M</td>
             <td className="py-3 pl-4 font-medium text-gray-500 text-right">Total Number of Employees</td>
           </tr>
           <tr>
@@ -179,7 +179,7 @@ function MarketSlide({ active }: { active: boolean }) {
             {[
               { label: "Businesses", vals: ["—", "2.35M", "2.12M"] },
               { label: "Avg Employees", vals: ["—", "26", "15"] },
-              { label: "Total Employees", vals: ["—", "61.6M", "31.1M"] },
+              { label: "Total Employees", vals: ["—", "61.1M", "31.8M"] },
               { label: "SaaS $/Employee", vals: ["—", "$1,700", "$1,400"] },
             ].map((r, i) => (
               <tr key={i} className={i < 3 ? "border-b border-gray-100" : ""}>
@@ -207,18 +207,17 @@ function DCFSlide() {
   const years = 5;
 
   // Revenue model (mirrors FinancialModelSlide)
-  const pricePerUserApp = 1;
-  const minPerUser = 5;
+  const basePerApp = 5;
+  const seatPricePerApp = 1;
   const hostingCostPerApp = 2.68;
   const costPerGeneration = 1.50;
   const gensPerWeek = 1;
 
   const penetratedCustomers = customers * (penetration / 100);
   const totalUsers = penetratedCustomers * usersPerCustomer;
-  const effectivePerUser = Math.max(appsPerUser * pricePerUserApp, minPerUser);
-  const year1AppRevenue = totalUsers * effectivePerUser * 12;
-  const year1HostingRevenue = penetratedCustomers * appsPerUser * hostingCostPerApp * 12 * 1.20;
-  const year1Revenue = year1AppRevenue + year1HostingRevenue;
+  const year1AppBaseRevenue = penetratedCustomers * appsPerUser * basePerApp * 12;
+  const year1SeatRevenue = totalUsers * appsPerUser * seatPricePerApp * 12;
+  const year1Revenue = year1AppBaseRevenue + year1SeatRevenue;
 
   // Costs
   const year1HostingCost = penetratedCustomers * appsPerUser * hostingCostPerApp * 12;
@@ -490,22 +489,20 @@ function FinancialModelSlide() {
   const [usersPerCustomer, setUsersPerCustomer] = useState(15);
   const [appsPerUser, setAppsPerUser] = useState(5);
   const [penetration, setPenetration] = useState(1);
+  const basePerApp = 5;
+  const seatPricePerApp = 1;
   const hostingCostPerApp = 2.68;
-  const gensPerWeek = 1;
-  const pricePerUserApp = 1;
-  const minPerUser = 5;
   const costPerGeneration = 1.50;
+  const gensPerWeek = 1;
 
   const penetratedCustomers = customers * (penetration / 100);
   const totalUsers = penetratedCustomers * usersPerCustomer;
-  const effectivePerUser = Math.max(appsPerUser * pricePerUserApp, minPerUser);
-  const annualAppRevenue = totalUsers * effectivePerUser * 12;
-  // Hosting cost per app/mo ($2.68). Hosting revenue = cost + 20% markup.
+  const annualAppBaseRevenue = penetratedCustomers * appsPerUser * basePerApp * 12;
+  const annualSeatRevenue = totalUsers * appsPerUser * seatPricePerApp * 12;
   const monthlyHostingCost = penetratedCustomers * appsPerUser * hostingCostPerApp;
   const annualInfraCost = monthlyHostingCost * 12;
-  const annualHostingRevenue = annualInfraCost * 1.20;
   const annualInferenceCost = penetratedCustomers * gensPerWeek * costPerGeneration * 52;
-  const totalAnnualRevenue = annualAppRevenue + annualHostingRevenue;
+  const totalAnnualRevenue = annualAppBaseRevenue + annualSeatRevenue;
   const totalAnnualCost = annualInfraCost + annualInferenceCost;
   const annualGrossProfit = totalAnnualRevenue - totalAnnualCost;
   const grossMargin = totalAnnualRevenue > 0 ? (annualGrossProfit / totalAnnualRevenue) * 100 : 0;
@@ -589,7 +586,7 @@ function FinancialModelSlide() {
           <tr className="border-b border-gray-100">
             <td className="py-3 text-gray-600">Price</td>
             <td className="py-3 text-right font-bold text-gray-800">
-              $1/user/app/mo
+              $5/app + $1/seat/app
             </td>
             <td></td>
             <td className="py-3 text-gray-600">Annual Inference Cost</td>
@@ -600,7 +597,7 @@ function FinancialModelSlide() {
           <tr className="border-b border-gray-100">
             <td className="py-3 text-gray-600">Monthly Revenue per Business</td>
             <td className="py-3 text-right font-bold" style={{ color: "var(--theme-secondary)" }}>
-              {fmt(effectivePerUser * usersPerCustomer)}
+              {fmt(appsPerUser * basePerApp + usersPerCustomer * appsPerUser * seatPricePerApp)}
             </td>
             <td></td>
             <td className="py-3 text-gray-600 font-semibold">Annual Gross Profit</td>
@@ -651,7 +648,7 @@ function FinancialModelSlide() {
               </tr>
               <tr>
                 <td className="py-2 text-gray-600">Price</td>
-                <td className="py-2 text-right font-bold text-gray-800">$1/user/app/mo</td>
+                <td className="py-2 text-right font-bold text-gray-800">$5/app + $1/seat/app</td>
               </tr>
             </tbody>
           </table>
@@ -692,6 +689,133 @@ function FinancialModelSlide() {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PricingComparisonSlide() {
+  const [employees, setEmployees] = useState(15);
+
+  const competitors = [
+    { category: "CRM", name: "HubSpot", perUser: 20, base: 0 },
+    { category: "Project Mgmt", name: "Monday.com", perUser: 12, base: 0 },
+    { category: "Messaging", name: "Slack", perUser: 7.25, base: 0 },
+    { category: "Invoicing", name: "FreshBooks", perUser: 11, base: 30 },
+    { category: "Support", name: "Zendesk", perUser: 19, base: 0 },
+  ];
+
+  const apps = competitors.length;
+  const traditionalTotal = competitors.reduce(
+    (sum, c) => sum + c.base + c.perUser * employees, 0
+  );
+  const go4itPerApp = 5 + employees * 1;
+  const go4itTotal = go4itPerApp * apps;
+  const multiple = traditionalTotal > 0 && go4itTotal > 0
+    ? Math.round(traditionalTotal / go4itTotal)
+    : 0;
+
+  const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
+
+  return (
+    <div className="flex flex-col justify-center h-full max-w-5xl mx-auto overflow-y-auto">
+      <style dangerouslySetInnerHTML={{ __html: hideSpinners }} />
+      <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-2 md:mb-4">Pricing Breakdown</h2>
+      <p className="text-sm md:text-lg text-gray-500 mb-4 md:mb-6">
+        5 core tools every small business needs — traditional vs. GO4IT
+      </p>
+
+      <div className="flex items-center gap-3 mb-4 md:mb-6">
+        <span className="text-sm md:text-lg text-gray-600">Team size:</span>
+        <StepInput value={employees} onChange={setEmployees} min={1} max={50} />
+        <span className="text-sm md:text-lg text-gray-600">employees</span>
+      </div>
+
+      {/* Desktop */}
+      <table className="hidden md:table w-full text-left border-collapse">
+        <thead>
+          <tr className="border-b-2 border-gray-200">
+            <th className="py-2 px-3 text-sm font-semibold text-gray-500">Category</th>
+            <th className="py-2 px-3 text-sm font-semibold text-gray-500">Incumbent</th>
+            <th className="py-2 px-3 text-sm font-semibold text-gray-500 text-right">Per-User Price</th>
+            <th className="py-2 px-3 text-sm font-semibold text-gray-500 text-right">Monthly Cost</th>
+            <th className="py-2 px-3 text-sm font-semibold text-right gradient-brand-text">GO4IT Cost</th>
+          </tr>
+        </thead>
+        <tbody className="text-base text-gray-700">
+          {competitors.map((c, i) => (
+            <tr key={i} className="border-b border-gray-100">
+              <td className="py-3 px-3 font-medium">{c.category}</td>
+              <td className="py-3 px-3 text-gray-500">{c.name}</td>
+              <td className="py-3 px-3 text-right text-sm">
+                {`$${c.perUser}/user/mo`}
+                {c.base > 0 && <span className="text-gray-400">{` + $${c.base} base`}</span>}
+              </td>
+              <td className="py-3 px-3 text-right font-semibold" style={{ color: "#ef4444" }}>
+                {fmt(c.base + c.perUser * employees)}
+              </td>
+              <td className="py-3 px-3 text-right font-semibold" style={{ color: "var(--theme-accent)" }}>
+                {fmt(go4itPerApp)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2" style={{ borderColor: "var(--theme-primary)" }}>
+            <td colSpan={3} className="py-3 px-3 font-bold text-lg text-gray-800">Total Monthly</td>
+            <td className="py-3 px-3 text-right font-bold text-xl" style={{ color: "#ef4444" }}>
+              {fmt(traditionalTotal)}
+            </td>
+            <td className="py-3 px-3 text-right font-bold text-xl gradient-brand-text">
+              {fmt(go4itTotal)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+
+      {/* Mobile */}
+      <div className="md:hidden">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="border-b-2 border-gray-200">
+              <th className="py-1.5 text-left text-xs font-semibold text-gray-500">Tool</th>
+              <th className="py-1.5 text-right text-xs font-semibold text-gray-500">Traditional</th>
+              <th className="py-1.5 text-right text-xs font-semibold gradient-brand-text">GO4IT</th>
+            </tr>
+          </thead>
+          <tbody>
+            {competitors.map((c, i) => (
+              <tr key={i} className="border-b border-gray-100">
+                <td className="py-2">
+                  <div className="font-medium text-gray-700">{c.category}</div>
+                  <div className="text-xs text-gray-400">{c.name}</div>
+                </td>
+                <td className="py-2 text-right font-semibold" style={{ color: "#ef4444" }}>
+                  {fmt(c.base + c.perUser * employees)}
+                </td>
+                <td className="py-2 text-right font-semibold" style={{ color: "var(--theme-accent)" }}>
+                  {fmt(go4itPerApp)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="border-t-2" style={{ borderColor: "var(--theme-primary)" }}>
+              <td className="py-2 font-bold text-gray-800">Total</td>
+              <td className="py-2 text-right font-bold" style={{ color: "#ef4444" }}>{fmt(traditionalTotal)}</td>
+              <td className="py-2 text-right font-bold gradient-brand-text">{fmt(go4itTotal)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* Savings callout */}
+      <div className="mt-4 md:mt-6 flex items-center justify-center gap-2">
+        <span className="text-2xl md:text-4xl font-extrabold gradient-brand-text">{multiple}x</span>
+        <span className="text-base md:text-xl text-gray-600">reduction in cost</span>
+      </div>
+      <p className="text-xs md:text-sm text-gray-400 text-center mt-2">
+        Incumbent pricing based on annual billing. GO4IT: $5/app/mo + $1/person/app/mo.
+      </p>
     </div>
   );
 }
@@ -912,18 +1036,18 @@ const slides = [
             .
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
-            For hosting, GO4IT deploys apps on edge data center VMs,
-            charging a fixed <span className="font-bold text-theme-primary">~20% premium</span> on infrastructure costs.
+            <span className="font-bold text-theme-primary">$5/app/month</span>{" "}
+            — covers hosting &amp; infrastructure.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
-            Our signature pricing:{" "}
-            <span className="font-bold text-theme-secondary">$1/user/app/month</span>{" "}
-            (minimum $5/user).
+            <span className="font-bold text-theme-secondary">$1/person/app/month</span>{" "}
+            — for each team member using an app.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
-            This represents a{" "}
-            <span className="font-bold text-theme-accent">5–10x savings</span>{" "}
-            vs. current SaaS spend.
+            A 15-person team with 5 apps pays just{" "}
+            <span className="font-bold text-theme-accent">$100/month</span>{" "}
+            — vs. $1,050/month with traditional SaaS.{" "}
+            A <span className="font-bold gradient-brand-text">10x</span> reduction in cost.
           </p>
         </div>
       </div>
@@ -1132,6 +1256,7 @@ const slides = [
       </div>
     ),
   },
+  { id: "pricing-comparison", content: null },
 ];
 
 export default function DeckPage() {
@@ -1192,7 +1317,9 @@ export default function DeckPage() {
             ? <FinancialModelSlide />
             : slides[current].id === "dcf"
               ? <DCFSlide />
-              : slides[current].content}
+              : slides[current].id === "pricing-comparison"
+                ? <PricingComparisonSlide />
+                : slides[current].content}
       </div>
 
       {/* Navigation */}

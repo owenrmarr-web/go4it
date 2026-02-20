@@ -142,7 +142,7 @@ export default function AppCard({
                   </svg>
                 </div>
                 <p className="mt-2 text-white text-xs font-semibold tracking-wide text-center">
-                  Try Demo
+                  Interactive Preview
                 </p>
               </div>
             </a>
@@ -205,7 +205,7 @@ export default function AppCard({
             onClick={(e) => e.stopPropagation()}
             className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
           >
-            Try it
+            Interactive Preview
           </a>
         )}
         <div className="relative flex-1" ref={pickerRef}>

@@ -48,6 +48,25 @@ interface OrgApp {
   isOwnApp: boolean;
 }
 
+interface CreatedApp {
+  id: string;
+  title: string;
+  description: string | null;
+  icon: string;
+  category: string;
+  source: string;
+  isPublished: boolean;
+  storeVersion: string | null;
+  hasUnpublishedChanges: boolean;
+  draftPreviewUrl: string | null;
+  storePreviewUrl: string | null;
+  draftExpiresAt: string | null;
+  draftExpiresInDays: number | null;
+  appId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface Member {
   id: string;
   role: "OWNER" | "ADMIN" | "MEMBER";
@@ -102,9 +121,11 @@ export default function AccountPage() {
   const [appsLoading, setAppsLoading] = useState(true);
   const [org, setOrg] = useState<OrgData | null>(null);
   const [orgApps, setOrgApps] = useState<OrgApp[]>([]);
+  const [createdApps, setCreatedApps] = useState<CreatedApp[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [orgLoading, setOrgLoading] = useState(true);
+  const [createdAppsLoading, setCreatedAppsLoading] = useState(true);
   const { hearted, toggle, loading: interactionsLoading } = useInteractions();
 
   // App management state
@@ -116,6 +137,7 @@ export default function AccountPage() {
   const [deployingAppId, setDeployingAppId] = useState<string | null>(null);
   const [deployMessage, setDeployMessage] = useState("");
   const [forkingAppId, setForkingAppId] = useState<string | null>(null);
+  const [deployingDraftId, setDeployingDraftId] = useState<string | null>(null);
 
   // Subdomain state
   const [subdomainInput, setSubdomainInput] = useState("");
@@ -179,6 +201,14 @@ export default function AccountPage() {
 
     fetchOrgData();
 
+    fetch("/api/account/created-apps")
+      .then((r) => r.json())
+      .then((data: CreatedApp[]) => {
+        setCreatedApps(data);
+        setCreatedAppsLoading(false);
+      })
+      .catch(() => setCreatedAppsLoading(false));
+
     // Load existing branding from profile
     fetch("/api/account/profile")
       .then((r) => r.json())
@@ -189,7 +219,7 @@ export default function AccountPage() {
       .catch(() => {});
   }, [fetchOrgData]);
 
-  const loading = appsLoading || interactionsLoading || orgLoading;
+  const loading = appsLoading || interactionsLoading || orgLoading || createdAppsLoading;
 
   const heartedApps = useMemo(
     () => allApps.filter((app) => hearted.has(app.id)),
@@ -596,6 +626,25 @@ export default function AccountPage() {
     handleLaunchApp(orgApp);
   };
 
+  const handleDeployDraft = async (createdApp: CreatedApp) => {
+    setDeployingDraftId(createdApp.id);
+    try {
+      const res = await fetch(`/api/generate/${createdApp.id}/deploy-draft`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to deploy draft");
+      }
+      toast.success("Draft preview deploying... this may take a few minutes.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to deploy draft";
+      toast.error(message);
+    } finally {
+      setDeployingDraftId(null);
+    }
+  };
+
   const handleBrandingLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -690,9 +739,9 @@ export default function AccountPage() {
           </div>
         ) : (
           <>
-            {/* ── My Apps ─────────────────────────────────── */}
+            {/* ── My Organization's Apps ────────────────────── */}
             <section className="mb-12">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">My Apps</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-4">My Organization&apos;s Apps</h2>
 
               {/* Team Portal URL */}
               {org && <PortalBanner slug={org.slug} />}
@@ -1076,6 +1125,133 @@ export default function AccountPage() {
               )}
             </section>
 
+            {/* ── Apps I've Created ─────────────────────────── */}
+            <section className="mb-12">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Apps I&apos;ve Created</h2>
+              {createdApps.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-xl shadow-sm">
+                  <p className="text-gray-400 mb-4">
+                    Apps you generate or upload will appear here.
+                  </p>
+                  <Link
+                    href="/create"
+                    className="inline-block gradient-brand text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    Create an App
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {createdApps.map((ca) => {
+                    const timeAgo = getTimeAgo(ca.updatedAt);
+                    return (
+                      <div
+                        key={ca.id}
+                        className="bg-white rounded-2xl shadow-sm overflow-hidden"
+                      >
+                        <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-center gap-4 sm:gap-5 min-w-0">
+                            <span className="text-3xl sm:text-4xl flex-shrink-0">{ca.icon}</span>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-bold text-gray-900 text-lg">
+                                  {ca.title}
+                                </h3>
+                                {ca.isPublished && ca.storeVersion && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                                    {ca.storeVersion} Published
+                                  </span>
+                                )}
+                                {!ca.isPublished && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+                                    Draft
+                                  </span>
+                                )}
+                                {ca.hasUnpublishedChanges && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
+                                    Unpublished changes
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-500 mt-0.5">
+                                {ca.category}
+                                <span className="ml-2">· Updated {timeAgo}</span>
+                                {ca.source === "uploaded" && (
+                                  <span className="ml-2">· Uploaded</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                            {/* Store preview indicator */}
+                            {ca.isPublished && (
+                              <span className={`flex items-center gap-1 text-xs ${ca.storePreviewUrl ? "text-green-600" : "text-gray-400"}`}>
+                                <span className={`w-2 h-2 rounded-full ${ca.storePreviewUrl ? "bg-green-500" : "bg-gray-300"}`} />
+                                {ca.storePreviewUrl ? "Store preview live" : "No store preview"}
+                              </span>
+                            )}
+
+                            {/* Draft preview expiration warning */}
+                            {ca.draftExpiresInDays !== null && ca.draftExpiresInDays <= 5 && (
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                ca.draftExpiresInDays <= 2
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                              }`}>
+                                Draft expires in {ca.draftExpiresInDays}d
+                              </span>
+                            )}
+
+                            {/* View Draft */}
+                            {ca.draftPreviewUrl && (
+                              <a
+                                href={ca.draftPreviewUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                              >
+                                View Draft
+                              </a>
+                            )}
+
+                            {/* Preview Draft */}
+                            {!ca.draftPreviewUrl && (
+                              <button
+                                onClick={() => handleDeployDraft(ca)}
+                                disabled={deployingDraftId === ca.id}
+                                className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                              >
+                                {deployingDraftId === ca.id ? "Deploying..." : "Preview Draft"}
+                              </button>
+                            )}
+
+                            {/* Iterate */}
+                            <button
+                              onClick={() => router.push(`/create?gen=${ca.id}`)}
+                              className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                            >
+                              Iterate
+                            </button>
+
+                            {/* Publish / Publish Update */}
+                            {(!ca.isPublished || ca.hasUnpublishedChanges) && (
+                              <button
+                                onClick={() => router.push(`/create?gen=${ca.id}&publish=true`)}
+                                className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+                              >
+                                {ca.isPublished ? "Publish Update" : "Publish"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
             {/* ── Team Members ─────────────────────────────── */}
             <section className="mb-12">
               <h2 className="text-xl font-bold text-gray-800 mb-4">
@@ -1395,6 +1571,18 @@ export default function AccountPage() {
       )}
     </div>
   );
+}
+
+function getTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
 }
 
 function PortalBanner({ slug }: { slug: string }) {

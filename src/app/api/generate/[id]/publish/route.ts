@@ -148,9 +148,18 @@ export async function POST(
     // Check if App was auto-created (isPublic: false) — first real publish stays at v1
     const existingApp = await prisma.app.findUnique({
       where: { id: generatedApp.appId },
-      select: { isPublic: true },
+      select: { isPublic: true, previewFlyAppId: true },
     });
     const isFirstPublish = existingApp && !existingApp.isPublic;
+
+    // Destroy old store preview machine if being replaced by a new one
+    const oldStoreFlyAppId = existingApp?.previewFlyAppId;
+    if (oldStoreFlyAppId && oldStoreFlyAppId !== generatedApp.previewFlyAppId && BUILDER_URL) {
+      fetch(`${BUILDER_URL}/cleanup/${oldStoreFlyAppId}`, {
+        method: "DELETE",
+        headers: builderHeaders(),
+      }).catch(() => {});
+    }
 
     const updatedApp = await prisma.app.update({
       where: { id: generatedApp.appId },
@@ -163,14 +172,21 @@ export async function POST(
         isPublic: isPublic !== false,
         previewUrl: generatedApp.previewFlyUrl || null,
         screenshot: generatedApp.screenshot || null,
+        previewFlyAppId: generatedApp.previewFlyAppId || oldStoreFlyAppId || null,
       },
     });
 
     const updatedGen = await prisma.generatedApp.update({
       where: { id },
-      data: isFirstPublish
-        ? { marketplaceVersion: 1, previewExpiresAt: null }
-        : { marketplaceVersion: { increment: 1 }, previewExpiresAt: null },
+      data: {
+        ...(isFirstPublish
+          ? { marketplaceVersion: 1 }
+          : { marketplaceVersion: { increment: 1 } }),
+        // Clear draft preview — it's now the store preview
+        previewFlyAppId: null,
+        previewFlyUrl: null,
+        previewExpiresAt: null,
+      },
     });
 
     // Deploy to org: promote preview OrgApp to RUNNING + set secrets
@@ -231,12 +247,19 @@ export async function POST(
       isPublic: isPublic !== false,
       previewUrl: generatedApp.previewFlyUrl || null,
       screenshot: generatedApp.screenshot || null,
+      previewFlyAppId: generatedApp.previewFlyAppId || null,
     },
   });
 
   await prisma.generatedApp.update({
     where: { id },
-    data: { appId: app.id, previewExpiresAt: null },
+    data: {
+      appId: app.id,
+      // Clear draft preview — it's now the store preview
+      previewFlyAppId: null,
+      previewFlyUrl: null,
+      previewExpiresAt: null,
+    },
   });
 
   // Deploy to org: create OrgApp record linked to preview Fly app + set secrets
