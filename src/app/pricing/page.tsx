@@ -66,6 +66,7 @@ const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
 export default function PricingPage() {
   const [employees, setEmployees] = useState(10);
+  const [numApps, setNumApps] = useState(5);
   // Indices: 0=CRM, 1=PM, 2=Messaging, 3=Invoicing, 4=Payroll
   const [seats, setSeats] = useState([10, 10, 10, 5, 10]);
 
@@ -80,14 +81,22 @@ export default function PricingPage() {
   const updateSeat = (i: number, v: number) =>
     setSeats((prev) => prev.map((s, j) => (j === i ? v : s)));
 
-  const traditionalTotal = competitors.reduce(
+  const extraApps = Math.max(0, numApps - 5);
+  const avgPerUser = competitors.reduce((sum, c) => sum + c.perUser, 0) / competitors.length;
+  const avgBase = competitors.reduce((sum, c) => sum + c.base, 0) / competitors.length;
+  const extraTraditionalCost = extraApps * (avgBase + avgPerUser * employees);
+  const extraGo4itCost = extraApps * (5 + employees * 1);
+
+  const baseTraditionalTotal = competitors.reduce(
     (sum, c, i) => sum + c.base + c.perUser * seats[i],
     0
   );
-  const go4itTotal = competitors.reduce(
+  const baseGo4itTotal = competitors.reduce(
     (sum, _, i) => sum + 5 + seats[i] * 1,
     0
   );
+  const traditionalTotal = baseTraditionalTotal + extraTraditionalCost;
+  const go4itTotal = baseGo4itTotal + extraGo4itCost;
   const monthlySavings = traditionalTotal - go4itTotal;
   const annualSavings = monthlySavings * 12;
   const multiple =
@@ -225,24 +234,41 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* Employee count input + reduction callout */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <span className="text-gray-700 font-medium">Number of employees:</span>
-            <StepInput
-              value={employees}
-              onChange={handleEmployeesChange}
-              min={1}
-              max={500}
-            />
+        {/* Inputs + savings + reduction — single row */}
+        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="w-48 text-gray-700 font-medium whitespace-nowrap">Number of Employees:</span>
+              <StepInput
+                value={employees}
+                onChange={handleEmployeesChange}
+                min={1}
+                max={500}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-48 text-gray-700 font-medium whitespace-nowrap">Number of Apps:</span>
+              <StepInput
+                value={numApps}
+                onChange={setNumApps}
+                min={5}
+                max={50}
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl md:text-4xl font-extrabold gradient-brand-text">
-              {multiple}x
-            </span>
-            <span className="text-sm md:text-xl text-gray-600">
-              reduction in cost
-            </span>
+          <div className="flex items-center gap-5">
+            <div className="rounded-xl bg-green-50 border border-green-200 px-6 py-3 text-center">
+              <p className="text-xs text-gray-500">Monthly savings</p>
+              <p className="text-2xl md:text-3xl font-extrabold text-green-600">{fmt(monthlySavings)}</p>
+            </div>
+            <div className="rounded-xl bg-green-50 border border-green-200 px-6 py-3 text-center">
+              <p className="text-xs text-gray-500">Annual savings</p>
+              <p className="text-2xl md:text-3xl font-extrabold text-green-600">{fmt(annualSavings)}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-3xl md:text-5xl font-extrabold gradient-brand-text">{multiple}x</span>
+              <span className="text-base md:text-lg text-gray-600">cost reduction</span>
+            </div>
           </div>
         </div>
 
@@ -298,6 +324,16 @@ export default function PricingPage() {
                 </td>
               </tr>
             ))}
+            {extraApps > 0 && (
+              <tr className="border-b border-gray-100">
+                <td className="py-3 px-3 font-medium">Additional Apps <span className="text-gray-400 font-normal">(x{extraApps})</span></td>
+                <td className="py-3 px-3 text-gray-500">Various</td>
+                <td className="py-3 px-3 text-right font-semibold" style={{ color: "var(--theme-primary)" }}>{employees}</td>
+                <td className="py-3 px-3 text-right text-sm">avg. of above</td>
+                <td className="py-3 px-3 text-right font-semibold" style={{ color: "#ef4444" }}>{fmt(extraTraditionalCost)}</td>
+                <td className="py-3 px-3 text-right font-semibold" style={{ color: "var(--theme-accent)" }}>{fmt(extraGo4itCost)}</td>
+              </tr>
+            )}
           </tbody>
           <tfoot>
             <tr
@@ -368,6 +404,17 @@ export default function PricingPage() {
                   </td>
                 </tr>
               ))}
+              {extraApps > 0 && (
+                <tr className="border-b border-gray-100">
+                  <td className="py-2">
+                    <div className="font-medium text-gray-700">Additional Apps</div>
+                    <div className="text-xs text-gray-400">x{extraApps} @ avg. of above</div>
+                  </td>
+                  <td className="py-2 text-right font-semibold" style={{ color: "var(--theme-primary)" }}>{employees}</td>
+                  <td className="py-2 text-right font-semibold" style={{ color: "#ef4444" }}>{fmt(extraTraditionalCost)}</td>
+                  <td className="py-2 text-right font-semibold" style={{ color: "var(--theme-accent)" }}>{fmt(extraGo4itCost)}</td>
+                </tr>
+              )}
             </tbody>
             <tfoot>
               <tr
@@ -389,28 +436,11 @@ export default function PricingPage() {
           </table>
         </div>
 
-        {/* Savings callout */}
-        <div className="mt-8 text-center">
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
-            <div className="rounded-xl bg-green-50 border border-green-200 px-6 py-4 text-center">
-              <p className="text-sm text-gray-500">Monthly savings</p>
-              <p className="text-2xl md:text-3xl font-extrabold text-green-600">
-                {fmt(monthlySavings)}
-              </p>
-            </div>
-            <div className="rounded-xl bg-green-50 border border-green-200 px-6 py-4 text-center">
-              <p className="text-sm text-gray-500">Annual savings</p>
-              <p className="text-2xl md:text-3xl font-extrabold text-green-600">
-                {fmt(annualSavings)}
-              </p>
-            </div>
-          </div>
-
-          <p className="text-xs md:text-sm text-gray-400 mt-6">
-            Incumbent pricing based on annual billing. GO4IT: $5/app/mo +
-            $1/person/app/mo.
-          </p>
-        </div>
+        {/* Pricing footnote */}
+        <p className="text-xs md:text-sm text-gray-400 mt-8 text-center">
+          Incumbent pricing based on annual billing. GO4IT: $5/app/mo +
+          $1/person/app/mo.
+        </p>
       </section>
     </div>
   );

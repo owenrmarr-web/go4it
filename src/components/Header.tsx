@@ -2,6 +2,7 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useGeneration } from "./GenerationContext";
 
 interface UserProfile {
@@ -24,6 +25,7 @@ export default function Header() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const gen = useGeneration();
 
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -77,21 +79,20 @@ export default function Header() {
 
         {/* Left side — desktop only */}
         <div className="hidden md:flex items-center gap-2">
-          <Link href="/">
-            <button className="px-5 py-2 rounded-lg border-2 border-theme-accent text-theme-accent font-semibold hover:opacity-80 transition-opacity">
-              App Store
-            </button>
-          </Link>
-          <Link href="/create">
-            <button className="px-5 py-2 rounded-lg border-2 border-theme-accent text-theme-accent font-semibold hover:opacity-80 transition-opacity">
-              Create
-            </button>
-          </Link>
-          <Link href="/pricing">
-            <button className="px-5 py-2 rounded-lg border-2 border-theme-accent text-theme-accent font-semibold hover:opacity-80 transition-opacity">
-              Pricing
-            </button>
-          </Link>
+          {[
+            { href: "/", label: "App Store" },
+            { href: "/create", label: "Create" },
+            { href: "/pricing", label: "Pricing" },
+          ].map(({ href, label }) => {
+            const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
+            return (
+              <Link key={href} href={href}>
+                <button className={`px-5 py-2 rounded-lg border-2 border-theme-accent font-semibold hover:opacity-80 transition-opacity ${isActive ? "text-white" : "text-theme-accent"}`} style={isActive ? { backgroundColor: "var(--theme-accent)" } : undefined}>
+                  {label}
+                </button>
+              </Link>
+            );
+          })}
           {isAdmin && (
             <Link href="/admin">
               <button className="px-3 py-2 rounded-lg text-xs font-semibold text-purple-600 border border-purple-200 hover:bg-purple-50 transition-colors">
@@ -184,15 +185,18 @@ export default function Header() {
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
         <div ref={mobileMenuRef} className="md:hidden border-t border-gray-100 bg-white px-4 pb-4 pt-2 space-y-1">
-          <Link href="/" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
-            App Store
-          </Link>
-          <Link href="/create" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
-            Create
-          </Link>
-          <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
-            Pricing
-          </Link>
+          {[
+            { href: "/", label: "App Store" },
+            { href: "/create", label: "Create" },
+            { href: "/pricing", label: "Pricing" },
+          ].map(({ href, label }) => {
+            const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
+            return (
+              <Link key={href} href={href} onClick={() => setMobileMenuOpen(false)} className={`block px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors ${isActive ? "text-theme-accent font-bold" : "text-gray-700"}`}>
+                {label}
+              </Link>
+            );
+          })}
           {isAdmin && (
             <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-purple-600 font-medium hover:bg-purple-50 transition-colors">
               Admin

@@ -135,15 +135,10 @@ export default function AppCard({
               onClick={(e) => e.stopPropagation()}
               className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all duration-300"
             >
-              <div className="opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-300">
-                <div className="w-14 h-14 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                  <svg className="w-6 h-6 text-gray-800 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
+              <div className="opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all duration-300">
+                <div className="px-5 py-2.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 shadow-lg">
+                  <span className="text-white text-sm font-semibold tracking-wide">Interactive Preview</span>
                 </div>
-                <p className="mt-2 text-white text-xs font-semibold tracking-wide text-center">
-                  Interactive Preview
-                </p>
               </div>
             </a>
           )}
@@ -179,81 +174,81 @@ export default function AppCard({
           </p>
         )}
 
+        {/* Save + Add to Org buttons */}
+        <div className="mt-2 flex gap-2 relative">
+          <button
+            onClick={handleHeart}
+            className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              isHearted
+                ? "bg-pink-100 text-pink-600"
+                : "bg-gray-100 text-gray-600 hover:bg-pink-50 hover:text-pink-500"
+            }`}
+          >
+            {isHearted ? "♥" : "♡"} {app.heartCount > 0 ? app.heartCount : isHearted ? "Saved" : "Save"}
+          </button>
+          {app.previewUrl && !app.screenshot && (
+            <a
+              href={app.previewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
+            >
+              Interactive Preview
+            </a>
+          )}
+          <div className="relative flex-1" ref={pickerRef}>
+            <button
+              onClick={handleAdd}
+              className={`w-full flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                isAddedToAny
+                  ? "bg-purple-100 text-purple-600"
+                  : "bg-gray-100 text-gray-600 hover:bg-purple-50 hover:text-purple-500"
+              }`}
+            >
+              {isAddedToAny ? "✓" : "+"} {isAddedToAny ? "Added" : "Add to Org"}
+            </button>
+
+            {/* Org picker dropdown */}
+            {showOrgPicker && (
+              <div className="absolute bottom-full mb-1 left-0 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                <p className="px-3 py-1.5 text-xs font-medium text-gray-400 uppercase">
+                  Add to...
+                </p>
+                {orgs.map((org) => {
+                  const alreadyAdded = org.appIds.includes(app.id);
+                  return (
+                    <button
+                      key={org.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOrgSelect(org);
+                      }}
+                      disabled={alreadyAdded}
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                        alreadyAdded
+                          ? "text-gray-400 cursor-default"
+                          : "text-gray-700 hover:bg-purple-50"
+                      }`}
+                    >
+                      {org.name}
+                      {alreadyAdded && (
+                        <span className="ml-1 text-xs text-gray-400">
+                          (added)
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Description — visible on mobile (no hover), hidden until hover on desktop */}
         <p className="mt-2 text-sm text-gray-500 leading-relaxed flex-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300">
           {app.description}
         </p>
-      </div>
-
-      {/* Heart + Try + Add buttons — visible on mobile, hidden until hover on desktop */}
-      <div className="px-5 pb-4 flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 relative">
-        <button
-          onClick={handleHeart}
-          className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            isHearted
-              ? "bg-pink-100 text-pink-600"
-              : "bg-gray-100 text-gray-600 hover:bg-pink-50 hover:text-pink-500"
-          }`}
-        >
-          {isHearted ? "♥" : "♡"} {app.heartCount > 0 ? app.heartCount : isHearted ? "Saved" : "Save"}
-        </button>
-        {app.previewUrl && !app.screenshot && (
-          <a
-            href={app.previewUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
-          >
-            Interactive Preview
-          </a>
-        )}
-        <div className="relative flex-1" ref={pickerRef}>
-          <button
-            onClick={handleAdd}
-            className={`w-full flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              isAddedToAny
-                ? "bg-purple-100 text-purple-600"
-                : "bg-gray-100 text-gray-600 hover:bg-purple-50 hover:text-purple-500"
-            }`}
-          >
-            {isAddedToAny ? "✓" : "+"} {isAddedToAny ? "Added" : "Add"}
-          </button>
-
-          {/* Org picker dropdown */}
-          {showOrgPicker && (
-            <div className="absolute bottom-full mb-1 left-0 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-              <p className="px-3 py-1.5 text-xs font-medium text-gray-400 uppercase">
-                Add to...
-              </p>
-              {orgs.map((org) => {
-                const alreadyAdded = org.appIds.includes(app.id);
-                return (
-                  <button
-                    key={org.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOrgSelect(org);
-                    }}
-                    disabled={alreadyAdded}
-                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                      alreadyAdded
-                        ? "text-gray-400 cursor-default"
-                        : "text-gray-700 hover:bg-purple-50"
-                    }`}
-                  >
-                    {org.name}
-                    {alreadyAdded && (
-                      <span className="ml-1 text-xs text-gray-400">
-                        (added)
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

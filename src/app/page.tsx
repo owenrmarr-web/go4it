@@ -71,7 +71,7 @@ export default function Home() {
 
         toast.success(`${result.app?.title || "App"} added to ${orgName}`, {
           action: {
-            label: "Go to Dashboard",
+            label: "My Account",
             onClick: () => (window.location.href = "/account"),
           },
         });
