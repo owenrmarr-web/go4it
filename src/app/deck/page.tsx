@@ -694,22 +694,24 @@ function FinancialModelSlide() {
 }
 
 function PricingComparisonSlide() {
-  const [employees, setEmployees] = useState(15);
-
   const competitors = [
     { category: "CRM", name: "HubSpot", perUser: 20, base: 0 },
     { category: "Project Mgmt", name: "Monday.com", perUser: 12, base: 0 },
     { category: "Messaging", name: "Slack", perUser: 7.25, base: 0 },
     { category: "Invoicing", name: "FreshBooks", perUser: 11, base: 30 },
-    { category: "Support", name: "Zendesk", perUser: 19, base: 0 },
+    { category: "Payroll", name: "Gusto", perUser: 6, base: 49 },
   ];
 
-  const apps = competitors.length;
+  const [seats, setSeats] = useState([15, 15, 15, 5, 15]);
+  const updateSeats = (i: number, v: number) =>
+    setSeats((prev) => prev.map((s, j) => (j === i ? v : s)));
+
   const traditionalTotal = competitors.reduce(
-    (sum, c) => sum + c.base + c.perUser * employees, 0
+    (sum, c, i) => sum + c.base + c.perUser * seats[i], 0
   );
-  const go4itPerApp = 5 + employees * 1;
-  const go4itTotal = go4itPerApp * apps;
+  const go4itTotal = competitors.reduce(
+    (sum, _, i) => sum + 5 + seats[i] * 1, 0
+  );
   const multiple = traditionalTotal > 0 && go4itTotal > 0
     ? Math.round(traditionalTotal / go4itTotal)
     : 0;
@@ -719,16 +721,10 @@ function PricingComparisonSlide() {
   return (
     <div className="flex flex-col justify-center h-full max-w-5xl mx-auto overflow-y-auto">
       <style dangerouslySetInnerHTML={{ __html: hideSpinners }} />
-      <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-2 md:mb-4">Pricing Breakdown</h2>
-      <p className="text-sm md:text-lg text-gray-500 mb-4 md:mb-6">
-        5 core tools every small business needs — traditional vs. GO4IT
+      <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-1 md:mb-2">Pricing Breakdown</h2>
+      <p className="text-sm md:text-lg text-gray-500 mb-2 md:mb-3">
+        5 core tools small businesses need — traditional vs. GO4IT (default 15 person business)
       </p>
-
-      <div className="flex items-center gap-3 mb-4 md:mb-6">
-        <span className="text-sm md:text-lg text-gray-600">Team size:</span>
-        <StepInput value={employees} onChange={setEmployees} min={1} max={50} />
-        <span className="text-sm md:text-lg text-gray-600">employees</span>
-      </div>
 
       {/* Desktop */}
       <table className="hidden md:table w-full text-left border-collapse">
@@ -736,6 +732,7 @@ function PricingComparisonSlide() {
           <tr className="border-b-2 border-gray-200">
             <th className="py-2 px-3 text-sm font-semibold text-gray-500">Category</th>
             <th className="py-2 px-3 text-sm font-semibold text-gray-500">Incumbent</th>
+            <th className="py-2 px-3 text-sm font-semibold text-gray-500 text-right">Seats</th>
             <th className="py-2 px-3 text-sm font-semibold text-gray-500 text-right">Per-User Price</th>
             <th className="py-2 px-3 text-sm font-semibold text-gray-500 text-right">Monthly Cost</th>
             <th className="py-2 px-3 text-sm font-semibold text-right gradient-brand-text">GO4IT Cost</th>
@@ -746,22 +743,25 @@ function PricingComparisonSlide() {
             <tr key={i} className="border-b border-gray-100">
               <td className="py-3 px-3 font-medium">{c.category}</td>
               <td className="py-3 px-3 text-gray-500">{c.name}</td>
+              <td className="py-3 px-3 text-right">
+                <StepInput value={seats[i]} onChange={(v) => updateSeats(i, v)} min={1} max={50} />
+              </td>
               <td className="py-3 px-3 text-right text-sm">
                 {`$${c.perUser}/user/mo`}
                 {c.base > 0 && <span className="text-gray-400">{` + $${c.base} base`}</span>}
               </td>
               <td className="py-3 px-3 text-right font-semibold" style={{ color: "#ef4444" }}>
-                {fmt(c.base + c.perUser * employees)}
+                {fmt(c.base + c.perUser * seats[i])}
               </td>
               <td className="py-3 px-3 text-right font-semibold" style={{ color: "var(--theme-accent)" }}>
-                {fmt(go4itPerApp)}
+                {fmt(5 + seats[i] * 1)}
               </td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="border-t-2" style={{ borderColor: "var(--theme-primary)" }}>
-            <td colSpan={3} className="py-3 px-3 font-bold text-lg text-gray-800">Total Monthly</td>
+            <td colSpan={4} className="py-3 px-3 font-bold text-lg text-gray-800">Total Monthly</td>
             <td className="py-3 px-3 text-right font-bold text-xl" style={{ color: "#ef4444" }}>
               {fmt(traditionalTotal)}
             </td>
@@ -778,6 +778,7 @@ function PricingComparisonSlide() {
           <thead>
             <tr className="border-b-2 border-gray-200">
               <th className="py-1.5 text-left text-xs font-semibold text-gray-500">Tool</th>
+              <th className="py-1.5 text-right text-xs font-semibold text-gray-500">Seats</th>
               <th className="py-1.5 text-right text-xs font-semibold text-gray-500">Traditional</th>
               <th className="py-1.5 text-right text-xs font-semibold gradient-brand-text">GO4IT</th>
             </tr>
@@ -789,18 +790,21 @@ function PricingComparisonSlide() {
                   <div className="font-medium text-gray-700">{c.category}</div>
                   <div className="text-xs text-gray-400">{c.name}</div>
                 </td>
+                <td className="py-2 text-right">
+                  <StepInput value={seats[i]} onChange={(v) => updateSeats(i, v)} min={1} max={50} />
+                </td>
                 <td className="py-2 text-right font-semibold" style={{ color: "#ef4444" }}>
-                  {fmt(c.base + c.perUser * employees)}
+                  {fmt(c.base + c.perUser * seats[i])}
                 </td>
                 <td className="py-2 text-right font-semibold" style={{ color: "var(--theme-accent)" }}>
-                  {fmt(go4itPerApp)}
+                  {fmt(5 + seats[i] * 1)}
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="border-t-2" style={{ borderColor: "var(--theme-primary)" }}>
-              <td className="py-2 font-bold text-gray-800">Total</td>
+              <td colSpan={2} className="py-2 font-bold text-gray-800">Total</td>
               <td className="py-2 text-right font-bold" style={{ color: "#ef4444" }}>{fmt(traditionalTotal)}</td>
               <td className="py-2 text-right font-bold gradient-brand-text">{fmt(go4itTotal)}</td>
             </tr>
@@ -809,11 +813,16 @@ function PricingComparisonSlide() {
       </div>
 
       {/* Savings callout */}
-      <div className="mt-4 md:mt-6 flex items-center justify-center gap-2">
+      <div className="mt-1 md:mt-2 flex items-center justify-center gap-2">
         <span className="text-2xl md:text-4xl font-extrabold gradient-brand-text">{multiple}x</span>
         <span className="text-base md:text-xl text-gray-600">reduction in cost</span>
       </div>
-      <p className="text-xs md:text-sm text-gray-400 text-center mt-2">
+      <p className="text-sm md:text-lg text-gray-500 text-center mt-1 italic">
+        US 5-50 employee businesses average 16 SaaS apps — at 60% replacement (10 apps),<br />
+        GO4IT saves a 15-person business over{" "}
+        <span className="font-semibold text-theme-accent">$17,000/year</span>.
+      </p>
+      <p className="text-xs md:text-sm text-gray-400 text-center mt-1">
         Incumbent pricing based on annual billing. GO4IT: $5/app/mo + $1/person/app/mo.
       </p>
     </div>
@@ -1045,14 +1054,15 @@ const slides = [
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             A 15-person team with 5 apps pays just{" "}
-            <span className="font-bold text-theme-accent">$100/month</span>{" "}
-            — vs. $1,050/month with traditional SaaS.{" "}
-            A <span className="font-bold gradient-brand-text">10x</span> reduction in cost.
+            <span className="font-bold text-theme-accent">$90/month</span>{" "}
+            — vs. $810/month with traditional SaaS.{" "}
+            A <span className="font-bold text-theme-accent">9x</span> reduction in cost.
           </p>
         </div>
       </div>
     ),
   },
+  { id: "pricing-comparison", content: null },
   { id: "financial", content: null },
   {
     id: "ask",
@@ -1200,7 +1210,7 @@ const slides = [
                 { feature: "AI Generation", go4it: true, base44: true, lovable: true, bolt: true, replit: true, softr: true },
                 { feature: "Managed Hosting", go4it: true, base44: true, lovable: true, bolt: true, replit: true, softr: true },
                 { feature: "Team Provisioning", go4it: true, base44: false, lovable: false, bolt: false, replit: false, softr: true },
-                { feature: "No Code Required", go4it: true, base44: true, lovable: true, bolt: true, replit: true, softr: true },
+                { feature: "Pre-Made Popular Apps", go4it: true, base44: false, lovable: false, bolt: false, replit: false, softr: false },
                 { feature: "Auto-Deploy Pipeline", go4it: true, base44: true, lovable: true, bolt: true, replit: true, softr: true },
                 { feature: "Business-Focused Pricing", go4it: true, base44: false, lovable: false, bolt: false, replit: false, softr: false },
               ].map((row, i) => (
@@ -1235,7 +1245,7 @@ const slides = [
             { feature: "AI Generation", go4it: true, others: "All" },
             { feature: "Managed Hosting", go4it: true, others: "All" },
             { feature: "Team Provisioning", go4it: true, others: "Softr" },
-            { feature: "No Code Required", go4it: true, others: "All" },
+            { feature: "Pre-Made Popular Apps", go4it: true, others: "None" },
             { feature: "Auto-Deploy Pipeline", go4it: true, others: "All" },
             { feature: "Business-Focused Pricing", go4it: true, others: "None" },
           ].map((row, i) => (
@@ -1256,7 +1266,6 @@ const slides = [
       </div>
     ),
   },
-  { id: "pricing-comparison", content: null },
 ];
 
 export default function DeckPage() {

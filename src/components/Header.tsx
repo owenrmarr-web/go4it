@@ -87,6 +87,11 @@ export default function Header() {
               Create
             </button>
           </Link>
+          <Link href="/pricing">
+            <button className="px-5 py-2 rounded-lg border-2 border-theme-accent text-theme-accent font-semibold hover:opacity-80 transition-opacity">
+              Pricing
+            </button>
+          </Link>
           {isAdmin && (
             <Link href="/admin">
               <button className="px-3 py-2 rounded-lg text-xs font-semibold text-purple-600 border border-purple-200 hover:bg-purple-50 transition-colors">
@@ -184,6 +189,9 @@ export default function Header() {
           </Link>
           <Link href="/create" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
             Create
+          </Link>
+          <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+            Pricing
           </Link>
           {isAdmin && (
             <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="block px-4 py-3 rounded-lg text-purple-600 font-medium hover:bg-purple-50 transition-colors">
