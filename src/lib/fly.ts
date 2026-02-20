@@ -417,7 +417,7 @@ export async function deployApp(
       console.log(`[Deploy ${orgAppId}] Generating package-lock.json...`);
       const lockResult = await runCommand(
         "npm",
-        ["install", "--package-lock-only"],
+        ["install", "--package-lock-only", "--ignore-scripts"],
         { cwd: sourceDir }
       );
       if (lockResult.code !== 0) {
@@ -502,7 +502,7 @@ export async function deployApp(
         }
         const lockResult = await runCommand(
           "npm",
-          ["install", "--package-lock-only", "--legacy-peer-deps"],
+          ["install", "--package-lock-only", "--legacy-peer-deps", "--ignore-scripts"],
           { cwd: sourceDir }
         );
         if (lockResult.code !== 0) {
