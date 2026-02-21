@@ -94,12 +94,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty("--theme-secondary-contrast", getContrastColor(activeColors.secondary));
     root.style.setProperty("--theme-accent-contrast", getContrastColor(activeColors.accent));
 
+    // Sort colors by luminance (darkest first) for safe text/border usage on white backgrounds
+    const ranked = [
+      { hex: activeColors.primary, lum: getLuminance(activeColors.primary) },
+      { hex: activeColors.secondary, lum: getLuminance(activeColors.secondary) },
+      { hex: activeColors.accent, lum: getLuminance(activeColors.accent) },
+    ].sort((a, b) => a.lum - b.lum);
+
+    root.style.setProperty("--theme-darkest", ranked[0].hex);
+    root.style.setProperty("--theme-second-darkest", ranked[1].hex);
+    root.style.setProperty("--theme-lightest", ranked[2].hex);
+    root.style.setProperty("--theme-darkest-contrast", getContrastColor(ranked[0].hex));
+    root.style.setProperty("--theme-second-darkest-contrast", getContrastColor(ranked[1].hex));
+
     // For gradient backgrounds, pick contrast based on the darkest color in the gradient
-    const minLum = Math.min(
-      getLuminance(activeColors.accent),
-      getLuminance(activeColors.secondary),
-      getLuminance(activeColors.primary)
-    );
+    const minLum = ranked[0].lum;
     root.style.setProperty("--theme-gradient-contrast", minLum > 0.4 ? "#111827" : "#ffffff");
 
     // Also set gradient

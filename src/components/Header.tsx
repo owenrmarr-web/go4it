@@ -87,7 +87,7 @@ export default function Header() {
             const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
               <Link key={href} href={href}>
-                <button className={`px-5 py-2 rounded-lg border-2 border-theme-accent font-semibold hover:opacity-80 transition-opacity ${isActive ? "text-on-accent" : "text-theme-accent"}`} style={isActive ? { backgroundColor: "var(--theme-accent)" } : undefined}>
+                <button className={`px-5 py-2 rounded-lg border-2 border-theme-accent font-semibold hover:opacity-80 transition-opacity ${isActive ? "text-on-darkest" : "text-theme-accent"}`} style={isActive ? { backgroundColor: "var(--theme-darkest)" } : undefined}>
                   {label}
                 </button>
               </Link>

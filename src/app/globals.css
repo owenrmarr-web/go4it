@@ -13,6 +13,11 @@
   --theme-secondary-contrast: #ffffff;
   --theme-accent-contrast: #111827;
   --theme-gradient-contrast: #ffffff;
+  --theme-darkest: #9333ea;
+  --theme-second-darkest: #ec4899;
+  --theme-lightest: #f97316;
+  --theme-darkest-contrast: #ffffff;
+  --theme-second-darkest-contrast: #ffffff;
 }
 
 .gradient-brand {
@@ -21,7 +26,7 @@
 }
 
 .text-theme-primary {
-  color: var(--theme-primary);
+  color: var(--theme-second-darkest);
 }
 
 .text-theme-secondary {
@@ -29,7 +34,7 @@
 }
 
 .text-theme-accent {
-  color: var(--theme-accent);
+  color: var(--theme-darkest);
 }
 
 .bg-theme-primary {
@@ -37,11 +42,11 @@
 }
 
 .border-theme-primary {
-  border-color: var(--theme-primary);
+  border-color: var(--theme-second-darkest);
 }
 
 .border-theme-accent {
-  border-color: var(--theme-accent);
+  border-color: var(--theme-darkest);
 }
 
 .text-on-primary {
@@ -54,6 +59,14 @@
 
 .text-on-accent {
   color: var(--theme-accent-contrast);
+}
+
+.text-on-darkest {
+  color: var(--theme-darkest-contrast);
+}
+
+.text-on-second-darkest {
+  color: var(--theme-second-darkest-contrast);
 }
 
 .gradient-brand-text {

@@ -48,7 +48,7 @@ function StepInput({
         step={step}
         onChange={(e) => onChange(clamp(parseFloat(e.target.value) || min))}
         className="w-20 text-right font-bold text-sm md:text-base rounded-lg border border-gray-300 px-2 py-1 focus:outline-none focus:border-purple-400"
-        style={{ color: "var(--theme-primary)" }}
+        style={{ color: "var(--theme-second-darkest)" }}
       />
     </div>
   );
@@ -318,7 +318,7 @@ export default function PricingPage() {
                 </td>
                 <td
                   className="py-3 px-3 text-right font-semibold"
-                  style={{ color: "var(--theme-accent)" }}
+                  style={{ color: "var(--theme-darkest)" }}
                 >
                   {fmt(5 + seats[i] * 1)}
                 </td>
@@ -328,17 +328,17 @@ export default function PricingPage() {
               <tr className="border-b border-gray-100">
                 <td className="py-3 px-3 font-medium">Additional Apps <span className="text-gray-400 font-normal">(x{extraApps})</span></td>
                 <td className="py-3 px-3 text-gray-500">Various</td>
-                <td className="py-3 px-3 text-right font-semibold" style={{ color: "var(--theme-primary)" }}>{employees}</td>
+                <td className="py-3 px-3 text-right font-semibold" style={{ color: "var(--theme-second-darkest)" }}>{employees}</td>
                 <td className="py-3 px-3 text-right text-sm">avg. of above</td>
                 <td className="py-3 px-3 text-right font-semibold" style={{ color: "#ef4444" }}>{fmt(extraTraditionalCost)}</td>
-                <td className="py-3 px-3 text-right font-semibold" style={{ color: "var(--theme-accent)" }}>{fmt(extraGo4itCost)}</td>
+                <td className="py-3 px-3 text-right font-semibold" style={{ color: "var(--theme-darkest)" }}>{fmt(extraGo4itCost)}</td>
               </tr>
             )}
           </tbody>
           <tfoot>
             <tr
               className="border-t-2"
-              style={{ borderColor: "var(--theme-primary)" }}
+              style={{ borderColor: "var(--theme-second-darkest)" }}
             >
               <td
                 colSpan={4}
@@ -398,7 +398,7 @@ export default function PricingPage() {
                   </td>
                   <td
                     className="py-2 text-right font-semibold"
-                    style={{ color: "var(--theme-accent)" }}
+                    style={{ color: "var(--theme-darkest)" }}
                   >
                     {fmt(5 + seats[i] * 1)}
                   </td>
@@ -410,16 +410,16 @@ export default function PricingPage() {
                     <div className="font-medium text-gray-700">Additional Apps</div>
                     <div className="text-xs text-gray-400">x{extraApps} @ avg. of above</div>
                   </td>
-                  <td className="py-2 text-right font-semibold" style={{ color: "var(--theme-primary)" }}>{employees}</td>
+                  <td className="py-2 text-right font-semibold" style={{ color: "var(--theme-second-darkest)" }}>{employees}</td>
                   <td className="py-2 text-right font-semibold" style={{ color: "#ef4444" }}>{fmt(extraTraditionalCost)}</td>
-                  <td className="py-2 text-right font-semibold" style={{ color: "var(--theme-accent)" }}>{fmt(extraGo4itCost)}</td>
+                  <td className="py-2 text-right font-semibold" style={{ color: "var(--theme-darkest)" }}>{fmt(extraGo4itCost)}</td>
                 </tr>
               )}
             </tbody>
             <tfoot>
               <tr
                 className="border-t-2"
-                style={{ borderColor: "var(--theme-primary)" }}
+                style={{ borderColor: "var(--theme-second-darkest)" }}
               >
                 <td colSpan={2} className="py-2 font-bold text-gray-800">Total</td>
                 <td

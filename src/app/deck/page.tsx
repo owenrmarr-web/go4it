@@ -1314,6 +1314,11 @@ export default function DeckPage() {
         "--theme-secondary": "#ec4899",
         "--theme-accent": "#f97316",
         "--theme-gradient": "linear-gradient(to right, #f97316, #ec4899, #9333ea)",
+        "--theme-darkest": "#9333ea",
+        "--theme-second-darkest": "#ec4899",
+        "--theme-lightest": "#f97316",
+        "--theme-darkest-contrast": "#ffffff",
+        "--theme-second-darkest-contrast": "#ffffff",
       } as React.CSSProperties}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
