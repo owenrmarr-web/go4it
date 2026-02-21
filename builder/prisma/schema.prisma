@@ -223,6 +223,7 @@ model OrgApp {
   orgIterationCount          Int          @default(0) // current Y (org customization count)
   orgSourceDir               String?      // org's forked source dir (null = using original)
   stripeConnectAccountId     String?      // Stripe Connect Express account for end-customer payments
+  authSecret                 String?      // AUTH_SECRET of deployed Fly app (for HMAC-signed team-sync)
 
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   app          App            @relation(fields: [appId], references: [id], onDelete: Cascade)
