@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+GO4IT-Overview.*
 
 # debug
 npm-debug.log*

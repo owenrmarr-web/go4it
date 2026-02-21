@@ -13,8 +13,8 @@ async function main() {
   // Always provision GO4IT admin account
   await prisma.user.upsert({
     where: { email: "admin@go4it.live" },
-    update: { name: "GO4IT Admin", password: adminHash },
-    create: { email: "admin@go4it.live", name: "GO4IT Admin", password: adminHash },
+    update: { name: "GO4IT Admin", password: adminHash, role: "admin" },
+    create: { email: "admin@go4it.live", name: "GO4IT Admin", password: adminHash, role: "admin" },
   });
   console.log("Provisioned: GO4IT Admin (admin@go4it.live)");
 

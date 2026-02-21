@@ -402,13 +402,135 @@ export async function GET() {
   const provisionPath2 = path.join(sourceDir, "prisma", "provision-users.ts");
   if (existsSync(provisionPath2)) {
     let provision = readFileSync(provisionPath2, "utf-8");
+    let provisionPatched = false;
     if (provision.includes('"go4it2026"')) {
       provision = provision.replace(
         /const defaultPassword = await bcrypt\.hash\("go4it2026", 12\);/,
         `const adminPassword = process.env.GO4IT_ADMIN_PASSWORD;\n  const defaultPassword = adminPassword\n    ? await bcrypt.hash(adminPassword, 12)\n    : await bcrypt.hash(crypto.randomUUID(), 12);`
       );
-      writeFileSync(provisionPath2, provision);
+      provisionPatched = true;
       console.log("[TemplateUpgrade] Updated provision-users.ts to use GO4IT_ADMIN_PASSWORD env var");
+    }
+    // Ensure admin user gets role: "admin"
+    if (!provision.includes('role: "admin"') && provision.includes("admin@go4it.live")) {
+      provision = provision.replace(
+        /create:\s*\{[^}]*email:\s*"admin@go4it\.live"[^}]*\}/,
+        (match) => match.includes("role") ? match : match.replace("}", ', role: "admin" }')
+      );
+      provision = provision.replace(
+        /update:\s*\{[^}]*name:\s*"GO4IT Admin"[^}]*\}/,
+        (match) => match.includes("role") ? match : match.replace("}", ', role: "admin" }')
+      );
+      provisionPatched = true;
+      console.log("[TemplateUpgrade] Added role: admin to provision-users.ts admin upsert");
+    }
+    if (provisionPatched) writeFileSync(provisionPath2, provision);
+  }
+
+  // --- 5. Add team-sync API route if missing ---
+  const teamSyncDir = path.join(sourceDir, "src", "app", "api", "team-sync");
+  const teamSyncPath = path.join(teamSyncDir, "route.ts");
+  if (!existsSync(teamSyncPath)) {
+    mkdirSync(teamSyncDir, { recursive: true });
+    writeFileSync(
+      teamSyncPath,
+      `import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import crypto from "crypto";
+import bcrypt from "bcryptjs";
+
+function verifySignature(payload: string, signature: string, secret: string): boolean {
+  const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+  if (expected.length !== signature.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+}
+
+export async function POST(request: Request) {
+  const authSecret = process.env.AUTH_SECRET;
+  if (!authSecret) {
+    return NextResponse.json({ error: "Not configured" }, { status: 500 });
+  }
+
+  const signature = request.headers.get("x-go4it-signature");
+  if (!signature) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.text();
+  if (!verifySignature(body, signature, authSecret)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
+
+  const { members } = JSON.parse(body) as {
+    members: { email: string; name: string; assigned: boolean; passwordHash?: string; role?: string }[];
+  };
+
+  if (!Array.isArray(members)) {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+
+  const results: string[] = [];
+  for (const member of members) {
+    const isAssigned = member.assigned !== false;
+    const password = isAssigned
+      ? (member.passwordHash || await bcrypt.hash(crypto.randomUUID(), 12))
+      : await bcrypt.hash(crypto.randomUUID(), 12);
+    const role = member.role || "member";
+
+    await prisma.user.upsert({
+      where: { email: member.email },
+      update: { name: member.name, isAssigned, ...(member.passwordHash ? { password } : {}) },
+      create: { email: member.email, name: member.name, password, isAssigned, role },
+    });
+    results.push(\`\${member.email}: \${isAssigned ? "assigned" : "unassigned"}\`);
+  }
+
+  return NextResponse.json({ ok: true, results });
+}
+`
+    );
+    console.log("[TemplateUpgrade] Added team-sync API route");
+  }
+
+  // --- 6. Patch auth.config.ts: add isAssigned session enforcement ---
+  if (existsSync(authConfigPath)) {
+    let authConfig = readFileSync(authConfigPath, "utf-8");
+
+    if (!authConfig.includes("isBlocked")) {
+      // Add isAssigned re-check in jwt callback (blocks removed users mid-session)
+      authConfig = authConfig.replace(
+        /return token;\s*\},\s*async session/,
+        `// Re-check isAssigned on every token verification — blocks removed users mid-session
+      if (token.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { isAssigned: true },
+          });
+          if (dbUser && !dbUser.isAssigned) {
+            token.isBlocked = true;
+          } else {
+            token.isBlocked = false;
+          }
+        } catch { /* fail open if DB unreachable */ }
+      }
+      return token;
+    },
+    async session`
+      );
+
+      // Add blocking check in session callback
+      authConfig = authConfig.replace(
+        "session.user.id = token.id as string;",
+        `if (token.isBlocked) {
+          session.user = undefined as any;
+          return session;
+        }
+        session.user.id = token.id as string;`
+      );
+
+      writeFileSync(authConfigPath, authConfig);
+      console.log("[TemplateUpgrade] Added isAssigned session enforcement to auth.config.ts");
     }
   }
 
@@ -590,8 +712,8 @@ async function main() {
   // Always provision GO4IT admin account
   await prisma.user.upsert({
     where: { email: "admin@go4it.live" },
-    update: { name: "GO4IT Admin", password: adminHash },
-    create: { email: "admin@go4it.live", name: "GO4IT Admin", password: adminHash },
+    update: { name: "GO4IT Admin", password: adminHash, role: "admin" },
+    create: { email: "admin@go4it.live", name: "GO4IT Admin", password: adminHash, role: "admin" },
   });
   console.log("Provisioned: GO4IT Admin (admin@go4it.live)");
 
@@ -780,6 +902,7 @@ export default defineConfig({
         status: "RUNNING",
         flyAppId: flyAppName,
         flyUrl,
+        authSecret,
         subdomain: subdomain || undefined,
         deployedAt: new Date(),
         deployedMarketplaceVersion: marketplaceVersion,
@@ -899,6 +1022,7 @@ export async function launchApp(
       data: {
         status: "RUNNING",
         flyUrl,
+        authSecret,
         subdomain: subdomain || undefined,
         deployedAt: new Date(),
       },

@@ -1,11 +1,16 @@
+import crypto from "crypto";
 import prisma from "@/lib/prisma";
 
 const BUILDER_URL = process.env.BUILDER_URL;
 const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
 
 /**
- * Sync team members to a running Fly.io app by updating GO4IT_TEAM_MEMBERS secret.
- * Called when OrgApp members change — no redeploy needed, just a secret update + restart.
+ * Sync team members to a running Fly.io app.
+ *
+ * Fast path: direct HTTP POST to the deployed app's /api/team-sync endpoint
+ *            (instant DB update, no restart needed).
+ * Slow path: update GO4IT_TEAM_MEMBERS secret via builder → machine restart
+ *            (fallback + ensures cold starts have the latest roster).
  */
 export async function syncTeamMembersToFly(orgAppId: string): Promise<void> {
   const orgApp = await prisma.orgApp.findUnique({
@@ -51,6 +56,36 @@ export async function syncTeamMembersToFly(orgAppId: string): Promise<void> {
         : {}),
     }));
 
+  // --- Fast path: direct HTTP to deployed app's /api/team-sync ---
+  if (orgApp.flyUrl && orgApp.authSecret) {
+    try {
+      const payload = JSON.stringify({ members: teamMembers });
+      const signature = crypto
+        .createHmac("sha256", orgApp.authSecret)
+        .update(payload)
+        .digest("hex");
+
+      const res = await fetch(`${orgApp.flyUrl}/api/team-sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-go4it-signature": signature,
+        },
+        body: payload,
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (res.ok) {
+        console.log(`[TeamSync] Direct sync succeeded for ${orgApp.flyAppId}`);
+      } else {
+        console.warn(`[TeamSync] Direct sync failed (${res.status}) for ${orgApp.flyAppId}, falling back to secrets`);
+      }
+    } catch (err) {
+      console.warn(`[TeamSync] Direct sync error for ${orgApp.flyAppId}:`, err);
+    }
+  }
+
+  // --- Slow path: update secrets via builder (always, as backup for cold starts) ---
   const secrets: Record<string, string> = {
     GO4IT_TEAM_MEMBERS: JSON.stringify(teamMembers),
   };
@@ -59,10 +94,12 @@ export async function syncTeamMembersToFly(orgAppId: string): Promise<void> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
 
-    await fetch(`${BUILDER_URL}/secrets/${orgApp.flyAppId}`, {
+    fetch(`${BUILDER_URL}/secrets/${orgApp.flyAppId}`, {
       method: "POST",
       headers,
       body: JSON.stringify({ secrets }),
+    }).catch((err) => {
+      console.error(`[TeamSync] Secrets fallback failed for ${orgApp.flyAppId}:`, err);
     });
   }
 }

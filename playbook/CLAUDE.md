@@ -38,6 +38,7 @@ Breaking any of these will cause build or deployment failures.
 | `Dockerfile` | Multi-stage production Docker build |
 | `prisma/provision-users.ts` | Team member provisioning (runs at deploy time) |
 | `src/app/api/access-requests/route.ts` | Access request API (seat upsell for unassigned members) |
+| `src/app/api/team-sync/route.ts` | Real-time team member sync (permission updates from platform) |
 
 ### Infrastructure Rules
 

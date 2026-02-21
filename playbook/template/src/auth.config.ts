@@ -41,10 +41,28 @@ export default {
         token.id = user.id;
         token.role = user.role;
       }
+      // Re-check isAssigned on every token verification — blocks removed users mid-session
+      if (token.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { isAssigned: true },
+          });
+          if (dbUser && !dbUser.isAssigned) {
+            token.isBlocked = true;
+          } else {
+            token.isBlocked = false;
+          }
+        } catch { /* fail open if DB unreachable */ }
+      }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
+        if (token.isBlocked) {
+          session.user = undefined as any;
+          return session;
+        }
         session.user.id = token.id as string;
         session.user.role = token.role as string;
       }
