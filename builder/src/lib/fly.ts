@@ -159,18 +159,34 @@ function generateStartScript(): string {
 set -e
 
 echo "=== GO4IT App Startup ==="
-
-# Ensure data directory is writable
 mkdir -p /data 2>/dev/null || true
 
-# Run prisma db push to create/update tables
-echo "Running database setup..."
-npx prisma db push --accept-data-loss 2>&1 || echo "Warning: prisma db push had issues"
+# --- Schema sync (skip if unchanged) ---
+SCHEMA_HASH=$(md5sum prisma/schema.prisma | cut -d' ' -f1)
+if [ ! -f "/data/.schema-$SCHEMA_HASH" ]; then
+  echo "Running database setup..."
+  npx prisma db push --accept-data-loss 2>&1 || echo "Warning: prisma db push had issues"
+  rm -f /data/.schema-* 2>/dev/null
+  touch "/data/.schema-$SCHEMA_HASH"
+else
+  echo "Schema unchanged, skipping db push."
+fi
 
-# Provision team members if env var is set
-if [ -n "$GO4IT_TEAM_MEMBERS" ] && [ -f "prisma/provision-users.ts" ]; then
-  echo "Provisioning team members..."
-  npx tsx prisma/provision-users.ts 2>&1 || echo "Warning: user provisioning had issues"
+# --- Team provisioning (skip if unchanged) ---
+if [ -n "$GO4IT_TEAM_MEMBERS" ]; then
+  TEAM_HASH=$(echo "$GO4IT_TEAM_MEMBERS" | md5sum | cut -d' ' -f1)
+  if [ ! -f "/data/.team-$TEAM_HASH" ]; then
+    echo "Provisioning team members..."
+    if [ -f "prisma/provision-users.js" ]; then
+      node prisma/provision-users.js 2>&1 || echo "Warning: user provisioning had issues"
+    elif [ -f "prisma/provision-users.ts" ]; then
+      npx tsx prisma/provision-users.ts 2>&1 || echo "Warning: user provisioning had issues"
+    fi
+    rm -f /data/.team-* 2>/dev/null
+    touch "/data/.team-$TEAM_HASH"
+  else
+    echo "Team unchanged, skipping provisioning."
+  fi
 fi
 
 echo "Starting application..."
@@ -197,6 +213,8 @@ COPY . .
 ENV DATABASE_URL="file:./build.db"
 RUN npx prisma db push --accept-data-loss 2>&1 || true
 RUN npm run build
+# Pre-compile provisioning script for fast startup
+RUN npx esbuild prisma/provision-users.ts --bundle --platform=node --outfile=prisma/provision-users.js --external:@prisma/client --external:bcryptjs --external:@prisma/adapter-libsql --external:@libsql/client 2>/dev/null || true
 
 FROM node:20-slim AS runner
 WORKDIR /app
@@ -273,8 +291,6 @@ function generatePreviewStartScript(): string {
 set -e
 
 echo "=== GO4IT App Startup ==="
-
-# Ensure data directory is writable
 mkdir -p /data 2>/dev/null || true
 
 if [ "$PREVIEW_MODE" = "true" ]; then
@@ -286,12 +302,18 @@ else
   # Production mode: fresh DB + real users
   rm -f /data/app.db
 
+  # --- Schema sync ---
   echo "Running database setup..."
   npx prisma db push --accept-data-loss 2>&1 || echo "Warning: prisma db push had issues"
 
-  if [ -n "$GO4IT_TEAM_MEMBERS" ] && [ -f "prisma/provision-users.ts" ]; then
+  # --- Team provisioning ---
+  if [ -n "$GO4IT_TEAM_MEMBERS" ]; then
     echo "Provisioning team members..."
-    npx tsx prisma/provision-users.ts 2>&1 || echo "Warning: user provisioning had issues"
+    if [ -f "prisma/provision-users.js" ]; then
+      node prisma/provision-users.js 2>&1 || echo "Warning: user provisioning had issues"
+    elif [ -f "prisma/provision-users.ts" ]; then
+      npx tsx prisma/provision-users.ts 2>&1 || echo "Warning: user provisioning had issues"
+    fi
   fi
 fi
 
@@ -446,6 +468,18 @@ export async function deployPreviewApp(
         );
       }
     }
+  }
+
+  // Pre-compile provision-users.ts for fast startup
+  const provisionTsPath = path.join(sourceDir, "prisma", "provision-users.ts");
+  if (existsSync(provisionTsPath)) {
+    try {
+      execSync(
+        "npx esbuild prisma/provision-users.ts --bundle --platform=node --outfile=prisma/provision-users.js --external:@prisma/client --external:bcryptjs --external:@prisma/adapter-libsql --external:@libsql/client",
+        { cwd: sourceDir, stdio: "pipe", timeout: 30000 }
+      );
+      console.log(`[Preview ${generationId}] Pre-compiled provision-users.js`);
+    } catch { /* non-fatal — start.sh falls back to tsx */ }
   }
 
   // Write preview deploy files
@@ -801,6 +835,16 @@ export async function POST(request: Request) {
 
       writeFileSync(authConfigPath, authConfig);
       console.log("[TemplateUpgrade] Added isAssigned session enforcement to auth.config.ts");
+    }
+  }
+
+  // --- 7. Rewrite start.sh with hash-based skip for fast cold starts ---
+  const startShPath = path.join(sourceDir, "start.sh");
+  if (existsSync(startShPath)) {
+    const startSh = readFileSync(startShPath, "utf-8");
+    if (!startSh.includes("schema unchanged")) {
+      writeFileSync(startShPath, generateStartScript());
+      console.log("[TemplateUpgrade] Rewrote start.sh with hash-based skip for fast cold starts");
     }
   }
 
