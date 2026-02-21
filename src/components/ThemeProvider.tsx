@@ -111,10 +111,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const minLum = ranked[0].lum;
     root.style.setProperty("--theme-gradient-contrast", minLum > 0.4 ? "#111827" : "#ffffff");
 
+    // For gradients, swap near-white colors to light gray for contrast
+    const gradientSafe = (hex: string) => getLuminance(hex) > 0.85 ? "#c9c9c9" : hex;
+    root.style.setProperty("--theme-primary-grad", gradientSafe(activeColors.primary));
+    root.style.setProperty("--theme-secondary-grad", gradientSafe(activeColors.secondary));
+    root.style.setProperty("--theme-accent-grad", gradientSafe(activeColors.accent));
+
     // Also set gradient
     root.style.setProperty(
       "--theme-gradient",
-      `linear-gradient(to right, ${activeColors.accent}, ${activeColors.secondary}, ${activeColors.primary})`
+      `linear-gradient(to right, ${gradientSafe(activeColors.accent)}, ${gradientSafe(activeColors.secondary)}, ${gradientSafe(activeColors.primary)})`
     );
   }, [colors]);
 

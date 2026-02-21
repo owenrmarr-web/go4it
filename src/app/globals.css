@@ -18,10 +18,13 @@
   --theme-lightest: #f97316;
   --theme-darkest-contrast: #ffffff;
   --theme-second-darkest-contrast: #ffffff;
+  --theme-primary-grad: #9333ea;
+  --theme-secondary-grad: #ec4899;
+  --theme-accent-grad: #f97316;
 }
 
 .gradient-brand {
-  background: linear-gradient(135deg, var(--theme-accent), var(--theme-secondary), var(--theme-primary));
+  background: linear-gradient(135deg, var(--theme-accent-grad), var(--theme-secondary-grad), var(--theme-primary-grad));
   color: var(--theme-gradient-contrast);
 }
 
@@ -70,7 +73,7 @@
 }
 
 .gradient-brand-text {
-  background: linear-gradient(to right, var(--theme-accent), var(--theme-secondary), var(--theme-primary));
+  background: linear-gradient(to right, var(--theme-accent-grad), var(--theme-secondary-grad), var(--theme-primary-grad));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

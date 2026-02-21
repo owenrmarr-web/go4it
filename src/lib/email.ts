@@ -33,7 +33,7 @@ export async function sendInviteEmail({
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb; padding: 40px 20px;">
           <div style="max-width: 480px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <div style="text-align: center; margin-bottom: 32px;">
-              <h1 style="font-size: 28px; font-weight: 800; background: linear-gradient(to right, #f97316, #ec4899, #9333ea); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">
+              <h1 style="display: inline-block; font-size: 28px; font-weight: 800; color: #ffffff; background: linear-gradient(135deg, #f97316, #ec4899, #9333ea); padding: 8px 24px; border-radius: 8px; margin: 0;">
                 GO4IT
               </h1>
             </div>
@@ -102,7 +102,7 @@ export async function sendVerificationEmail({
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb; padding: 40px 20px;">
           <div style="max-width: 480px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <div style="text-align: center; margin-bottom: 32px;">
-              <h1 style="font-size: 28px; font-weight: 800; background: linear-gradient(to right, #f97316, #ec4899, #9333ea); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">
+              <h1 style="display: inline-block; font-size: 28px; font-weight: 800; color: #ffffff; background: linear-gradient(135deg, #f97316, #ec4899, #9333ea); padding: 8px 24px; border-radius: 8px; margin: 0;">
                 GO4IT
               </h1>
             </div>
