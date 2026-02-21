@@ -85,7 +85,7 @@ export default function InvitePage({
         toast.success(`Welcome to ${data.organization.name}!`);
       }
 
-      router.push("/account");
+      router.push(`/account?org=${data.organization.slug}`);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to accept invitation";

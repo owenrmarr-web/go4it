@@ -307,16 +307,22 @@ GO4IT's first-party apps follow a modular "Go Suite" strategy. Each app owns a s
 
 | App | Domain | Owns | Status |
 |-----|--------|------|--------|
-| **GoCRM** | Relationships | Contacts, companies, interaction history (calls/emails/meetings/notes), relationship stages, tags/segmentation, tasks/follow-ups, lightweight deal pipeline | Building |
-| **GoSchedule** | Scheduling | Appointments, availability, bookings, calendar | Exists |
-| **GoInvoice** | Money | Invoices, payments, expenses, ledger entries, tax records | Planned |
+| **GoCRM** | Relationships | Contacts, companies, interaction history (calls/emails/meetings/notes), relationship stages, tags/segmentation, tasks/follow-ups, lightweight deal pipeline | Done |
+| **GoSchedule** | Scheduling | Appointments, availability, bookings, calendar (includes customer-facing booking page) | Done |
+| **GoProject** | Project management | Projects, tasks, milestones, assignments, progress tracking | Done |
+| **GoChat** | Messaging | Team messaging, channels, direct messages | Done |
+| **GoInvoice** | Money | Invoices, payments, expenses, ledger entries, tax records | Building |
 | **GoSales** | Sales performance | Advanced pipeline, forecasting, rep performance, commissions, quota tracking | Planned |
 
 ### Domain Boundaries
 
-- **CRM owns relationships** — who your customers are and every touchpoint with them. It does NOT own financial transactions, appointment scheduling, or sales analytics.
+- **CRM owns relationships** — who your customers are and every touchpoint with them. It does NOT own financial transactions, appointment scheduling, project management, or sales analytics.
 - **Lightweight deals in CRM** — the CRM includes a simple pipeline (Interested → Quoted → Committed → Won/Lost) to track which contacts have active opportunities and rough values. It does NOT include forecasting, weighted probabilities, or rep leaderboards — that's GoSales.
-- **Other apps own their domain** — GoSchedule owns booking logic, GoInvoice owns payment records, GoSales owns advanced sales tracking. The CRM surfaces their data via cross-app queries but doesn't duplicate it.
+- **Schedule owns booking** — GoSchedule owns services, availability, appointments, and the customer-facing booking page. The CRM surfaces appointment data via cross-app queries but doesn't duplicate it.
+- **Project owns work tracking** — GoProject owns projects, tasks, milestones, and assignments. The CRM can surface task counts per contact but doesn't manage projects.
+- **Chat owns messaging** — GoChat owns team channels, direct messages, and the AI coworker. Other apps can surface data into chat via the ai-query endpoint.
+- **Invoice owns money** — GoInvoice owns invoices, payments, expenses, and ledger entries. The CRM surfaces payment history per contact but doesn't manage financials.
+- **Other apps own their domain** — GoSales owns advanced sales tracking. Each app surfaces its data via cross-app queries but doesn't duplicate it.
 
 ### Cross-App Data Flow
 

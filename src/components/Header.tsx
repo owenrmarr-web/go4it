@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useGeneration } from "./GenerationContext";
+import { useActiveOrg } from "@/contexts/ActiveOrgContext";
 
 interface UserProfile {
   companyName: string | null;
@@ -24,6 +25,7 @@ export default function Header() {
   const isAdmin = session?.user?.isAdmin;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const gen = useGeneration();
+  const { activeOrg } = useActiveOrg();
 
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -162,17 +164,19 @@ export default function Header() {
               )}
             </Link>
           )}
-          {session && profile?.logo && (
+          {session && (activeOrg?.logo || profile?.logo) && (
             <img
-              src={profile.logo}
+              src={(activeOrg?.logo || profile?.logo)!}
               alt="Company logo"
               className="h-10 w-10 rounded-lg object-contain border border-gray-200 hidden sm:block"
             />
           )}
-          {session && profile?.companyName && (
-            <span className="text-sm font-medium text-gray-500 hidden md:inline max-w-52 truncate">
-              {profile.companyName}
-            </span>
+          {session && (activeOrg?.name || profile?.companyName) && (
+            <Link href="/account" className="hidden md:inline">
+              <span className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors max-w-52 truncate">
+                {activeOrg?.name || profile?.companyName}
+              </span>
+            </Link>
           )}
           <Link href={session ? "/account" : "/auth"}>
             <button className="gradient-brand px-4 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-sm text-sm md:text-base md:px-5">

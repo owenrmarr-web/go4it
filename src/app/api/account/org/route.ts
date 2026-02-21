@@ -2,45 +2,26 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Find the org where this user is a member (prefer OWNER, fall back to any role)
-  let membership = await prisma.organizationMember.findFirst({
-    where: { userId: session.user.id, role: "OWNER" },
+const orgInclude = {
+  organization: {
     include: {
-      organization: {
+      apps: {
         include: {
-          apps: {
-            include: {
-              app: {
+          app: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              icon: true,
+              category: true,
+              generatedApp: {
                 select: {
                   id: true,
-                  title: true,
-                  description: true,
-                  icon: true,
-                  category: true,
-                  generatedApp: {
-                    select: {
-                      id: true,
-                      marketplaceVersion: true,
-                      createdById: true,
-                    },
-                  },
-                },
-              },
-              members: {
-                include: {
-                  user: {
-                    select: { id: true, name: true, email: true, image: true },
-                  },
+                  marketplaceVersion: true,
+                  createdById: true,
                 },
               },
             },
-            orderBy: { addedAt: "desc" },
           },
           members: {
             include: {
@@ -48,68 +29,54 @@ export async function GET() {
                 select: { id: true, name: true, email: true, image: true },
               },
             },
-            orderBy: { joinedAt: "asc" },
-          },
-          invitations: {
-            where: { status: "PENDING", expiresAt: { gt: new Date() } },
-            orderBy: { createdAt: "desc" },
           },
         },
+        orderBy: { addedAt: "desc" as const },
+      },
+      members: {
+        include: {
+          user: {
+            select: { id: true, name: true, email: true, image: true },
+          },
+        },
+        orderBy: { joinedAt: "asc" as const },
+      },
+      invitations: {
+        where: { status: "PENDING" as const, expiresAt: { gt: new Date() } },
+        orderBy: { createdAt: "desc" as const },
       },
     },
-  });
+  },
+} as const;
 
-  // Fall back to any membership (ADMIN or MEMBER)
-  if (!membership) {
+export async function GET(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const slug = new URL(request.url).searchParams.get("slug");
+
+  let membership;
+
+  if (slug) {
+    // Targeted lookup by org slug
     membership = await prisma.organizationMember.findFirst({
-      where: { userId: session.user.id },
-      include: {
-        organization: {
-          include: {
-            apps: {
-              include: {
-                app: {
-                  select: {
-                    id: true,
-                    title: true,
-                    description: true,
-                    icon: true,
-                    category: true,
-                    generatedApp: {
-                      select: {
-                        id: true,
-                        marketplaceVersion: true,
-                        createdById: true,
-                      },
-                    },
-                  },
-                },
-                members: {
-                  include: {
-                    user: {
-                      select: { id: true, name: true, email: true, image: true },
-                    },
-                  },
-                },
-              },
-              orderBy: { addedAt: "desc" },
-            },
-            members: {
-              include: {
-                user: {
-                  select: { id: true, name: true, email: true, image: true },
-                },
-              },
-              orderBy: { joinedAt: "asc" },
-            },
-            invitations: {
-              where: { status: "PENDING", expiresAt: { gt: new Date() } },
-              orderBy: { createdAt: "desc" },
-            },
-          },
-        },
-      },
+      where: { userId: session.user.id, organization: { slug } },
+      include: orgInclude,
     });
+  } else {
+    // Default: prefer OWNER, fall back to any role
+    membership = await prisma.organizationMember.findFirst({
+      where: { userId: session.user.id, role: "OWNER" },
+      include: orgInclude,
+    });
+    if (!membership) {
+      membership = await prisma.organizationMember.findFirst({
+        where: { userId: session.user.id },
+        include: orgInclude,
+      });
+    }
   }
 
   if (!membership) {
@@ -159,7 +126,6 @@ export async function GET() {
           userId: m.userId,
           user: m.user,
         })),
-        // Version info
         deployedVersion: deployedX != null ? `V${deployedX}.${deployedY ?? 0}` : null,
         latestVersion: `V${latestX}.${latestY}`,
         needsUpdate: !!needsUpdate,

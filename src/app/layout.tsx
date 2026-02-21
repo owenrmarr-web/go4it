@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import ClientSessionProvider from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { GenerationProvider } from "@/components/GenerationContext";
+import { ActiveOrgProvider } from "@/contexts/ActiveOrgContext";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -46,9 +47,11 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className="font-sans bg-gray-50 min-h-screen">
         <ClientSessionProvider>
-          <GenerationProvider>
-            <ThemeProvider>{children}</ThemeProvider>
-          </GenerationProvider>
+          <ActiveOrgProvider>
+            <GenerationProvider>
+              <ThemeProvider>{children}</ThemeProvider>
+            </GenerationProvider>
+          </ActiveOrgProvider>
         </ClientSessionProvider>
         <Toaster position="bottom-left" richColors />
       </body>

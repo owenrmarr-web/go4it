@@ -1,15 +1,16 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import AppCard, { type UserOrg } from "@/components/AppCard";
 import { useInteractions } from "@/hooks/useInteractions";
 import type { App } from "@/types";
 import { extractColorsFromImage } from "@/lib/colorExtractor";
+import { useActiveOrg } from "@/contexts/ActiveOrgContext";
 
 interface OrgData {
   id: string;
@@ -114,9 +115,40 @@ const ROLE_COLORS: Record<string, string> = {
   MEMBER: "bg-gray-100 text-gray-700",
 };
 
-export default function AccountPage() {
+interface OrgSummary {
+  id: string;
+  name: string;
+  slug: string;
+  logo: string | null;
+  themeColors: { primary: string; secondary: string; accent: string } | null;
+  role: "OWNER" | "ADMIN" | "MEMBER";
+}
+
+export default function AccountPageWrapper() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50">
+          <Header />
+          <div className="flex justify-center pt-40">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
+          </div>
+        </div>
+      }
+    >
+      <AccountPage />
+    </Suspense>
+  );
+}
+
+function AccountPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { setActiveOrg } = useActiveOrg();
+  const [allOrgs, setAllOrgs] = useState<OrgSummary[]>([]);
+  const [activeOrgSlug, setActiveOrgSlug] = useState<string | null>(null);
+  const activeOrgSlugRef = useRef<string | null>(null);
   const [allApps, setAllApps] = useState<App[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
   const [org, setOrg] = useState<OrgData | null>(null);
@@ -176,35 +208,101 @@ export default function AccountPage() {
   const brandingFileRef = useRef<HTMLInputElement>(null);
   const brandingCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // For AppCard — build a UserOrg array from the single org
+  // For AppCard — build a UserOrg array from all orgs (active org has appIds populated)
   const orgs: UserOrg[] = useMemo(() => {
-    if (!org) return [];
-    return [
-      {
-        id: org.id,
-        name: org.name,
-        slug: org.slug,
-        role: userRole || "OWNER",
-        appIds: orgApps.map((a) => a.appId),
-      },
-    ];
-  }, [org, orgApps, userRole]);
+    if (allOrgs.length === 0 && org) {
+      // Fallback for initial load before allOrgs fetched
+      return [{ id: org.id, name: org.name, slug: org.slug, role: userRole || "OWNER", appIds: orgApps.map((a) => a.appId) }];
+    }
+    return allOrgs.map((o) => ({
+      id: o.id,
+      name: o.name,
+      slug: o.slug,
+      role: o.role,
+      appIds: o.slug === activeOrgSlug ? orgApps.map((a) => a.appId) : [],
+    }));
+  }, [allOrgs, org, orgApps, userRole, activeOrgSlug]);
 
-  const fetchOrgData = useCallback(async () => {
+  const fetchOrgData = useCallback(async (slug?: string) => {
     try {
-      const res = await fetch("/api/account/org");
+      const target = slug || activeOrgSlugRef.current;
+      const url = target ? `/api/account/org?slug=${encodeURIComponent(target)}` : "/api/account/org";
+      const res = await fetch(url);
       const data = await res.json();
       setOrg(data.org || null);
       setOrgApps(data.apps || []);
       setMembers(data.members || []);
       setInvitations(data.invitations || []);
       setUserRole(data.role || null);
+      // Sync branding state from this org's data
+      if (data.org?.logo) setBrandingLogo(data.org.logo);
+      if (data.org?.themeColors) setBrandingColors(data.org.themeColors);
     } catch {
       // silent
     } finally {
       setOrgLoading(false);
     }
   }, []);
+
+  // Apply org theme colors to CSS variables (mirrors ThemeProvider logic)
+  const applyOrgTheme = useCallback((themeColors: { primary: string; secondary: string; accent: string } | null) => {
+    const root = document.documentElement;
+    if (!themeColors) return; // Leave current theme if org has no custom theme
+
+    const getLuminance = (hex: string) => {
+      const h = hex.replace("#", "");
+      const r = parseInt(h.substring(0, 2), 16) / 255;
+      const g = parseInt(h.substring(2, 4), 16) / 255;
+      const b = parseInt(h.substring(4, 6), 16) / 255;
+      const toLinear = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+      return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    };
+    const getContrast = (hex: string) => getLuminance(hex) > 0.4 ? "#111827" : "#ffffff";
+    const gradientSafe = (hex: string) => getLuminance(hex) > 0.85 ? "#c9c9c9" : hex;
+
+    root.style.setProperty("--theme-primary", themeColors.primary);
+    root.style.setProperty("--theme-secondary", themeColors.secondary);
+    root.style.setProperty("--theme-accent", themeColors.accent);
+    root.style.setProperty("--theme-primary-contrast", getContrast(themeColors.primary));
+    root.style.setProperty("--theme-secondary-contrast", getContrast(themeColors.secondary));
+    root.style.setProperty("--theme-accent-contrast", getContrast(themeColors.accent));
+
+    const ranked = [
+      { hex: themeColors.primary, lum: getLuminance(themeColors.primary) },
+      { hex: themeColors.secondary, lum: getLuminance(themeColors.secondary) },
+      { hex: themeColors.accent, lum: getLuminance(themeColors.accent) },
+    ].sort((a, b) => a.lum - b.lum);
+    root.style.setProperty("--theme-darkest", ranked[0].hex);
+    root.style.setProperty("--theme-second-darkest", ranked[1].hex);
+    root.style.setProperty("--theme-lightest", ranked[2].hex);
+    root.style.setProperty("--theme-darkest-contrast", getContrast(ranked[0].hex));
+    root.style.setProperty("--theme-second-darkest-contrast", getContrast(ranked[1].hex));
+    root.style.setProperty("--theme-gradient-contrast", ranked[0].lum > 0.4 ? "#111827" : "#ffffff");
+    root.style.setProperty("--theme-primary-grad", gradientSafe(themeColors.primary));
+    root.style.setProperty("--theme-secondary-grad", gradientSafe(themeColors.secondary));
+    root.style.setProperty("--theme-accent-grad", gradientSafe(themeColors.accent));
+    root.style.setProperty("--theme-gradient", `linear-gradient(to right, ${gradientSafe(themeColors.accent)}, ${gradientSafe(themeColors.secondary)}, ${gradientSafe(themeColors.primary)})`);
+  }, []);
+
+  const handleOrgSwitch = useCallback(async (slug: string) => {
+    if (slug === activeOrgSlug) return;
+    setActiveOrgSlug(slug);
+    activeOrgSlugRef.current = slug;
+    setOrgLoading(true);
+    setConfiguringAppId(null);
+
+    // Apply theme colors from allOrgs immediately (before fetch completes)
+    const targetOrg = allOrgs.find((o) => o.slug === slug);
+    if (targetOrg) {
+      setActiveOrg({ name: targetOrg.name, slug: targetOrg.slug, logo: targetOrg.logo });
+      if (targetOrg.themeColors) applyOrgTheme(targetOrg.themeColors);
+    }
+
+    // Update URL without scroll
+    router.replace(`/account?org=${encodeURIComponent(slug)}`, { scroll: false });
+
+    await fetchOrgData(slug);
+  }, [activeOrgSlug, allOrgs, setActiveOrg, applyOrgTheme, router, fetchOrgData]);
 
   useEffect(() => {
     fetch("/api/apps")
@@ -215,7 +313,26 @@ export default function AccountPage() {
       })
       .catch(() => setAppsLoading(false));
 
-    fetchOrgData();
+    // Fetch all orgs, then load detail for the active one
+    fetch("/api/account/orgs")
+      .then((r) => r.json())
+      .then((orgList: OrgSummary[]) => {
+        setAllOrgs(orgList);
+        const urlSlug = searchParams.get("org");
+        const target = urlSlug
+          ? orgList.find((o) => o.slug === urlSlug) || orgList[0]
+          : orgList[0];
+        if (target) {
+          setActiveOrgSlug(target.slug);
+          activeOrgSlugRef.current = target.slug;
+          setActiveOrg({ name: target.name, slug: target.slug, logo: target.logo });
+          if (target.themeColors) applyOrgTheme(target.themeColors);
+          fetchOrgData(target.slug);
+        } else {
+          fetchOrgData();
+        }
+      })
+      .catch(() => fetchOrgData());
 
     fetch("/api/account/created-apps")
       .then((r) => r.json())
@@ -225,19 +342,18 @@ export default function AccountPage() {
       })
       .catch(() => setCreatedAppsLoading(false));
 
-    // Load existing branding + profile from profile
+    // Load existing profile data
     fetch("/api/account/profile")
       .then((r) => r.json())
       .then((data) => {
-        if (data.logo) setBrandingLogo(data.logo);
-        if (data.themeColors) setBrandingColors(data.themeColors);
         if (data.name) setProfileName(data.name);
         if (data.image) setProfileImage(data.image);
         if (data.profileColor) setProfileColor(data.profileColor);
         if (data.profileEmoji !== undefined) setProfileEmoji(data.profileEmoji);
       })
       .catch(() => {});
-  }, [fetchOrgData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loading = appsLoading || interactionsLoading || orgLoading || createdAppsLoading;
 
@@ -725,6 +841,8 @@ export default function AccountPage() {
       }
       toast.success("Branding updated!");
       fetchOrgData();
+      // Refresh org list so tabs reflect updated logo/colors
+      fetch("/api/account/orgs").then((r) => r.json()).then((list: OrgSummary[]) => setAllOrgs(list)).catch(() => {});
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to save branding";
       toast.error(message);
@@ -974,9 +1092,33 @@ export default function AccountPage() {
               </div>
             </section>
 
-            {/* ── My Organization's Apps ────────────────────── */}
+            {/* ── Organization Apps ────────────────────── */}
             <section className="mb-12">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">My Organization&apos;s Apps</h2>
+              {/* Org tabs (only shown when user has 2+ orgs) */}
+              {allOrgs.length > 1 && (
+                <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 overflow-x-auto">
+                  {allOrgs.map((o) => (
+                    <button
+                      key={o.slug}
+                      onClick={() => handleOrgSwitch(o.slug)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                        activeOrgSlug === o.slug
+                          ? "bg-white shadow-sm text-gray-900"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      {o.logo && (
+                        <img src={o.logo} alt="" className="w-5 h-5 rounded object-contain" />
+                      )}
+                      {o.name}
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${ROLE_COLORS[o.role]}`}>
+                        {ROLE_LABELS[o.role]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <h2 className="text-xl font-bold text-gray-800 mb-4">{org?.name ? `${org.name} Apps` : "My Organization\u2019s Apps"}</h2>
 
               {/* Team Portal URL */}
               {org && <PortalBanner slug={org.slug} />}
