@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import { syncUserApps } from "@/lib/team-sync";
 
 export async function POST(request: Request) {
   try {
@@ -41,13 +42,17 @@ export async function POST(request: Request) {
 
     const hashed = await bcrypt.hash(password, 12);
 
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { email: verificationToken.identifier },
       data: { password: hashed },
+      select: { id: true },
     });
 
     // Delete used token (single-use)
     await prisma.verificationToken.delete({ where: { token } });
+
+    // Sync new password hash to all deployed apps this user has access to
+    syncUserApps(updatedUser.id).catch(() => {});
 
     return NextResponse.json({ success: true });
   } catch (error) {

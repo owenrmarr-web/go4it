@@ -116,16 +116,10 @@ export async function POST(request: Request, context: RouteContext) {
 
   console.log(`[Deploy Route] orgApp.status=${orgApp.status}, orgApp.flyAppId=${orgApp.flyAppId}, isPreviewLaunch=${isPreviewLaunch}, existingFlyAppId=${existingFlyAppId}`);
 
-  // Look up the org owner's password hash so they can log in with their platform credentials
-  const orgOwner = await prisma.organizationMember.findFirst({
-    where: { organizationId: organization.id, role: "OWNER" },
-    include: { user: { select: { email: true, password: true } } },
-  });
-
-  // Fetch ALL org members — not just those assigned to this app
+  // Fetch ALL org members with password hashes so they can log in to deployed apps
   const allOrgMembers = await prisma.organizationMember.findMany({
     where: { organizationId: organization.id },
-    include: { user: { select: { name: true, email: true } } },
+    include: { user: { select: { name: true, email: true, password: true } } },
   });
 
   // Build set of assigned emails (those with OrgAppMember records for this app)
@@ -140,8 +134,8 @@ export async function POST(request: Request, context: RouteContext) {
       name: m.user.name || m.user.email!,
       email: m.user.email!,
       assigned: assignedEmails.has(m.user.email!),
-      ...(orgOwner?.user.email === m.user.email && orgOwner.user.password && assignedEmails.has(m.user.email!)
-        ? { passwordHash: orgOwner.user.password }
+      ...(m.user.password && assignedEmails.has(m.user.email!)
+        ? { passwordHash: m.user.password }
         : {}),
     }));
 

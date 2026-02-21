@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { syncUserApps } from "@/lib/team-sync";
 
 export async function PUT(request: Request) {
   const session = await auth();
@@ -51,6 +52,9 @@ export async function PUT(request: Request) {
       where: { id: session.user.id },
       data: { password: hashed },
     });
+
+    // Sync new password hash to all deployed apps this user has access to
+    syncUserApps(session.user.id).catch(() => {});
 
     return NextResponse.json({ success: true });
   } catch (error) {

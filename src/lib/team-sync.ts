@@ -39,20 +39,16 @@ export async function syncTeamMembersToFly(orgAppId: string): Promise<void> {
     orgApp.members.map((m) => m.user.id)
   );
 
-  // Find org owner for password hash passthrough
-  const ownerMember = orgApp.organization.members.find((m) => m.role === "OWNER");
-  const ownerEmail = ownerMember?.user.email;
-  const ownerPasswordHash = ownerMember?.user.password;
-
   // Full org roster with assigned flag — drives seat expansion in deployed apps
+  // Include password hashes for all assigned members so they can sign in with platform credentials
   const teamMembers = orgApp.organization.members
     .filter((m) => m.user.email)
     .map((m) => ({
       name: m.user.name || m.user.email!,
       email: m.user.email!,
       assigned: assignedUserIds.has(m.user.id),
-      ...(m.user.email === ownerEmail && ownerPasswordHash && assignedUserIds.has(m.user.id)
-        ? { passwordHash: ownerPasswordHash }
+      ...(m.user.password && assignedUserIds.has(m.user.id)
+        ? { passwordHash: m.user.password }
         : {}),
     }));
 
@@ -101,6 +97,25 @@ export async function syncTeamMembersToFly(orgAppId: string): Promise<void> {
     }).catch((err) => {
       console.error(`[TeamSync] Secrets fallback failed for ${orgApp.flyAppId}:`, err);
     });
+  }
+}
+
+/**
+ * Sync all deployed apps a user has access to (e.g. after password change).
+ * Finds every OrgAppMember for this user and syncs each running app.
+ */
+export async function syncUserApps(userId: string): Promise<void> {
+  const appMembers = await prisma.orgAppMember.findMany({
+    where: { userId },
+    include: { orgApp: { select: { id: true, status: true } } },
+  });
+
+  for (const { orgApp } of appMembers) {
+    if (orgApp.status === "RUNNING" || orgApp.status === "PREVIEW") {
+      syncTeamMembersToFly(orgApp.id).catch((err) => {
+        console.error(`[TeamSync] Password sync failed for ${orgApp.id}:`, err);
+      });
+    }
   }
 }
 
