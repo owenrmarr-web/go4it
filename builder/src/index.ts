@@ -13,7 +13,7 @@ import cleanupRoute from "./routes/cleanup.js";
 import secretsRoute from "./routes/secrets.js";
 import deployPreviewRoute from "./routes/deploy-preview.js";
 import machinesRoute from "./routes/machines.js";
-import { cleanupExpiredPreviews, cleanupStaleWorkspaces } from "./lib/cleanup.js";
+import { cleanupExpiredPreviews, cleanupOrphanedPreviews, cleanupStaleWorkspaces } from "./lib/cleanup.js";
 
 const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -116,9 +116,10 @@ async function start() {
     await app.listen({ port: PORT, host: "0.0.0.0" });
     console.log(`GO4IT Builder Service listening on port ${PORT}`);
 
-    // Run cleanup every hour for expired preview machines and stale workspaces
+    // Run cleanup every hour for expired/orphaned preview machines and stale workspaces
     setInterval(async () => {
       await cleanupExpiredPreviews();
+      await cleanupOrphanedPreviews();
       await cleanupStaleWorkspaces();
     }, 60 * 60 * 1000);
     console.log("Preview + workspace cleanup scheduled (hourly)");

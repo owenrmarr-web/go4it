@@ -11,7 +11,7 @@ import {
 } from "fs";
 import path from "path";
 import prisma from "./prisma.js";
-import { preCreateFlyInfra, deployPreviewApp } from "./fly.js";
+import { preCreateFlyInfra, deployPreviewApp, destroyApp } from "./fly.js";
 import { captureScreenshot } from "./screenshot.js";
 
 export type GenerationStage =
@@ -77,6 +77,22 @@ export async function cancelGeneration(generationId: string): Promise<boolean> {
       where: { id: generationId },
       data: { status: "FAILED", currentStage: "failed", error: "Cancelled by user" },
     });
+
+    // Destroy any pre-created Fly preview app to avoid orphaned machines
+    const gen = await prisma.generatedApp.findUnique({
+      where: { id: generationId },
+      select: { previewFlyAppId: true },
+    });
+    if (gen?.previewFlyAppId) {
+      console.log(`[Cancel] Destroying preview ${gen.previewFlyAppId} for ${generationId}`);
+      destroyApp(gen.previewFlyAppId).catch((err) =>
+        console.error(`[Cancel] Failed to destroy preview: ${err}`)
+      );
+      await prisma.generatedApp.update({
+        where: { id: generationId },
+        data: { previewFlyAppId: null, previewFlyUrl: null, previewExpiresAt: null },
+      });
+    }
   } catch {
     // Record may not exist yet due to replication delay
   }
@@ -602,6 +618,18 @@ export async function startGeneration(
           error: errorMsg.slice(0, 1000),
         },
       });
+
+      // Destroy any pre-created Fly preview app on failure
+      if (flyInfraPromise) {
+        flyInfraPromise.then((flyAppName) => {
+          if (flyAppName) {
+            console.log(`[Generator ${generationId}] Destroying preview ${flyAppName} after failure`);
+            destroyApp(flyAppName).catch((err) =>
+              console.error(`[Generator ${generationId}] Failed to destroy preview on failure: ${err}`)
+            );
+          }
+        });
+      }
     }
   );
 }

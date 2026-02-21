@@ -161,13 +161,15 @@ model AppIteration {
 // ============================================
 
 model Organization {
-  id             String   @id @default(cuid())
-  name           String
-  slug           String   @unique // e.g., "zenith" for zenith.go4it.live
-  logo           String?  // Base64 for now, will move to object storage later
-  themeColors    String?  // JSON: { primary, secondary, accent }
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique // e.g., "zenith" for zenith.go4it.live
+  logo                 String?  // Base64 for now, will move to object storage later
+  themeColors          String?  // JSON: { primary, secondary, accent }
+  stripeCustomerId     String?  // Stripe Customer ID (cus_xxx)
+  stripeSubscriptionId String?  // Stripe Subscription ID (sub_xxx)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   members       OrganizationMember[]
   invitations   Invitation[]
@@ -220,6 +222,7 @@ model OrgApp {
   deployedOrgVersion         Int?         // Y at time of deploy
   orgIterationCount          Int          @default(0) // current Y (org customization count)
   orgSourceDir               String?      // org's forked source dir (null = using original)
+  stripeConnectAccountId     String?      // Stripe Connect Express account for end-customer payments
 
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   app          App            @relation(fields: [appId], references: [id], onDelete: Cascade)

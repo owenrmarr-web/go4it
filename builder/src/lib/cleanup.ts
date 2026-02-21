@@ -80,6 +80,60 @@ export async function cleanupStaleWorkspaces(): Promise<void> {
 }
 
 /**
+ * Clean up preview Fly apps for failed/cancelled generations.
+ * Catches any that weren't destroyed at failure time (e.g. race conditions).
+ */
+export async function cleanupOrphanedPreviews(): Promise<void> {
+  try {
+    const orphans = await prisma.generatedApp.findMany({
+      where: {
+        status: "FAILED",
+        previewFlyAppId: { not: null },
+      },
+      select: { id: true, previewFlyAppId: true },
+    });
+
+    if (orphans.length === 0) return;
+
+    console.log(
+      `[Cleanup] Found ${orphans.length} orphaned preview(s) from failed generations`
+    );
+
+    for (const gen of orphans) {
+      try {
+        console.log(
+          `[Cleanup] Destroying orphaned preview ${gen.previewFlyAppId} for generation ${gen.id}`
+        );
+        await destroyApp(gen.previewFlyAppId!);
+
+        await prisma.generatedApp.update({
+          where: { id: gen.id },
+          data: {
+            previewFlyAppId: null,
+            previewFlyUrl: null,
+            previewExpiresAt: null,
+          },
+        });
+
+        console.log(
+          `[Cleanup] Orphaned preview ${gen.previewFlyAppId} destroyed`
+        );
+      } catch (err) {
+        console.error(
+          `[Cleanup] Failed to clean up orphaned preview ${gen.previewFlyAppId}:`,
+          err instanceof Error ? err.message : err
+        );
+      }
+    }
+  } catch (err) {
+    console.error(
+      "[Cleanup] Error running orphaned preview cleanup:",
+      err instanceof Error ? err.message : err
+    );
+  }
+}
+
+/**
  * Clean up expired preview deployments.
  * Destroys the Fly.io machine but preserves source code on the builder volume.
  * Users can re-generate a preview anytime.
