@@ -693,6 +693,222 @@ function FinancialModelSlide() {
   );
 }
 
+function ProductStrategySlide() {
+  const completed = [
+    { label: "Platform Foundation", desc: "Auth, database, hosting" },
+    { label: "AI App Generation", desc: "Claude Code CLI + builder" },
+    { label: "Marketplace Rollout", desc: "Browse, publish, discover" },
+    { label: "Organizations & Teams", desc: "Roles, invites, branding" },
+    { label: "App Deployments", desc: "One-click launch to Fly.io" },
+  ];
+  const current = [
+    { label: "Billing & Payments", desc: "Stripe subscriptions" },
+    { label: "Marketplace Depth", desc: "Expanding pre-built offerings" },
+  ];
+  const future = [
+    { label: "Cross-App Intelligence", desc: "Business insights multiplier" },
+    { label: "AI-Native Coworkers", desc: "Agentic AI integration" },
+    { label: "Generation Optimization", desc: "Fastest app generator in the world" },
+  ];
+
+  const userTranslations = [
+    { dev: "Platform Foundation", user: "Sign up, verify email, create org" },
+    { dev: "AI App Generation", user: "Describe an app in plain English, get it in 15 min" },
+    { dev: "Marketplace Rollout", user: "Browse a library of ready-made business tools" },
+    { dev: "Organizations & Teams", user: "Invite your team, assign roles" },
+    { dev: "App Deployments", user: "Launch apps to your custom subdomain" },
+    { dev: "Billing & Payments", user: "Subscribe and pay per-app, per-seat" },
+    { dev: "Marketplace Depth", user: "More polished apps ready to deploy instantly" },
+    { dev: "Cross-App Intelligence", user: "Ask questions across all your business data" },
+    { dev: "AI-Native Coworkers", user: "AI agents that work alongside your team" },
+    { dev: "Generation Optimization", user: "Apps built faster with higher quality" },
+  ];
+
+  // Gradient stops for the stepping stones
+  const allSteps = [...completed, ...current, ...future];
+  const getColor = (i: number) => {
+    const t = i / (allSteps.length - 1);
+    // orange → pink → purple
+    if (t < 0.5) {
+      const u = t * 2;
+      const r = Math.round(249 + (236 - 249) * u);
+      const g = Math.round(115 + (72 - 115) * u);
+      const b = Math.round(22 + (153 - 22) * u);
+      return `rgb(${r},${g},${b})`;
+    }
+    const u = (t - 0.5) * 2;
+    const r = Math.round(236 + (147 - 236) * u);
+    const g = Math.round(72 + (51 - 72) * u);
+    const b = Math.round(153 + (234 - 153) * u);
+    return `rgb(${r},${g},${b})`;
+  };
+
+  return (
+    <div className="flex flex-col h-full max-w-6xl mx-auto overflow-y-auto">
+      <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-6">Product Roadmap</h2>
+
+      {/* Desktop */}
+      <div className="hidden md:block">
+        {/* Development Track — staggered footsteps */}
+        <div className="mb-4">
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Development Milestones</div>
+          <div className="flex items-start justify-center" style={{ minHeight: 140 }}>
+            {allSteps.map((step, i) => {
+              const isCompleted = i < completed.length;
+              const isCurrent = i >= completed.length && i < completed.length + current.length;
+              const isHigh = i % 2 === 0;
+              return (
+                <div key={i} style={{ marginTop: isHigh ? 0 : 36 }}>
+                  <div className="flex flex-col items-center" style={{ width: 88 }}>
+                    <div
+                      className="rounded-full flex items-center justify-center text-white font-bold text-xs mb-1.5"
+                      style={{
+                        width: 44,
+                        height: 44,
+                        backgroundColor: isCompleted || isCurrent ? getColor(i) : "#e5e7eb",
+                        color: isCompleted || isCurrent ? "white" : "#9ca3af",
+                        border: isCurrent ? "3px solid white" : "none",
+                        boxShadow: isCurrent ? `0 0 0 2px ${getColor(i)}, 0 0 12px ${getColor(i)}40` : "none",
+                        opacity: !isCompleted && !isCurrent ? 0.6 : 1,
+                      }}
+                    >
+                      {isCompleted ? "\u2713" : isCurrent ? "\u2022\u2022" : (i + 1)}
+                    </div>
+                    <span
+                      className="text-xs font-semibold text-center leading-tight"
+                      style={{ color: isCompleted || isCurrent ? getColor(i) : "#9ca3af" }}
+                    >
+                      {step.label}
+                    </span>
+                    <span className="text-[10px] text-gray-400 text-center leading-tight mt-0.5">
+                      {step.desc}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Legend */}
+          <div className="flex justify-center gap-6 mt-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getColor(0) }} />
+              <span className="text-xs text-gray-500">Complete</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: getColor(6), backgroundColor: getColor(6), boxShadow: `0 0 0 1px white, 0 0 0 2px ${getColor(6)}` }} />
+              <span className="text-xs text-gray-500">In Progress</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-gray-200" />
+              <span className="text-xs text-gray-500">Planned</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-gray-200 my-3" />
+
+        {/* User Experience Track — staggered footsteps mirroring above */}
+        <div>
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">What Users Experience</div>
+          <div className="flex items-start justify-center" style={{ minHeight: 120 }}>
+            {userTranslations.map((row, i) => {
+              const isCompleted = i < completed.length;
+              const isCurrent = i >= completed.length && i < completed.length + current.length;
+              const isFuture = !isCompleted && !isCurrent;
+              const color = getColor(i);
+              const isHigh = i % 2 === 0;
+              return (
+                <div key={i} style={{ marginTop: isHigh ? 0 : 30 }}>
+                  <div className="flex flex-col items-center" style={{ width: 88 }}>
+                    <div
+                      className="rounded-full flex-shrink-0 mb-1.5"
+                      style={{
+                        width: isCurrent ? 34 : 28,
+                        height: isCurrent ? 34 : 28,
+                        backgroundColor: isFuture ? "#e5e7eb" : color,
+                        boxShadow: isCurrent ? `0 0 0 3px white, 0 0 0 5px ${color}, 0 0 14px ${color}50` : "none",
+                        opacity: isFuture ? 0.6 : 1,
+                      }}
+                    />
+                    <span className={`text-xs text-center leading-tight ${isFuture ? "text-gray-400 italic" : "text-gray-700"}`}>
+                      {row.user}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile */}
+      <div className="md:hidden">
+        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Development Track</div>
+        <div className="space-y-1 mb-4">
+          {allSteps.map((step, i) => {
+            const isCompleted = i < completed.length;
+            const isCurrent = i >= completed.length && i < completed.length + current.length;
+            return (
+              <div key={i} className="flex items-center gap-2">
+                <div className="flex flex-col items-center" style={{ width: 16 }}>
+                  <div
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{
+                      backgroundColor: isCompleted || isCurrent ? getColor(i) : "#e5e7eb",
+                      boxShadow: isCurrent ? `0 0 0 2px white, 0 0 0 3px ${getColor(i)}` : "none",
+                    }}
+                  />
+                  {i < allSteps.length - 1 && <div className="w-0.5 h-3" style={{ backgroundColor: isCompleted ? getColor(i) : "#e5e7eb" }} />}
+                </div>
+                <div className="flex-1">
+                  <span className="text-xs font-semibold" style={{ color: isCompleted || isCurrent ? getColor(i) : "#9ca3af" }}>
+                    {step.label}
+                  </span>
+                  <span className="text-[10px] text-gray-400 ml-1">{step.desc}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="border-t border-gray-200 my-3" />
+
+        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Development {"\u2192"} User Experience</div>
+        <div>
+          {userTranslations.map((row, i) => {
+            const isCompleted = i < completed.length;
+            const isCurrent = i >= completed.length && i < completed.length + current.length;
+            const isFuture = !isCompleted && !isCurrent;
+            const color = getColor(i);
+            const isLast = i === userTranslations.length - 1;
+            return (
+              <div key={i} className="flex gap-2">
+                <div className="flex flex-col items-center" style={{ width: 16 }}>
+                  <div
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0 z-10"
+                    style={{
+                      backgroundColor: isFuture ? "#e5e7eb" : color,
+                      boxShadow: isCurrent ? `0 0 0 2px white, 0 0 0 3px ${color}` : "none",
+                    }}
+                  />
+                  {!isLast && <div className="w-0.5 flex-1" style={{ backgroundColor: isFuture ? "#e5e7eb" : color, minHeight: 8 }} />}
+                </div>
+                <div className="pb-1.5">
+                  <span className="text-xs font-semibold" style={{ color: isFuture ? "#9ca3af" : color }}>{row.dev}</span>
+                  <span className="text-xs text-gray-400"> {"\u2192"} </span>
+                  <span className={`text-xs ${isFuture ? "text-gray-400 italic" : "text-gray-600"}`}>{row.user}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PricingComparisonSlide() {
   const competitors = [
     { category: "CRM", name: "HubSpot", perUser: 20, base: 0 },
@@ -1092,6 +1308,7 @@ const slides = [
       </div>
     ),
   },
+  { id: "strategy", content: null },
   // { id: "dcf", content: null },
   {
     id: "marketplace",
@@ -1325,7 +1542,9 @@ export default function DeckPage() {
     >
       {/* Slide */}
       <div className="h-full px-4 pt-6 pb-20 md:px-16 md:py-12 overflow-y-auto">
-        {slides[current].id === "market"
+        {slides[current].id === "strategy"
+          ? <ProductStrategySlide />
+          : slides[current].id === "market"
           ? <MarketSlide active={slides[current].id === "market"} />
           : slides[current].id === "financial"
             ? <FinancialModelSlide />
