@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 interface InviteDetails {
   email: string;
+  name: string | null;
   role: string;
   organization: {
     name: string;
@@ -14,6 +15,7 @@ interface InviteDetails {
     logo: string | null;
   };
   expiresAt: string;
+  hasAccount: boolean;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -55,9 +57,13 @@ export default function InvitePage({
 
   const handleAccept = async () => {
     if (!session) {
-      // Store token and redirect to auth
-      sessionStorage.setItem("pendingInvite", token);
-      router.push("/auth?redirect=/invite/" + token);
+      if (invite?.hasAccount) {
+        // Existing user — sign in then come back to accept
+        router.push("/auth?callbackUrl=/invite/" + token);
+      } else {
+        // New user — streamlined join page
+        router.push("/join/" + token);
+      }
       return;
     }
 
@@ -79,7 +85,7 @@ export default function InvitePage({
         toast.success(`Welcome to ${data.organization.name}!`);
       }
 
-      router.push(`/org/${data.organization.slug}/admin`);
+      router.push("/account");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to accept invitation";
@@ -182,8 +188,9 @@ export default function InvitePage({
         {/* Auth State Message */}
         {!session && (
           <p className="text-sm text-gray-600 text-center mb-6">
-            You'll need to sign in or create an account to join this
-            organization.
+            {invite.hasAccount
+              ? "Sign in to your existing account to join this organization."
+              : "Create an account to join this organization."}
           </p>
         )}
 
@@ -205,8 +212,10 @@ export default function InvitePage({
           {accepting
             ? "Joining..."
             : session
-            ? "Accept Invitation"
-            : "Sign In & Accept"}
+              ? "Accept Invitation"
+              : invite?.hasAccount
+                ? "Sign In & Accept"
+                : "Get Started"}
         </button>
 
         {/* Decline Link */}

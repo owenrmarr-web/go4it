@@ -124,6 +124,7 @@ export default function AccountPage() {
   const [createdApps, setCreatedApps] = useState<CreatedApp[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [userRole, setUserRole] = useState<"OWNER" | "ADMIN" | "MEMBER" | null>(null);
   const [orgLoading, setOrgLoading] = useState(true);
   const [createdAppsLoading, setCreatedAppsLoading] = useState(true);
   const { hearted, toggle, loading: interactionsLoading } = useInteractions();
@@ -174,11 +175,11 @@ export default function AccountPage() {
         id: org.id,
         name: org.name,
         slug: org.slug,
-        role: "OWNER",
+        role: userRole || "OWNER",
         appIds: orgApps.map((a) => a.appId),
       },
     ];
-  }, [org, orgApps]);
+  }, [org, orgApps, userRole]);
 
   const fetchOrgData = useCallback(async () => {
     try {
@@ -188,6 +189,7 @@ export default function AccountPage() {
       setOrgApps(data.apps || []);
       setMembers(data.members || []);
       setInvitations(data.invitations || []);
+      setUserRole(data.role || null);
     } catch {
       // silent
     } finally {
@@ -732,18 +734,22 @@ export default function AccountPage() {
             My Account
           </h1>
           <div className="flex items-center gap-2">
-            <Link
-              href="/account/settings"
-              className="text-sm text-gray-500 hover:text-purple-600 transition-colors border border-gray-200 hover:border-purple-300 px-4 py-2 rounded-lg"
-            >
-              Account Settings
-            </Link>
-            <Link
-              href="/account/payments"
-              className="text-sm text-gray-500 hover:text-purple-600 transition-colors border border-gray-200 hover:border-purple-300 px-4 py-2 rounded-lg"
-            >
-              Payments
-            </Link>
+            {userRole === "OWNER" && (
+              <>
+                <Link
+                  href="/account/settings"
+                  className="text-sm text-gray-500 hover:text-purple-600 transition-colors border border-gray-200 hover:border-purple-300 px-4 py-2 rounded-lg"
+                >
+                  Account Settings
+                </Link>
+                <Link
+                  href="/account/payments"
+                  className="text-sm text-gray-500 hover:text-purple-600 transition-colors border border-gray-200 hover:border-purple-300 px-4 py-2 rounded-lg"
+                >
+                  Payments
+                </Link>
+              </>
+            )}
             <button
               onClick={handleSignOut}
               className="text-sm text-gray-500 hover:text-red-500 transition-colors border border-gray-200 hover:border-red-300 px-4 py-2 rounded-lg"
@@ -766,8 +772,8 @@ export default function AccountPage() {
               {/* Team Portal URL */}
               {org && <PortalBanner slug={org.slug} />}
 
-              {/* Branding */}
-              {org && (
+              {/* Branding (Owner only) */}
+              {org && userRole === "OWNER" && (
                 <div className="mb-4 bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-sm font-semibold text-gray-800 mb-4">Branding</h3>
                   <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
@@ -832,16 +838,24 @@ export default function AccountPage() {
 
               {!org ? (
                 <div className="text-center py-10 bg-white rounded-xl shadow-sm">
-                  <p className="text-gray-400 mb-4">
-                    Add your company name in settings to start deploying apps
-                    for your team.
-                  </p>
-                  <Link
-                    href="/account/settings"
-                    className="inline-block gradient-brand px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    Set Up Company
-                  </Link>
+                  {userRole === "OWNER" || !userRole ? (
+                    <>
+                      <p className="text-gray-400 mb-4">
+                        Add your company name in settings to start deploying apps
+                        for your team.
+                      </p>
+                      <Link
+                        href="/account/settings"
+                        className="inline-block gradient-brand px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                      >
+                        Set Up Company
+                      </Link>
+                    </>
+                  ) : (
+                    <p className="text-gray-400">
+                      No organization found. Contact your team admin.
+                    </p>
+                  )}
                 </div>
               ) : orgApps.length === 0 ? (
                 <div className="text-center py-10 bg-white rounded-xl shadow-sm">
@@ -936,7 +950,7 @@ export default function AccountPage() {
                             </a>
                           )}
 
-                          {deployingAppId !== orgApp.appId && (
+                          {deployingAppId !== orgApp.appId && userRole !== "MEMBER" && (
                             <>
                               {orgApp.generatedAppId && (
                                 <button
@@ -1005,8 +1019,8 @@ export default function AccountPage() {
                         </div>
                       </div>
 
-                      {/* Configure panel */}
-                      {configuringAppId === orgApp.id && (
+                      {/* Configure panel (Owner & Admin only) */}
+                      {configuringAppId === orgApp.id && userRole !== "MEMBER" && (
                         <div className="border-t border-gray-100 px-5 py-4 bg-gray-50">
                           {/* Custom URL */}
                           <div className="mb-4 pb-4 border-b border-gray-200">
@@ -1272,7 +1286,8 @@ export default function AccountPage() {
               )}
             </section>
 
-            {/* ── Team Members ─────────────────────────────── */}
+            {/* ── Team Members (Owner & Admin only) ──────────── */}
+            {userRole && userRole !== "MEMBER" && (
             <section className="mb-12">
               <h2 className="text-xl font-bold text-gray-800 mb-4">
                 Team Members
@@ -1452,6 +1467,7 @@ export default function AccountPage() {
                 </div>
               )}
             </section>
+            )}
 
             {/* ── Saved Apps ───────────────────────────────── */}
             <section>

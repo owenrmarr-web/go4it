@@ -47,11 +47,19 @@ export async function GET(request: Request, context: RouteContext) {
     );
   }
 
+  // Check if invitee already has a GO4IT account
+  const existingUser = await prisma.user.findUnique({
+    where: { email: invitation.email },
+    select: { id: true },
+  });
+
   return NextResponse.json({
     email: invitation.email,
+    name: invitation.name,
     role: invitation.role,
     organization: invitation.organization,
     expiresAt: invitation.expiresAt,
+    hasAccount: !!existingUser,
   });
 }
 

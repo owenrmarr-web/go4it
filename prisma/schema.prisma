@@ -22,6 +22,8 @@ model User {
   businessDescription String?   // Free-text business description for AI context
   logo          String?   // Base64 encoded logo image
   themeColors   String?   // JSON object with extracted colors { primary, secondary, accent }
+  profileColor  String?   // Preset hex color for avatar background
+  profileEmoji  String?   // Emoji avatar (alternative to photo upload)
   accounts      Account[]
   sessions      Session[]
   interactions  UserInteraction[]

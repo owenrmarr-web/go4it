@@ -8,8 +8,8 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Find the org where this user is OWNER
-  const membership = await prisma.organizationMember.findFirst({
+  // Find the org where this user is a member (prefer OWNER, fall back to any role)
+  let membership = await prisma.organizationMember.findFirst({
     where: { userId: session.user.id, role: "OWNER" },
     include: {
       organization: {
@@ -59,13 +59,67 @@ export async function GET() {
     },
   });
 
+  // Fall back to any membership (ADMIN or MEMBER)
   if (!membership) {
-    return NextResponse.json({ org: null, apps: [], members: [], invitations: [] });
+    membership = await prisma.organizationMember.findFirst({
+      where: { userId: session.user.id },
+      include: {
+        organization: {
+          include: {
+            apps: {
+              include: {
+                app: {
+                  select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    icon: true,
+                    category: true,
+                    generatedApp: {
+                      select: {
+                        id: true,
+                        marketplaceVersion: true,
+                        createdById: true,
+                      },
+                    },
+                  },
+                },
+                members: {
+                  include: {
+                    user: {
+                      select: { id: true, name: true, email: true, image: true },
+                    },
+                  },
+                },
+              },
+              orderBy: { addedAt: "desc" },
+            },
+            members: {
+              include: {
+                user: {
+                  select: { id: true, name: true, email: true, image: true },
+                },
+              },
+              orderBy: { joinedAt: "asc" },
+            },
+            invitations: {
+              where: { status: "PENDING", expiresAt: { gt: new Date() } },
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  if (!membership) {
+    return NextResponse.json({ org: null, apps: [], members: [], invitations: [], role: null });
   }
 
   const org = membership.organization;
 
   return NextResponse.json({
+    role: membership.role,
     org: {
       id: org.id,
       name: org.name,
