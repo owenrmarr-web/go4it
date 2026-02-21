@@ -394,7 +394,7 @@ export default function CreatePage() {
               {showCancelConfirm ? (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 inline-block">
                   <p className="text-sm text-amber-800 mb-3">
-                    Builds typically take <strong>1-2 minutes</strong>. Are you sure you want to cancel?
+                    Builds typically take <strong>10-15 minutes</strong>. Are you sure you want to cancel?
                   </p>
                   <div className="flex gap-3 justify-center">
                     <button

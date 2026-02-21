@@ -353,6 +353,12 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
   }, [state.generationId]);
 
   const reset = useCallback(() => {
+    // Tell the builder to kill the CLI process (fire-and-forget)
+    const genId = state.generationId;
+    if (genId && state.stage !== "idle" && state.stage !== "complete" && state.stage !== "failed") {
+      fetch(`/api/generate/${genId}/cancel`, { method: "POST" }).catch(() => {});
+    }
+
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
@@ -372,7 +378,7 @@ export function GenerationProvider({ children }: { children: React.ReactNode }) 
       previewUrl: null,
       previewLoading: false,
     });
-  }, []);
+  }, [state.generationId, state.stage]);
 
   useEffect(() => {
     if (resumedRef.current) return;

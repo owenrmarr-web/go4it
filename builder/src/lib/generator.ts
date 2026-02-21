@@ -59,6 +59,31 @@ export function getActiveJobCount(): number {
   return activeJobs;
 }
 
+/** Kill a running generation's CLI process and mark it as failed. */
+export async function cancelGeneration(generationId: string): Promise<boolean> {
+  const child = processStore.get(generationId);
+  if (!child) return false;
+
+  child.kill("SIGTERM");
+  // Give it a moment, then force kill if still alive
+  setTimeout(() => {
+    if (!child.killed) child.kill("SIGKILL");
+  }, 3000);
+
+  cleanupTimers(generationId);
+
+  try {
+    await prisma.generatedApp.update({
+      where: { id: generationId },
+      data: { status: "FAILED", currentStage: "failed", error: "Cancelled by user" },
+    });
+  } catch {
+    // Record may not exist yet due to replication delay
+  }
+
+  return true;
+}
+
 const APPS_DIR = process.env.APPS_DIR || "/data/apps";
 
 // Retry a Prisma update with backoff — handles Turso replication delay
@@ -734,13 +759,23 @@ function updateDetail(generationId: string, detail: string) {
     .catch(() => {});
 }
 
+// Ordered stage list for forward-only progression
+const STAGE_ORDER: GenerationStage[] = [
+  "pending", "designing", "scaffolding", "coding", "database", "finalizing", "deploying", "complete",
+];
+
 function checkForStageMarkers(generationId: string, text: string) {
   const markerPattern = /\[GO4IT:STAGE:(\w+)\]/g;
   let match;
   while ((match = markerPattern.exec(text)) !== null) {
     const stage = match[1] as GenerationStage;
-    if (stage in STAGE_MESSAGES) {
-      // Fire-and-forget DB write for stage updates
+    if (!(stage in STAGE_MESSAGES)) continue;
+
+    // Only allow forward stage transitions — ignore markers that would go backward
+    const current = currentStages.get(generationId) || "pending";
+    const currentIdx = STAGE_ORDER.indexOf(current);
+    const newIdx = STAGE_ORDER.indexOf(stage);
+    if (newIdx > currentIdx) {
       updateProgress(generationId, stage);
     }
   }

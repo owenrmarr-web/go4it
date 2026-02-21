@@ -8,6 +8,7 @@ import previewRoute, {
   PREVIEW_PORT,
 } from "./routes/preview.js";
 import healthRoute from "./routes/health.js";
+import cancelRoute from "./routes/cancel.js";
 import cleanupRoute from "./routes/cleanup.js";
 import secretsRoute from "./routes/secrets.js";
 import deployPreviewRoute from "./routes/deploy-preview.js";
@@ -22,7 +23,7 @@ const app = Fastify({
 });
 
 // Auth middleware — only require auth for builder API routes, not preview proxy
-const PROTECTED_PATHS = new Set(["generate", "iterate", "deploy", "deploy-preview", "preview", "workspace", "secrets", "machines"]);
+const PROTECTED_PATHS = new Set(["generate", "iterate", "deploy", "deploy-preview", "preview", "workspace", "secrets", "machines", "cancel"]);
 
 app.addHook("onRequest", async (request, reply) => {
   const firstSegment = request.url.split("?")[0].split("/")[1] || "";
@@ -44,6 +45,7 @@ app.register(iterateRoute);
 app.register(deployRoute);
 app.register(previewRoute);
 app.register(healthRoute);
+app.register(cancelRoute);
 app.register(cleanupRoute);
 app.register(secretsRoute);
 app.register(deployPreviewRoute);
