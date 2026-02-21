@@ -95,7 +95,7 @@ export default function AuthModal({ onClose, onSuccess, closable = true }: AuthM
             <button
               type="submit"
               disabled={loading}
-              className="w-full gradient-brand text-white py-2.5 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60"
+              className="w-full gradient-brand py-2.5 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60"
             >
               {loading ? "Processing..." : "Sign In"}
             </button>
@@ -104,7 +104,7 @@ export default function AuthModal({ onClose, onSuccess, closable = true }: AuthM
           <div className="mt-5">
             <button
               onClick={goToSignup}
-              className="w-full gradient-brand text-white py-2.5 rounded-lg font-bold text-base hover:opacity-90 transition-opacity"
+              className="w-full gradient-brand py-2.5 rounded-lg font-bold text-base hover:opacity-90 transition-opacity"
             >
               Create Free Account
             </button>

@@ -279,7 +279,7 @@ export default function CreatePage() {
 
             {/* Auth banner for unauthenticated users */}
             {status === "unauthenticated" && (
-              <div className="mt-5 gradient-brand rounded-xl p-4 text-center text-white shadow-lg">
+              <div className="mt-5 gradient-brand rounded-xl p-4 text-center shadow-lg">
                 <p className="font-semibold text-base">
                   Sign in or create a free account to generate your app
                 </p>
@@ -352,7 +352,7 @@ export default function CreatePage() {
                   setShowGenerateConfirm(true);
                 }}
                 disabled={!businessContext.trim() || prompt.trim().length < 10}
-                className="gradient-brand text-white px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="gradient-brand px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Generate App
               </button>
@@ -447,7 +447,7 @@ export default function CreatePage() {
                   href={gen.previewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity inline-block"
+                  className="gradient-brand px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity inline-block"
                 >
                   Open Preview
                 </a>
@@ -469,7 +469,7 @@ export default function CreatePage() {
                     }
                   }}
                   disabled={gen.previewLoading}
-                  className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity inline-block disabled:opacity-50"
+                  className="gradient-brand px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity inline-block disabled:opacity-50"
                 >
                   {gen.previewLoading ? "Deploying Preview..." : "Deploy Preview"}
                 </button>
@@ -608,7 +608,7 @@ export default function CreatePage() {
               <button
                 onClick={handleIterate}
                 disabled={iterationPrompt.trim().length < 10}
-                className="gradient-brand text-white px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="gradient-brand px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Refine
               </button>
@@ -870,7 +870,7 @@ export default function CreatePage() {
                   publishTitle.trim().length < 2 ||
                   publishDescription.trim().length < 10
                 }
-                className="gradient-brand text-white px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="gradient-brand px-10 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {publishing ? "Publishing..." : "Publish"}
               </button>
@@ -892,7 +892,7 @@ export default function CreatePage() {
               {gen.iterationCount > 0 && (
                 <button
                   onClick={() => setLocalView("refine")}
-                  className="gradient-brand text-white px-8 py-2.5 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+                  className="gradient-brand px-8 py-2.5 rounded-xl font-semibold hover:opacity-90 transition-opacity"
                 >
                   Try Refining Again
                 </button>
@@ -926,7 +926,7 @@ export default function CreatePage() {
                   setShowGenerateConfirm(false);
                   handleGenerate();
                 }}
-                className="gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all"
+                className="gradient-brand px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all"
               >
                 Let&apos;s GO4IT!
               </button>

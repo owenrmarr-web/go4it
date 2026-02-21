@@ -9,10 +9,15 @@
   --theme-secondary: #ec4899;
   --theme-accent: #f97316;
   --theme-gradient: linear-gradient(to right, #f97316, #ec4899, #9333ea);
+  --theme-primary-contrast: #ffffff;
+  --theme-secondary-contrast: #ffffff;
+  --theme-accent-contrast: #111827;
+  --theme-gradient-contrast: #ffffff;
 }
 
 .gradient-brand {
   background: linear-gradient(135deg, var(--theme-accent), var(--theme-secondary), var(--theme-primary));
+  color: var(--theme-gradient-contrast);
 }
 
 .text-theme-primary {
@@ -37,6 +42,18 @@
 
 .border-theme-accent {
   border-color: var(--theme-accent);
+}
+
+.text-on-primary {
+  color: var(--theme-primary-contrast);
+}
+
+.text-on-secondary {
+  color: var(--theme-secondary-contrast);
+}
+
+.text-on-accent {
+  color: var(--theme-accent-contrast);
 }
 
 .gradient-brand-text {

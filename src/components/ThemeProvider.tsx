@@ -32,6 +32,25 @@ const ThemeContext = createContext<ThemeContextValue>({
   refreshTheme: () => {},
 });
 
+/**
+ * Convert a hex color to relative luminance (WCAG 2.0).
+ * Returns a value between 0 (black) and 1 (white).
+ */
+function getLuminance(hex: string): number {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16) / 255;
+  const g = parseInt(h.substring(2, 4), 16) / 255;
+  const b = parseInt(h.substring(4, 6), 16) / 255;
+  const toLinear = (c: number) =>
+    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+/** Return "#ffffff" or "#111827" (gray-900) based on background luminance. */
+function getContrastColor(hex: string): string {
+  return getLuminance(hex) > 0.4 ? "#111827" : "#ffffff";
+}
+
 export function useTheme() {
   return useContext(ThemeContext);
 }
@@ -69,6 +88,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty("--theme-primary", activeColors.primary);
     root.style.setProperty("--theme-secondary", activeColors.secondary);
     root.style.setProperty("--theme-accent", activeColors.accent);
+
+    // Contrast-aware text colors for each theme color
+    root.style.setProperty("--theme-primary-contrast", getContrastColor(activeColors.primary));
+    root.style.setProperty("--theme-secondary-contrast", getContrastColor(activeColors.secondary));
+    root.style.setProperty("--theme-accent-contrast", getContrastColor(activeColors.accent));
+
+    // For gradient backgrounds, pick contrast based on the darkest color in the gradient
+    const minLum = Math.min(
+      getLuminance(activeColors.accent),
+      getLuminance(activeColors.secondary),
+      getLuminance(activeColors.primary)
+    );
+    root.style.setProperty("--theme-gradient-contrast", minLum > 0.4 ? "#111827" : "#ffffff");
 
     // Also set gradient
     root.style.setProperty(

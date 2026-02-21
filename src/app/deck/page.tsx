@@ -68,12 +68,12 @@ function MarketSlide({ active }: { active: boolean }) {
           <tr>
             <th className="py-2 px-4 text-center align-bottom" style={{ height: 240 }}>
               <div className="flex justify-center items-end h-full">
-                <div className="rounded-full flex items-center justify-center text-white font-bold text-2xl" style={{ width: 220, height: 220, backgroundColor: "var(--theme-primary)" }}>$350B</div>
+                <div className="rounded-full flex items-center justify-center text-on-primary font-bold text-2xl" style={{ width: 220, height: 220, backgroundColor: "var(--theme-primary)" }}>$350B</div>
               </div>
             </th>
             <th className="py-2 px-4 text-center align-bottom" style={{ height: 240 }}>
               <div className="flex justify-center items-end h-full">
-                <div className="rounded-full flex items-center justify-center text-white font-bold text-xl" style={{ width: 120, height: 120, backgroundColor: "var(--theme-secondary)" }}>$105B</div>
+                <div className="rounded-full flex items-center justify-center text-on-secondary font-bold text-xl" style={{ width: 120, height: 120, backgroundColor: "var(--theme-secondary)" }}>$105B</div>
               </div>
             </th>
             <th className="py-2 px-4 text-center align-bottom relative" style={{ height: 240 }}>
@@ -91,7 +91,7 @@ function MarketSlide({ active }: { active: boolean }) {
                 }}
               />
               <div className="flex justify-center items-end h-full">
-                <div className="rounded-full flex items-center justify-center text-white font-bold" style={{ width: 78, height: 78, backgroundColor: "var(--theme-accent)" }}>$44B</div>
+                <div className="rounded-full flex items-center justify-center text-on-accent font-bold" style={{ width: 78, height: 78, backgroundColor: "var(--theme-accent)" }}>$44B</div>
               </div>
             </th>
             <th className="py-2 pr-4 align-bottom">
@@ -148,11 +148,11 @@ function MarketSlide({ active }: { active: boolean }) {
       <div className="md:hidden">
         <div className="flex justify-center items-end gap-4 mb-2">
           <div className="flex flex-col items-center">
-            <div className="rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ width: 110, height: 110, backgroundColor: "var(--theme-primary)" }}>$350B</div>
+            <div className="rounded-full flex items-center justify-center text-on-primary font-bold text-sm" style={{ width: 110, height: 110, backgroundColor: "var(--theme-primary)" }}>$350B</div>
             <span className="text-xs font-semibold mt-1" style={{ color: "var(--theme-primary)" }}>Global</span>
           </div>
           <div className="flex flex-col items-center">
-            <div className="rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ width: 60, height: 60, backgroundColor: "var(--theme-secondary)" }}>$105B</div>
+            <div className="rounded-full flex items-center justify-center text-on-secondary font-bold text-sm" style={{ width: 60, height: 60, backgroundColor: "var(--theme-secondary)" }}>$105B</div>
             <span className="text-xs font-semibold mt-1" style={{ color: "var(--theme-secondary)" }}>US 5–500</span>
           </div>
           <div className="flex flex-col items-center">
@@ -161,7 +161,7 @@ function MarketSlide({ active }: { active: boolean }) {
                 className="absolute border-2 rounded-lg transition-opacity duration-[2000ms]"
                 style={{ borderColor: "var(--theme-accent)", opacity: showHighlight ? 1 : 0, top: -6, bottom: -6, left: -6, right: -6, pointerEvents: "none" }}
               />
-              <div className="rounded-full flex items-center justify-center text-white font-bold text-xs" style={{ width: 44, height: 44, backgroundColor: "var(--theme-accent)" }}>$44B</div>
+              <div className="rounded-full flex items-center justify-center text-on-accent font-bold text-xs" style={{ width: 44, height: 44, backgroundColor: "var(--theme-accent)" }}>$44B</div>
             </div>
             <span className="text-xs font-semibold mt-1" style={{ color: "var(--theme-accent)" }}>US 5–50</span>
           </div>
@@ -923,7 +923,7 @@ const slides = [
             },
           ].map((s) => (
             <div key={s.step} className="text-center">
-              <div className="w-16 h-16 rounded-full gradient-brand text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 rounded-full gradient-brand text-2xl font-bold flex items-center justify-center mx-auto mb-4">
                 {s.step}
               </div>
               <div className="w-full aspect-video flex items-end justify-center mb-4">
@@ -1075,7 +1075,7 @@ const slides = [
           href="https://go4it.live"
           target="_blank"
           rel="noopener noreferrer"
-          className="gradient-brand text-white text-lg md:text-xl font-semibold px-6 py-3 md:px-8 md:py-4 rounded-xl hover:opacity-90 transition"
+          className="gradient-brand text-lg md:text-xl font-semibold px-6 py-3 md:px-8 md:py-4 rounded-xl hover:opacity-90 transition"
         >
           Visit go4it.live
         </a>

@@ -724,6 +724,12 @@ export default function AccountPage() {
             >
               Account Settings
             </Link>
+            <Link
+              href="/account/payments"
+              className="text-sm text-gray-500 hover:text-purple-600 transition-colors border border-gray-200 hover:border-purple-300 px-4 py-2 rounded-lg"
+            >
+              Payments
+            </Link>
             <button
               onClick={handleSignOut}
               className="text-sm text-gray-500 hover:text-red-500 transition-colors border border-gray-200 hover:border-red-300 px-4 py-2 rounded-lg"
@@ -801,7 +807,7 @@ export default function AccountPage() {
                     <button
                       onClick={handleSaveBranding}
                       disabled={savingBranding}
-                      className="px-4 py-2 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 self-start sm:self-center w-full sm:w-auto"
+                      className="px-4 py-2 text-sm font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 self-start sm:self-center w-full sm:w-auto"
                     >
                       {savingBranding ? "Saving..." : "Save"}
                     </button>
@@ -818,7 +824,7 @@ export default function AccountPage() {
                   </p>
                   <Link
                     href="/account/settings"
-                    className="inline-block gradient-brand text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                    className="inline-block gradient-brand px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
                   >
                     Set Up Company
                   </Link>
@@ -830,7 +836,7 @@ export default function AccountPage() {
                   </p>
                   <Link
                     href="/"
-                    className="inline-block gradient-brand text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                    className="inline-block gradient-brand px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
                   >
                     Browse Marketplace
                   </Link>
@@ -945,7 +951,7 @@ export default function AccountPage() {
                                 orgApp.status === "FAILED" ||
                                 orgApp.status === "PREVIEW") && (
                                 <button
-                                  className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+                                  className="px-3 py-1.5 text-sm font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity"
                                   onClick={() => handleLaunchApp(orgApp)}
                                 >
                                   {orgApp.status === "FAILED"
@@ -1095,7 +1101,7 @@ export default function AccountPage() {
                             <button
                               onClick={handleSaveAppMembers}
                               disabled={savingMembers}
-                              className="gradient-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+                              className="gradient-brand px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
                             >
                               {savingMembers ? "Saving..." : "Save Access"}
                             </button>
@@ -1135,7 +1141,7 @@ export default function AccountPage() {
                   </p>
                   <Link
                     href="/create"
-                    className="inline-block gradient-brand text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                    className="inline-block gradient-brand px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
                   >
                     Create an App
                   </Link>
@@ -1238,7 +1244,7 @@ export default function AccountPage() {
                             {(!ca.isPublished || ca.hasUnpublishedChanges) && (
                               <button
                                 onClick={() => router.push(`/create?gen=${ca.id}&publish=true`)}
-                                className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+                                className="px-3 py-1.5 text-sm font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity"
                               >
                                 {ca.isPublished ? "Publish Update" : "Publish"}
                               </button>
@@ -1561,7 +1567,7 @@ export default function AccountPage() {
               <button
                 onClick={handleSendInvite}
                 disabled={sendingInvite || !inviteEmail.trim()}
-                className="flex-1 gradient-brand text-white px-4 py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+                className="flex-1 gradient-brand px-4 py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
               >
                 {sendingInvite ? "Sending..." : "Add & Send Invite"}
               </button>
@@ -1620,7 +1626,7 @@ function PortalBanner({ slug }: { slug: string }) {
           href={`/${slug}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
+          className="px-3 py-1.5 text-sm font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
         >
           Visit
         </a>

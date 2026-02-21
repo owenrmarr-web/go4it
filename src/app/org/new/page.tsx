@@ -282,7 +282,7 @@ export default function CreateOrganizationPage() {
             <button
               onClick={handleCreate}
               disabled={creating || !formData.name || !formData.slug}
-              className="w-full gradient-brand text-white py-3 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60"
+              className="w-full gradient-brand py-3 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60"
             >
               {creating ? "Creating..." : "Create Organization"}
             </button>

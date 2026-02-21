@@ -41,9 +41,9 @@ export default function GenerationProgress({
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center text-lg transition-all duration-500 ${
                     isComplete
-                      ? "gradient-brand text-white shadow-lg"
+                      ? "gradient-brand shadow-lg"
                       : isActive
-                        ? "gradient-brand text-white shadow-lg scale-110 animate-pulse"
+                        ? "gradient-brand shadow-lg scale-110 animate-pulse"
                         : "bg-gray-200 text-gray-400"
                   }`}
                 >

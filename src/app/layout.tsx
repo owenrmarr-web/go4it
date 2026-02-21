@@ -9,8 +9,32 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "GO4IT",
-  description: "Free software tools to help small businesses do big things.",
+  title: {
+    default: "GO4IT — AI-Powered Business Tools",
+    template: "%s | GO4IT",
+  },
+  description:
+    "Free AI-enabled software tools to help small businesses do big things. Browse, deploy, and start using apps in minutes.",
+  metadataBase: new URL(process.env.NEXTAUTH_URL || "https://go4it.live"),
+  openGraph: {
+    title: "GO4IT — AI-Powered Business Tools",
+    description:
+      "Free AI-enabled software tools to help small businesses do big things. Browse, deploy, and start using apps in minutes.",
+    url: "https://go4it.live",
+    siteName: "GO4IT",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GO4IT — AI-Powered Business Tools",
+    description:
+      "Free AI-enabled software tools to help small businesses do big things.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

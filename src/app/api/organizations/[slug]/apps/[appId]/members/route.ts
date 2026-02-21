@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { syncTeamMembersToFly } from "@/lib/team-sync";
+import { syncSubscriptionQuantities } from "@/lib/billing";
 
 type RouteContext = { params: Promise<{ slug: string; appId: string }> };
 
@@ -139,6 +140,11 @@ export async function PUT(request: Request, context: RouteContext) {
   // Sync team members to Fly.io (fire-and-forget — don't block the response)
   syncTeamMembersToFly(orgApp.id).catch((err) => {
     console.error(`[TeamSync] Failed to sync after member update:`, err);
+  });
+
+  // Sync Stripe subscription quantities (fire-and-forget)
+  syncSubscriptionQuantities(organization.id).catch((err) => {
+    console.error(`[Billing] Failed to sync subscription quantities:`, err);
   });
 
   return NextResponse.json(updatedMembers);

@@ -242,12 +242,20 @@ export default function SettingsPage() {
       <main className="max-w-2xl mx-auto px-4 pt-28 pb-16">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-extrabold text-gray-900">Settings</h1>
-          <button
-            onClick={() => router.push("/account")}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            Back to My Apps
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push("/account")}
+              className="text-sm text-gray-500 hover:text-purple-600 transition-colors border border-gray-200 hover:border-purple-300 px-4 py-2 rounded-lg"
+            >
+              My Account
+            </button>
+            <button
+              onClick={() => router.push("/account/payments")}
+              className="text-sm text-gray-500 hover:text-purple-600 transition-colors border border-gray-200 hover:border-purple-300 px-4 py-2 rounded-lg"
+            >
+              Payments
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-6 space-y-6">
@@ -579,7 +587,7 @@ export default function SettingsPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full gradient-brand text-white py-3 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60"
+              className="w-full gradient-brand py-3 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60"
             >
               {saving ? "Saving..." : "Save Changes"}
             </button>

@@ -612,7 +612,7 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full gradient-brand text-white py-3 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full gradient-brand py-3 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading
               ? "Processing..."
@@ -625,7 +625,7 @@ export default function AuthPage() {
         {/* Toggle login / signup */}
         <p className="mt-6 text-center text-sm text-gray-500">
           {mode === "login"
-            ? "Don&apos;t have an account?"
+            ? "Don\u2019t have an account?"
             : "Already have one?"}{" "}
           <button
             type="button"

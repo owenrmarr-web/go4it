@@ -706,7 +706,7 @@ export default function OrgAdminPage({
                           </button>
                           {(orgApp.status === "ADDED" || orgApp.status === "FAILED") && (
                             <button
-                              className="px-3 py-1.5 text-sm font-medium text-white gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+                              className="px-3 py-1.5 text-sm font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity"
                               onClick={() => handleLaunchApp(orgApp)}
                             >
                               {orgApp.status === "FAILED" ? "Retry" : "Launch"}
@@ -794,7 +794,7 @@ export default function OrgAdminPage({
                         <button
                           onClick={handleSaveAppMembers}
                           disabled={savingMembers}
-                          className="gradient-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+                          className="gradient-brand px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
                         >
                           {savingMembers ? "Saving..." : "Save Access"}
                         </button>
@@ -940,7 +940,7 @@ export default function OrgAdminPage({
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="gradient-brand text-white px-6 py-2.5 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+                  className="gradient-brand px-6 py-2.5 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
                 >
                   {saving ? "Saving..." : "Save Changes"}
                 </button>
@@ -1154,7 +1154,7 @@ export default function OrgAdminPage({
               <button
                 onClick={handleSendInvite}
                 disabled={sendingInvite || !inviteEmail.trim()}
-                className="flex-1 gradient-brand text-white px-4 py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+                className="flex-1 gradient-brand px-4 py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
               >
                 {sendingInvite ? "Sending..." : "Send Invite"}
               </button>

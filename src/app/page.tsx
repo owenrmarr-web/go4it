@@ -101,13 +101,13 @@ export default function Home() {
 
       {/* Hero */}
       <section className="gradient-brand pt-24 sm:pt-32 pb-10 sm:pb-14 px-4 text-center">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white drop-shadow-lg">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold drop-shadow-lg">
           GO4IT
         </h1>
-        <p className="mt-3 sm:mt-4 text-lg sm:text-xl md:text-2xl text-white/90 font-medium max-w-3xl mx-auto">
+        <p className="mt-3 sm:mt-4 text-lg sm:text-xl md:text-2xl opacity-90 font-medium max-w-3xl mx-auto">
           AI-enabled software tools to help small businesses do big things.
         </p>
-        <p className="mt-2 text-white/70 text-base max-w-2xl mx-auto">
+        <p className="mt-2 opacity-70 text-base max-w-2xl mx-auto">
           Browse, deploy, and start using apps tailored to your business in minutes — Let&apos;s GO4IT
         </p>
       </section>
@@ -135,7 +135,7 @@ export default function Home() {
             </p>
             <a
               href="/create"
-              className="inline-block mt-6 gradient-brand text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity"
+              className="inline-block mt-6 gradient-brand px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity"
             >
               Create Your First App
             </a>

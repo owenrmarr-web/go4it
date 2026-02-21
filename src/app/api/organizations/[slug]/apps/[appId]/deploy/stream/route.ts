@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { getDeployProgress, cleanupDeployProgress } from "@/lib/fly";
+import { syncSubscriptionQuantities } from "@/lib/billing";
 
 type RouteContext = { params: Promise<{ slug: string; appId: string }> };
 
@@ -89,6 +90,12 @@ export async function GET(request: Request, context: RouteContext) {
           clearInterval(interval);
           // Clean up progress after a short delay
           setTimeout(() => cleanupDeployProgress(orgApp.id), 5000);
+          // Sync Stripe subscription quantities on successful deploy
+          if (progress.stage === "running") {
+            syncSubscriptionQuantities(organization.id).catch((err) => {
+              console.error(`[Billing] Failed to sync after deploy:`, err);
+            });
+          }
           controller.close();
         }
       }, 1500);

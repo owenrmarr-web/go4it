@@ -87,7 +87,7 @@ export default function Header() {
             const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
               <Link key={href} href={href}>
-                <button className={`px-5 py-2 rounded-lg border-2 border-theme-accent font-semibold hover:opacity-80 transition-opacity ${isActive ? "text-white" : "text-theme-accent"}`} style={isActive ? { backgroundColor: "var(--theme-accent)" } : undefined}>
+                <button className={`px-5 py-2 rounded-lg border-2 border-theme-accent font-semibold hover:opacity-80 transition-opacity ${isActive ? "text-on-accent" : "text-theme-accent"}`} style={isActive ? { backgroundColor: "var(--theme-accent)" } : undefined}>
                   {label}
                 </button>
               </Link>
@@ -175,7 +175,7 @@ export default function Header() {
             </span>
           )}
           <Link href={session ? "/account" : "/auth"}>
-            <button className="gradient-brand px-4 py-2 rounded-lg text-white font-semibold hover:opacity-90 transition-opacity shadow-sm text-sm md:text-base md:px-5">
+            <button className="gradient-brand px-4 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-sm text-sm md:text-base md:px-5">
               My Account
             </button>
           </Link>

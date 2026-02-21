@@ -159,16 +159,16 @@ export default function DevelopersPage() {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+                    d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
                   />
                 </svg>
               </div>
               <h3 className="font-bold text-gray-900 text-lg">
-                1. Download Kit
+                1. Build Your App
               </h3>
               <p className="mt-2 text-sm text-gray-600">
-                Get the developer kit with our playbook, starter template, and
-                build instructions
+                Build a Next.js app with a <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">go4it.json</code> manifest
+                that defines your app&apos;s name, category, and description
               </p>
             </div>
 
@@ -185,16 +185,16 @@ export default function DevelopersPage() {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"
+                    d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"
                   />
                 </svg>
               </div>
               <h3 className="font-bold text-gray-900 text-lg">
-                2. Build with Claude
+                2. Zip &amp; Upload
               </h3>
               <p className="mt-2 text-sm text-gray-600">
-                Use Claude to build your app locally. Iterate until
-                you&apos;re happy with the result
+                Zip your project (excluding node_modules, .next, and .env)
+                and upload it below
               </p>
             </div>
 
@@ -211,51 +211,19 @@ export default function DevelopersPage() {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                    d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.745 3.745 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z"
                   />
                 </svg>
               </div>
               <h3 className="font-bold text-gray-900 text-lg">
-                3. Upload
+                3. Get Published
               </h3>
               <p className="mt-2 text-sm text-gray-600">
-                Zip your project and upload it here. We&apos;ll review and
-                publish it to the marketplace
+                We&apos;ll review your submission and publish it to the GO4IT
+                marketplace
               </p>
             </div>
           </div>
-        </section>
-
-        {/* Download Kit */}
-        <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center">
-          <h2 className="text-xl font-bold text-gray-900">Developer Kit</h2>
-          <p className="mt-2 text-gray-600">
-            Everything you need to build a GO4IT-compatible app: playbook, starter template, and manifest spec.
-          </p>
-          <a
-            href="/go4it-developer-kit.zip"
-            download
-            className="mt-6 inline-flex items-center gap-2 px-6 py-3 gradient-brand text-white font-semibold rounded-lg hover:opacity-90 transition-opacity"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-5 h-5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-              />
-            </svg>
-            Download Developer Kit
-          </a>
-          <p className="mt-3 text-xs text-gray-400">
-            Includes CLAUDE.md instructions, playbook, and starter template
-          </p>
         </section>
 
         {/* Upload Section */}
@@ -338,6 +306,28 @@ export default function DevelopersPage() {
               </label>
             </div>
           )}
+        </section>
+
+        {/* Manifest Reference */}
+        <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-8">
+          <h2 className="text-xl font-bold text-gray-900 text-center mb-4">
+            go4it.json Manifest
+          </h2>
+          <p className="text-gray-600 text-center mb-4">
+            Your project root must include a <code className="text-sm bg-gray-100 px-1.5 py-0.5 rounded">go4it.json</code> file with these fields:
+          </p>
+          <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-700 overflow-x-auto">
+            <pre>{`{
+  "name": "My App",
+  "description": "A short description (10+ chars)",
+  "category": "CRM | Scheduling | ...",
+  "icon": "🚀",
+  "tags": ["keyword1", "keyword2", "keyword3"]
+}`}</pre>
+          </div>
+          <p className="mt-3 text-xs text-gray-400 text-center">
+            Valid categories: CRM, Scheduling, Communication, Finance, HR, Marketing, Operations, Analytics, Productivity, Legal, Sales, Support, Other
+          </p>
         </section>
 
         {/* My Submissions */}

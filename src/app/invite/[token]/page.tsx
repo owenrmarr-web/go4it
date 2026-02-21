@@ -122,7 +122,7 @@ export default function InvitePage({
           <p className="text-gray-600 mb-6">{error}</p>
           <Link
             href="/"
-            className="inline-block gradient-brand text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+            className="inline-block gradient-brand px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
           >
             Go to Homepage
           </Link>
@@ -200,7 +200,7 @@ export default function InvitePage({
         <button
           onClick={handleAccept}
           disabled={accepting}
-          className="w-full gradient-brand text-white py-3 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60"
+          className="w-full gradient-brand py-3 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60"
         >
           {accepting
             ? "Joining..."

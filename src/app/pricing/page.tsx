@@ -111,10 +111,10 @@ export default function PricingPage() {
 
       {/* Hero */}
       <section className="gradient-brand pt-24 sm:pt-32 pb-10 sm:pb-14 px-4 text-center">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white drop-shadow-lg">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold drop-shadow-lg">
           Pricing
         </h1>
-        <p className="mt-3 text-lg sm:text-xl text-white/80 max-w-2xl mx-auto">
+        <p className="mt-3 text-lg sm:text-xl opacity-80 max-w-2xl mx-auto">
           Enterprise-grade apps at a fraction of the cost
         </p>
       </section>
@@ -131,7 +131,7 @@ export default function PricingPage() {
               {/* Step 1 */}
               <div className="flex gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center text-white font-bold text-sm shrink-0">
+                  <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center font-bold text-sm shrink-0">
                     1
                   </div>
                   <div className="w-0.5 flex-1 bg-gradient-to-b from-orange-300 to-pink-300 my-1" />
@@ -150,7 +150,7 @@ export default function PricingPage() {
               {/* Step 2 */}
               <div className="flex gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center text-white font-bold text-sm shrink-0">
+                  <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center font-bold text-sm shrink-0">
                     2
                   </div>
                   <div className="w-0.5 flex-1 bg-gradient-to-b from-pink-300 to-purple-300 my-1" />
@@ -169,7 +169,7 @@ export default function PricingPage() {
               {/* Step 3 */}
               <div className="flex gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center text-white font-bold text-sm shrink-0">
+                  <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center font-bold text-sm shrink-0">
                     3
                   </div>
                 </div>
