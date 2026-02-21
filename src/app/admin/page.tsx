@@ -498,9 +498,33 @@ export default function AdminPage() {
                       </span>
                       <span>{gen.iterationCount} iteration{gen.iterationCount !== 1 ? "s" : ""}</span>
                       {gen.app ? (
-                        <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
-                          Published
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                            Published
+                          </span>
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`Remove "${gen.title}" from the store? This cannot be undone.`)) return;
+                              try {
+                                const res = await fetch(`/api/admin/apps/${gen.app!.id}`, { method: "DELETE" });
+                                if (res.ok) {
+                                  toast.success("App removed from store");
+                                  setGenerations((prev) =>
+                                    prev.map((g) => g.id === gen.id ? { ...g, app: null } : g)
+                                  );
+                                } else {
+                                  const data = await res.json();
+                                  toast.error(data.error || "Failed to remove");
+                                }
+                              } catch {
+                                toast.error("Failed to remove");
+                              }
+                            }}
+                            className="px-2 py-0.5 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-gray-300">Not published</span>
                       )}
@@ -530,6 +554,9 @@ export default function AdminPage() {
                       </th>
                       <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Created
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -584,6 +611,32 @@ export default function AdminPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">
                           {new Date(gen.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {gen.app && (
+                            <button
+                              onClick={async () => {
+                                if (!confirm(`Remove "${gen.title}" from the store? This cannot be undone.`)) return;
+                                try {
+                                  const res = await fetch(`/api/admin/apps/${gen.app!.id}`, { method: "DELETE" });
+                                  if (res.ok) {
+                                    toast.success("App removed from store");
+                                    setGenerations((prev) =>
+                                      prev.map((g) => g.id === gen.id ? { ...g, app: null } : g)
+                                    );
+                                  } else {
+                                    const data = await res.json();
+                                    toast.error(data.error || "Failed to remove");
+                                  }
+                                } catch {
+                                  toast.error("Failed to remove");
+                                }
+                              }}
+                              className="px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                            >
+                              Remove from Store
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -982,6 +1035,28 @@ export default function AdminPage() {
                         </span>
                       )}
                     </div>
+                    {m.type !== "builder" && (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Destroy ${m.flyAppId}? This will shut down the machine and delete all its data permanently.`)) return;
+                          try {
+                            const res = await fetch(`/api/admin/machines/${m.flyAppId}`, { method: "DELETE" });
+                            if (res.ok) {
+                              toast.success(`${m.flyAppId} destroyed`);
+                              setMachines((prev) => prev.filter((x) => x.flyAppId !== m.flyAppId));
+                            } else {
+                              const data = await res.json();
+                              toast.error(data.error || "Failed to destroy");
+                            }
+                          } catch {
+                            toast.error("Failed to destroy machine");
+                          }
+                        }}
+                        className="px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors mt-1"
+                      >
+                        Destroy
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1013,6 +1088,9 @@ export default function AdminPage() {
                       </th>
                       <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
                         Release
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -1085,6 +1163,30 @@ export default function AdminPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 text-center">
                           {m.releaseVersion != null ? `v${m.releaseVersion}` : <span className="text-gray-300">—</span>}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {m.type !== "builder" && (
+                            <button
+                              onClick={async () => {
+                                if (!confirm(`Destroy ${m.flyAppId}? This will shut down the machine and delete all its data permanently.`)) return;
+                                try {
+                                  const res = await fetch(`/api/admin/machines/${m.flyAppId}`, { method: "DELETE" });
+                                  if (res.ok) {
+                                    toast.success(`${m.flyAppId} destroyed`);
+                                    setMachines((prev) => prev.filter((x) => x.flyAppId !== m.flyAppId));
+                                  } else {
+                                    const data = await res.json();
+                                    toast.error(data.error || "Failed to destroy");
+                                  }
+                                } catch {
+                                  toast.error("Failed to destroy machine");
+                                }
+                              }}
+                              className="px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                            >
+                              Destroy
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

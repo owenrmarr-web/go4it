@@ -24,6 +24,26 @@ function flyctl(args: string[]): Promise<{ stdout: string; code: number }> {
 }
 
 export default async function machinesRoute(app: FastifyInstance) {
+  // DELETE /machines/:appName - Destroy a Fly app
+  app.delete<{ Params: { appName: string } }>("/machines/:appName", async (request, reply) => {
+    const { appName } = request.params;
+
+    if (!appName || !appName.startsWith("go4it-")) {
+      return reply.status(400).send({ error: "Invalid app name" });
+    }
+
+    if (appName === "go4it-builder") {
+      return reply.status(403).send({ error: "Cannot destroy the builder" });
+    }
+
+    const result = await flyctl(["apps", "destroy", appName, "--yes"]);
+    if (result.code !== 0) {
+      return reply.status(500).send({ error: `Failed to destroy ${appName}: ${result.stdout}` });
+    }
+
+    return reply.send({ success: true, destroyed: appName });
+  });
+
   app.get("/machines", async (_request, reply) => {
     const result = await flyctl(["apps", "list", "--json"]);
     if (result.code !== 0) {

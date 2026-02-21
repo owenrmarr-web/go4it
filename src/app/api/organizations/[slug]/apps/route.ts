@@ -223,6 +223,34 @@ export async function DELETE(request: Request, context: RouteContext) {
 
   const { appId } = await request.json();
 
+  // Find the org app to get flyAppId before deleting
+  const orgApp = await prisma.orgApp.findFirst({
+    where: {
+      organizationId: organization.id,
+      appId,
+    },
+    select: { flyAppId: true },
+  });
+
+  // Destroy the Fly machine if it exists
+  if (orgApp?.flyAppId) {
+    const BUILDER_URL = process.env.BUILDER_URL;
+    const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
+    if (BUILDER_URL) {
+      try {
+        const headers: Record<string, string> = {};
+        if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
+        await fetch(`${BUILDER_URL}/machines/${orgApp.flyAppId}`, {
+          method: "DELETE",
+          headers,
+        });
+      } catch (err) {
+        console.error("Failed to destroy Fly machine:", err);
+        // Continue with DB cleanup even if Fly destroy fails
+      }
+    }
+  }
+
   await prisma.orgApp.deleteMany({
     where: {
       organizationId: organization.id,

@@ -154,6 +154,11 @@ export default function AccountPage() {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
 
+  // Remove app confirmation state
+  const [removeConfirm, setRemoveConfirm] = useState<{ appId: string; appTitle: string } | null>(null);
+  const [removeConfirmText, setRemoveConfirmText] = useState("");
+  const [removingApp, setRemovingApp] = useState(false);
+
   // Branding state
   const [brandingLogo, setBrandingLogo] = useState<string | null>(null);
   const [brandingColors, setBrandingColors] = useState({ primary: "#9333EA", secondary: "#EC4899", accent: "#F97316" });
@@ -336,14 +341,20 @@ export default function AccountPage() {
     }
   };
 
-  const handleRemoveApp = async (appId: string, appTitle: string) => {
-    if (!org || !confirm(`Remove ${appTitle}?`)) return;
+  const handleRemoveApp = (appId: string, appTitle: string) => {
+    setRemoveConfirm({ appId, appTitle });
+    setRemoveConfirmText("");
+  };
 
+  const confirmRemoveApp = async () => {
+    if (!org || !removeConfirm) return;
+
+    setRemovingApp(true);
     try {
       const res = await fetch(`/api/organizations/${org.slug}/apps`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appId }),
+        body: JSON.stringify({ appId: removeConfirm.appId }),
       });
 
       if (!res.ok) {
@@ -351,12 +362,15 @@ export default function AccountPage() {
         throw new Error(data.error || "Failed to remove app");
       }
 
-      toast.success(`${appTitle} removed`);
+      toast.success(`${removeConfirm.appTitle} removed`);
+      setRemoveConfirm(null);
       fetchOrgData();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to remove app";
       toast.error(message);
+    } finally {
+      setRemovingApp(false);
     }
   };
 
@@ -1570,6 +1584,59 @@ export default function AccountPage() {
                 className="flex-1 gradient-brand px-4 py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
               >
                 {sendingInvite ? "Sending..." : "Add & Send Invite"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove App Confirmation Modal */}
+      {removeConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-red-600">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Remove {removeConfirm.appTitle}?</h3>
+            </div>
+            <div className="mb-4 space-y-2 text-sm text-gray-600">
+              <p>This action is <span className="font-semibold text-red-600">permanent and cannot be undone</span>. Removing this app will:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Shut down the running application</li>
+                <li>Delete all app data and configurations</li>
+                <li>Remove access for all team members</li>
+                <li>Release the custom subdomain</li>
+              </ul>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Type <span className="font-mono font-bold text-red-600">{removeConfirm.appTitle}</span> to confirm
+              </label>
+              <input
+                type="text"
+                value={removeConfirmText}
+                onChange={(e) => setRemoveConfirmText(e.target.value)}
+                placeholder={removeConfirm.appTitle}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setRemoveConfirm(null)}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRemoveApp}
+                disabled={removeConfirmText !== removeConfirm.appTitle || removingApp}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {removingApp ? "Removing..." : "Remove Permanently"}
               </button>
             </div>
           </div>
