@@ -3,6 +3,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import Link from "next/link";
 import { COUNTRIES, US_STATES, USE_CASE_OPTIONS } from "@/lib/constants";
 import { generateUsernameFromName } from "@/lib/username-utils";
 import { generateSlug } from "@/lib/slug";
@@ -47,6 +48,10 @@ export default function AuthPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("verified") === "true") {
       toast.success("Email verified! Please sign in to continue.");
+      window.history.replaceState({}, "", "/auth");
+    }
+    if (params.get("reset") === "true") {
+      toast.success("Password reset successful! Please sign in with your new password.");
       window.history.replaceState({}, "", "/auth");
     }
     const error = params.get("error");
@@ -608,6 +613,17 @@ export default function AuthPage() {
               </button>
             </div>
           </div>
+
+          {mode === "login" && (
+            <div className="text-right -mt-2">
+              <Link
+                href="/forgot-password"
+                className="text-sm text-purple-600 hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          )}
 
           <button
             type="submit"
