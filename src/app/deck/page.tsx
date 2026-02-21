@@ -1106,9 +1106,6 @@ const slides = [
             <br />
             and AI builds it for you. Everything you need, nothing you don&apos;t.
           </p>
-          <p className="text-lg md:text-2xl text-gray-700">
-            Custom applications available directly in your browser. Zero technical expertise required.
-          </p>
         </div>
       </div>
     ),

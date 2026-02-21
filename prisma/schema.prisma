@@ -268,3 +268,28 @@ model Invitation {
   @@index([email])
   @@index([token])
 }
+
+// ============================================
+// Bug/Feedback Tracking
+// ============================================
+
+enum BugStatus {
+  OPEN
+  IN_PROGRESS
+  FIXED
+  WONTFIX
+}
+
+model BugReport {
+  id               String    @id @default(cuid())
+  reporterName     String
+  location         String?
+  description      String
+  stepsToReproduce String?
+  screenshotUrl    String?
+  status           BugStatus @default(OPEN)
+  commitId         String?
+  adminNote        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
