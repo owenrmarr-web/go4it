@@ -23,7 +23,10 @@ export async function GET() {
       useCases: true,
       businessDescription: true,
       logo: true,
+      image: true,
       themeColors: true,
+      profileColor: true,
+      profileEmoji: true,
     },
   });
 
@@ -31,10 +34,23 @@ export async function GET() {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
+  let themeColors = user.themeColors ? JSON.parse(user.themeColors) : null;
+
+  // Fall back to org theme colors if user has no custom theme
+  if (!themeColors) {
+    const membership = await prisma.organizationMember.findFirst({
+      where: { userId: session.user.id },
+      include: { organization: { select: { themeColors: true } } },
+    });
+    if (membership?.organization.themeColors) {
+      themeColors = JSON.parse(membership.organization.themeColors);
+    }
+  }
+
   return NextResponse.json({
     ...user,
     useCases: user.useCases ? JSON.parse(user.useCases) : [],
-    themeColors: user.themeColors ? JSON.parse(user.themeColors) : null,
+    themeColors,
   });
 }
 
@@ -46,7 +62,7 @@ export async function PUT(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, username, companyName, state, country, useCases, logo, themeColors, businessDescription } =
+    const { name, username, companyName, state, country, useCases, logo, themeColors, businessDescription, image, profileColor, profileEmoji } =
       body;
 
     // Build update object with only defined fields
@@ -60,6 +76,9 @@ export async function PUT(request: Request) {
       logo?: string | null;
       themeColors?: string | null;
       businessDescription?: string | null;
+      image?: string | null;
+      profileColor?: string | null;
+      profileEmoji?: string | null;
     } = {};
 
     // Validate and update username if provided
@@ -92,6 +111,11 @@ export async function PUT(request: Request) {
         : null;
     if (businessDescription !== undefined)
       updateData.businessDescription = businessDescription || null;
+    if (image !== undefined) updateData.image = image || null;
+    if (profileColor !== undefined)
+      updateData.profileColor = profileColor || null;
+    if (profileEmoji !== undefined)
+      updateData.profileEmoji = profileEmoji || null;
 
     await prisma.user.update({
       where: { id: session.user.id },

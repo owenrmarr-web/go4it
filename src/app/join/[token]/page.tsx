@@ -189,7 +189,7 @@ export default function JoinPage({
           <span className="text-2xl">{profileEmoji}</span>
         ) : (
           <span className="text-xl font-bold">
-            {name?.[0]?.toUpperCase() || "?"}
+            {name?.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "?"}
           </span>
         )}
       </div>

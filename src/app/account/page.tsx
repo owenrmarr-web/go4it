@@ -160,6 +160,15 @@ export default function AccountPage() {
   const [removeConfirmText, setRemoveConfirmText] = useState("");
   const [removingApp, setRemovingApp] = useState(false);
 
+  // Profile state
+  const [profileName, setProfileName] = useState("");
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileColor, setProfileColor] = useState("#9333EA");
+  const [profileEmoji, setProfileEmoji] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const profileFileRef = useRef<HTMLInputElement>(null);
+
   // Branding state
   const [brandingLogo, setBrandingLogo] = useState<string | null>(null);
   const [brandingColors, setBrandingColors] = useState({ primary: "#9333EA", secondary: "#EC4899", accent: "#F97316" });
@@ -216,12 +225,16 @@ export default function AccountPage() {
       })
       .catch(() => setCreatedAppsLoading(false));
 
-    // Load existing branding from profile
+    // Load existing branding + profile from profile
     fetch("/api/account/profile")
       .then((r) => r.json())
       .then((data) => {
         if (data.logo) setBrandingLogo(data.logo);
         if (data.themeColors) setBrandingColors(data.themeColors);
+        if (data.name) setProfileName(data.name);
+        if (data.image) setProfileImage(data.image);
+        if (data.profileColor) setProfileColor(data.profileColor);
+        if (data.profileEmoji !== undefined) setProfileEmoji(data.profileEmoji);
       })
       .catch(() => {});
   }, [fetchOrgData]);
@@ -720,6 +733,46 @@ export default function AccountPage() {
     }
   };
 
+  const handleProfilePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 500 * 1024) { toast.error("Photo must be under 500KB"); return; }
+    if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setProfileImage(ev.target?.result as string);
+      setProfileEmoji(null); // photo clears emoji
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const res = await fetch("/api/account/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profileName.trim(),
+          image: profileImage,
+          profileColor,
+          profileEmoji,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save");
+      }
+      toast.success("Profile updated!");
+      setShowProfileEditor(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save profile";
+      toast.error(message);
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut({ redirect: true, redirectTo: "/" });
   };
@@ -765,6 +818,162 @@ export default function AccountPage() {
           </div>
         ) : (
           <>
+            {/* ── My Profile ────────────────────────────────── */}
+            <section className="mb-12">
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    {/* Avatar */}
+                    <div
+                      className="w-14 h-14 rounded-full flex items-center justify-center text-white flex-shrink-0 overflow-hidden"
+                      style={{ backgroundColor: profileImage ? undefined : profileColor }}
+                    >
+                      {profileImage ? (
+                        <img src={profileImage} alt="" className="w-full h-full object-cover" />
+                      ) : profileEmoji ? (
+                        <span className="text-2xl">{profileEmoji}</span>
+                      ) : (
+                        <span className="text-lg font-bold">
+                          {profileName?.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "?"}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-lg">{profileName || session?.user?.name || "—"}</p>
+                      <p className="text-sm text-gray-500">{session?.user?.email}</p>
+                      {org && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {org.name} · {ROLE_LABELS[userRole || "MEMBER"]}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowProfileEditor(!showProfileEditor)}
+                    className="px-4 py-2 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                  >
+                    {showProfileEditor ? "Cancel" : "Edit Profile"}
+                  </button>
+                </div>
+
+                {/* Expandable profile editor */}
+                {showProfileEditor && (
+                  <div className="border-t border-gray-100 px-4 sm:px-6 py-5 bg-gray-50">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {/* Left: Name */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Display Name
+                        </label>
+                        <input
+                          type="text"
+                          value={profileName}
+                          onChange={(e) => setProfileName(e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                          placeholder="Your name"
+                        />
+                      </div>
+
+                      {/* Right: Avatar options */}
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 mb-2">Avatar</p>
+                        <div className="flex items-center gap-3 mb-3">
+                          {/* Preview */}
+                          <div
+                            className="w-12 h-12 rounded-full flex items-center justify-center text-white flex-shrink-0 overflow-hidden border-2 border-white shadow"
+                            style={{ backgroundColor: profileImage ? undefined : profileColor }}
+                          >
+                            {profileImage ? (
+                              <img src={profileImage} alt="" className="w-full h-full object-cover" />
+                            ) : profileEmoji ? (
+                              <span className="text-xl">{profileEmoji}</span>
+                            ) : (
+                              <span className="text-sm font-bold">
+                                {profileName?.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "?"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => profileFileRef.current?.click()}
+                              className="px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                            >
+                              Upload Photo
+                            </button>
+                            <input ref={profileFileRef} type="file" accept="image/*" onChange={handleProfilePhotoUpload} className="hidden" />
+                            {profileImage && (
+                              <button
+                                onClick={() => setProfileImage(null)}
+                                className="px-3 py-1.5 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Emoji picker */}
+                        <p className="text-xs text-gray-500 mb-1">Or pick an emoji</p>
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {["😊","😎","🚀","💪","⭐","🔥","💡","🎯","🌟","👋","🎨","🏆","💜","🦄","🌈","🐱","🎵","☕","🌻","🍀"].map((e) => (
+                            <button
+                              key={e}
+                              onClick={() => { setProfileEmoji(e); setProfileImage(null); }}
+                              className={`w-8 h-8 text-lg rounded-lg flex items-center justify-center transition-colors ${
+                                profileEmoji === e && !profileImage ? "bg-purple-100 ring-2 ring-purple-400" : "hover:bg-gray-100"
+                              }`}
+                            >
+                              {e}
+                            </button>
+                          ))}
+                          {profileEmoji && !profileImage && (
+                            <button
+                              onClick={() => setProfileEmoji(null)}
+                              className="w-8 h-8 text-xs rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 border border-dashed border-gray-300"
+                              title="Clear emoji"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Color palette */}
+                        <p className="text-xs text-gray-500 mb-1">Background color</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {["#F97316","#EC4899","#9333EA","#3B82F6","#14B8A6","#22C55E","#EF4444","#6366F1","#F59E0B","#06B6D4"].map((c) => (
+                            <button
+                              key={c}
+                              onClick={() => setProfileColor(c)}
+                              className={`w-7 h-7 rounded-full transition-transform ${
+                                profileColor === c ? "ring-2 ring-offset-1 ring-gray-400 scale-110" : "hover:scale-110"
+                              }`}
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        onClick={handleSaveProfile}
+                        disabled={savingProfile || !profileName.trim()}
+                        className="gradient-brand px-5 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+                      >
+                        {savingProfile ? "Saving..." : "Save Profile"}
+                      </button>
+                      <button
+                        onClick={() => setShowProfileEditor(false)}
+                        className="px-5 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+
             {/* ── My Organization's Apps ────────────────────── */}
             <section className="mb-12">
               <h2 className="text-xl font-bold text-gray-800 mb-4">My Organization&apos;s Apps</h2>
@@ -1105,7 +1314,7 @@ export default function AccountPage() {
                                   className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-400"
                                 />
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-sm font-semibold">
-                                  {member.user.name?.[0]?.toUpperCase() || "?"}
+                                  {member.user.name?.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "?"}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-gray-900 truncate">
@@ -1330,7 +1539,7 @@ export default function AccountPage() {
                         >
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
-                              {member.user.name?.[0]?.toUpperCase() || "?"}
+                              {member.user.name?.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "?"}
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">
@@ -1405,7 +1614,7 @@ export default function AccountPage() {
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-semibold">
-                            {invite.name?.[0]?.toUpperCase() || invite.email[0]?.toUpperCase() || "?"}
+                            {invite.name?.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || invite.email[0]?.toUpperCase() || "?"}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
