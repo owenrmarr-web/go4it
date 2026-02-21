@@ -79,7 +79,7 @@ The User table is the **staff roster**. At deploy time, GO4IT provisions all org
 ### Seed Data — `prisma/seed.ts`
 
 Replace the existing stub with seed data for your app:
-- Always create the admin user first: `id: "preview"`, `email: "admin@go4it.live"`, password: bcrypt hash of `"go4it2026"`, `role: "admin"`. The `id: "preview"` is required — it must match the preview session user ID.
+- Always create the admin user first: `id: "preview"`, `email: "admin@go4it.live"`, password: bcrypt hash of `process.env.GO4IT_ADMIN_PASSWORD` (fall back to `crypto.randomUUID()` if unset), `role: "admin"`. The `id: "preview"` is required — it must match the preview session user ID.
 - Create 5–8 realistic sample records per main entity, all with `userId` set to the admin user's ID
 - Use industry-appropriate names, values, and statuses
 - Use `createMany` for efficiency where possible

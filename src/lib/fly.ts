@@ -545,13 +545,16 @@ const adapter = new PrismaLibSql({ url: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const defaultPassword = await bcrypt.hash("go4it2026", 12);
+  const adminPassword = process.env.GO4IT_ADMIN_PASSWORD;
+  const adminHash = adminPassword
+    ? await bcrypt.hash(adminPassword, 12)
+    : await bcrypt.hash(crypto.randomUUID(), 12);
 
   // Always provision GO4IT admin account
   await prisma.user.upsert({
     where: { email: "admin@go4it.live" },
-    update: { name: "GO4IT Admin" },
-    create: { email: "admin@go4it.live", name: "GO4IT Admin", password: defaultPassword },
+    update: { name: "GO4IT Admin", password: adminHash },
+    create: { email: "admin@go4it.live", name: "GO4IT Admin", password: adminHash },
   });
   console.log("Provisioned: GO4IT Admin (admin@go4it.live)");
 
@@ -563,7 +566,7 @@ async function main() {
   for (const member of members) {
     const isAssigned = member.assigned !== false;
     const password = isAssigned
-      ? (member.passwordHash || defaultPassword)
+      ? (member.passwordHash || adminHash)
       : await bcrypt.hash(crypto.randomUUID(), 12);
     await prisma.user.upsert({
       where: { email: member.email },
@@ -679,12 +682,15 @@ export default defineConfig({
       console.log(`[Deploy ${orgAppId}] Re-deploying to existing app: ${flyAppName}`);
     }
 
-    // Set secrets (AUTH_SECRET + team members)
+    // Set secrets (AUTH_SECRET + team members + admin password)
     const secrets: Record<string, string> = {
       AUTH_SECRET: authSecret,
     };
     if (teamMembers.length > 0) {
       secrets.GO4IT_TEAM_MEMBERS = JSON.stringify(teamMembers);
+    }
+    if (process.env.GO4IT_ADMIN_PASSWORD) {
+      secrets.GO4IT_ADMIN_PASSWORD = process.env.GO4IT_ADMIN_PASSWORD;
     }
 
     const secretPairs = Object.entries(secrets).map(
@@ -788,6 +794,9 @@ export async function launchApp(
     };
     if (teamMembers.length > 0) {
       secrets.GO4IT_TEAM_MEMBERS = JSON.stringify(teamMembers);
+    }
+    if (process.env.GO4IT_ADMIN_PASSWORD) {
+      secrets.GO4IT_ADMIN_PASSWORD = process.env.GO4IT_ADMIN_PASSWORD;
     }
 
     const secretPairs = Object.entries(secrets).map(

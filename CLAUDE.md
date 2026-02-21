@@ -291,6 +291,49 @@ For local dev, use: `DATABASE_URL="file:./dev.db" npx prisma db push`
 
 ---
 
+## App Ecosystem — Go Suite (2026-02-21)
+
+GO4IT's first-party apps follow a modular "Go Suite" strategy. Each app owns a single domain and stays focused. Cross-app data queries (via the `/api/ai-query` endpoint baked into every generated app) connect them into a unified experience for the business owner.
+
+### App Stream
+
+| App | Domain | Owns | Status |
+|-----|--------|------|--------|
+| **GoCRM** | Relationships | Contacts, companies, interaction history (calls/emails/meetings/notes), relationship stages, tags/segmentation, tasks/follow-ups, lightweight deal pipeline | Building |
+| **GoSchedule** | Scheduling | Appointments, availability, bookings, calendar | Exists |
+| **GoInvoice** | Money | Invoices, payments, expenses, ledger entries, tax records | Planned |
+| **GoSales** | Sales performance | Advanced pipeline, forecasting, rep performance, commissions, quota tracking | Planned |
+
+### Domain Boundaries
+
+- **CRM owns relationships** — who your customers are and every touchpoint with them. It does NOT own financial transactions, appointment scheduling, or sales analytics.
+- **Lightweight deals in CRM** — the CRM includes a simple pipeline (Interested → Quoted → Committed → Won/Lost) to track which contacts have active opportunities and rough values. It does NOT include forecasting, weighted probabilities, or rep leaderboards — that's GoSales.
+- **Other apps own their domain** — GoSchedule owns booking logic, GoInvoice owns payment records, GoSales owns advanced sales tracking. The CRM surfaces their data via cross-app queries but doesn't duplicate it.
+
+### Cross-App Data Flow
+
+Apps in the same org can query each other via the `/api/ai-query` endpoint pattern:
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  GoCRM (contact detail page)         │
+│                                                     │
+│  Native: contact info, activity timeline, deals     │
+│                                                     │
+│  ┌─────────────────────────────────────────────┐    │
+│  │  "Connected Apps" panel (via ai-query API)  │    │
+│  │                                             │    │
+│  │  GoSchedule: upcoming/past appointments     │    │
+│  │  GoInvoice: payment history, balances       │    │
+│  │  GoSales: advanced deal analytics           │    │
+│  └─────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────┘
+```
+
+This is the GO4IT differentiator — instead of buying one bloated platform (HubSpot, Zoho), businesses compose exactly the tools they need, and they talk to each other natively.
+
+---
+
 ## Fly.io Deployment (2026-02-07)
 
 ### How it works
@@ -505,7 +548,7 @@ flyctl deploy --app go4it-builder
 - ~~Deployed app URLs fixed (2026-02-10)~~ — Custom subdomain DNS broken (`fly-global.fly.dev` NXDOMAIN). Switched all deployed apps to `.fly.dev` URLs. Existing DB records migrated via `prisma/fix-fly-urls.ts`. Cert provisioning skipped until DNS is fixed.
 - ~~Production preview fixed (2026-02-10)~~ — Preview was timing out because builder did a synchronous Fly.io deploy (2-5 min) within Vercel's 60s function limit. Converted to async pattern: builder returns 202, deploys in background, frontend polls GET `/preview/:id/status` every 3s until ready.
 - ~~Password management (2026-02-10)~~ — 6-char minimum enforced on platform signup (server + client) and generated app template. Password change added to Account Settings (current + new + confirm, bcrypt verify). API at `/api/account/password`.
-- ~~Universal admin account (2026-02-10)~~ — Every deployed app auto-provisions `admin@go4it.live` / `go4it2026` via updated `provision-users.ts`. Runs regardless of team member config.
+- ~~Universal admin account (2026-02-10)~~ — Every deployed app auto-provisions `admin@go4it.live` via `provision-users.ts` using the `GO4IT_ADMIN_PASSWORD` env var. Runs regardless of team member config.
 - ~~Builder service for production~~ — Standalone Fastify API on Fly.io (`go4it-builder.fly.dev`). Platform delegates generation, iteration, preview, and deploy via HTTP. Production generation works end-to-end.
 - ~~Usernames & leaderboard~~ — Unique usernames, auto-generated on signup, creator rankings by hearts/deploys.
 - ~~Custom subdomain routing~~ — `*.go4it.live` wildcard DNS + auto-generated subdomains + Fly.io TLS certs. Configurable from Account page. **Note: DNS broken, using .fly.dev fallback (see roadmap item #2).**

@@ -5,13 +5,16 @@ import crypto from "crypto";
 const prisma = new PrismaClient();
 
 async function main() {
-  const defaultPassword = await bcrypt.hash("go4it2026", 12);
+  const adminPassword = process.env.GO4IT_ADMIN_PASSWORD;
+  const adminHash = adminPassword
+    ? await bcrypt.hash(adminPassword, 12)
+    : await bcrypt.hash(crypto.randomUUID(), 12);
 
   // Always provision GO4IT admin account
   await prisma.user.upsert({
     where: { email: "admin@go4it.live" },
-    update: { name: "GO4IT Admin" },
-    create: { email: "admin@go4it.live", name: "GO4IT Admin", password: defaultPassword },
+    update: { name: "GO4IT Admin", password: adminHash },
+    create: { email: "admin@go4it.live", name: "GO4IT Admin", password: adminHash },
   });
   console.log("Provisioned: GO4IT Admin (admin@go4it.live)");
 
@@ -27,7 +30,7 @@ async function main() {
   for (const member of members) {
     const isAssigned = member.assigned !== false; // backward compat: missing = assigned
     const password = isAssigned
-      ? (member.passwordHash || defaultPassword)
+      ? (member.passwordHash || adminHash)
       : await bcrypt.hash(crypto.randomUUID(), 12); // random unusable password
     const role = member.role || "member";
     await prisma.user.upsert({

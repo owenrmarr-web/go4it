@@ -775,7 +775,7 @@ export default function CreatePage() {
                     )}
                   </div>
                   <p className="text-xs text-gray-400 mb-3">
-                    Select who gets access. Default password: <code className="bg-gray-100 px-1 rounded">go4it2026</code>
+                    Select who gets access. Team members use their GO4IT platform credentials.
                   </p>
 
                   {orgMembers.length === 0 ? (
