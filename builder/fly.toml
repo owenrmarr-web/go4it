@@ -12,7 +12,7 @@ primary_region = "ord"
 
 [[vm]]
   size = "shared-cpu-4x"
-  memory = "2048mb"
+  memory = "4096mb"
 
 [mounts]
   source = "builder_data"

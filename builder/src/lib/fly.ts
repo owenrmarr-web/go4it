@@ -645,6 +645,43 @@ export async function GET() {
     console.log("[TemplateUpgrade] Added access-requests API route");
   }
 
+  // --- 4. Remove hardcoded demo credentials from auth page + provisioning ---
+  const authPagePath = path.join(sourceDir, "src", "app", "auth", "page.tsx");
+  if (existsSync(authPagePath)) {
+    let authPage = readFileSync(authPagePath, "utf-8");
+    if (authPage.includes("go4it2026")) {
+      authPage = authPage.replace(/\s*<div[^>]*>\s*Demo:.*?go4it2026.*?<\/div>/s, "");
+      writeFileSync(authPagePath, authPage);
+      console.log("[TemplateUpgrade] Removed demo credentials from auth page");
+    }
+  }
+
+  const seedPath = path.join(sourceDir, "prisma", "seed.ts");
+  if (existsSync(seedPath)) {
+    let seed = readFileSync(seedPath, "utf-8");
+    if (seed.includes('"go4it2026"')) {
+      seed = seed.replace('"go4it2026"', 'process.env.GO4IT_ADMIN_PASSWORD || crypto.randomUUID()');
+      if (!seed.includes('import crypto')) {
+        seed = seed.replace(/^(import .*)$/m, '$1\nimport crypto from "crypto";');
+      }
+      writeFileSync(seedPath, seed);
+      console.log("[TemplateUpgrade] Updated seed.ts to use GO4IT_ADMIN_PASSWORD env var");
+    }
+  }
+
+  const provisionPath2 = path.join(sourceDir, "prisma", "provision-users.ts");
+  if (existsSync(provisionPath2)) {
+    let provision = readFileSync(provisionPath2, "utf-8");
+    if (provision.includes('"go4it2026"')) {
+      provision = provision.replace(
+        /const defaultPassword = await bcrypt\.hash\("go4it2026", 12\);/,
+        `const adminPassword = process.env.GO4IT_ADMIN_PASSWORD;\n  const defaultPassword = adminPassword\n    ? await bcrypt.hash(adminPassword, 12)\n    : await bcrypt.hash(crypto.randomUUID(), 12);`
+      );
+      writeFileSync(provisionPath2, provision);
+      console.log("[TemplateUpgrade] Updated provision-users.ts to use GO4IT_ADMIN_PASSWORD env var");
+    }
+  }
+
   console.log("[TemplateUpgrade] Done");
 }
 
