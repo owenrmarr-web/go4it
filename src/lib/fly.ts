@@ -380,7 +380,7 @@ export async function GET() {
   if (existsSync(authPagePath)) {
     let authPage = readFileSync(authPagePath, "utf-8");
     if (authPage.includes("go4it2026")) {
-      authPage = authPage.replace(/\s*<div[^>]*>\s*Demo:.*?go4it2026.*?<\/div>/s, "");
+      authPage = authPage.replace(/\s*<div[^>]*>[\s\S]*?go4it2026[\s\S]*?<\/div>/, "");
       writeFileSync(authPagePath, authPage);
       console.log("[TemplateUpgrade] Removed demo credentials from auth page");
     }
