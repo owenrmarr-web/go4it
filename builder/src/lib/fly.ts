@@ -195,6 +195,7 @@ RUN npm ci --legacy-peer-deps
 COPY . .
 # Provide a dummy DATABASE_URL at build time so Next.js can collect page data
 ENV DATABASE_URL="file:./build.db"
+RUN npx prisma db push --accept-data-loss 2>&1 || true
 RUN npm run build
 
 FROM node:20-slim AS runner
