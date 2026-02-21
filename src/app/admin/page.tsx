@@ -60,6 +60,15 @@ interface AdminOrg {
   };
 }
 
+interface AdminContact {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  message: string;
+  createdAt: string;
+}
+
 interface AdminMachine {
   flyAppId: string;
   flyStatus: string;
@@ -77,17 +86,19 @@ interface AdminMachine {
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"users" | "organizations" | "creations" | "submissions" | "machines">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "organizations" | "creations" | "submissions" | "machines" | "contact">("users");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [orgs, setOrgs] = useState<AdminOrg[]>([]);
   const [generations, setGenerations] = useState<AdminGeneration[]>([]);
   const [submissions, setSubmissions] = useState<AdminSubmission[]>([]);
   const [machines, setMachines] = useState<AdminMachine[]>([]);
+  const [contacts, setContacts] = useState<AdminContact[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [orgsLoading, setOrgsLoading] = useState(true);
   const [generationsLoading, setGenerationsLoading] = useState(true);
   const [submissionsLoading, setSubmissionsLoading] = useState(true);
   const [machinesLoading, setMachinesLoading] = useState(true);
+  const [contactsLoading, setContactsLoading] = useState(true);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -125,6 +136,12 @@ export default function AdminPage() {
       .then((data) => setMachines(data))
       .catch(() => {})
       .finally(() => setMachinesLoading(false));
+
+    fetch("/api/contact")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => setContacts(data))
+      .catch(() => {})
+      .finally(() => setContactsLoading(false));
   }, [session, status, router]);
 
   if (status === "loading" || !session?.user?.isAdmin) {
@@ -204,6 +221,16 @@ export default function AdminPage() {
             }`}
           >
             Machines ({machines.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("contact")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "contact"
+                ? "bg-white shadow-sm text-gray-900"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Contact ({contacts.length})
           </button>
         </div>
 
@@ -1187,6 +1214,92 @@ export default function AdminPage() {
                               Destroy
                             </button>
                           )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              </>
+            )}
+          </div>
+        )}
+        {/* Contact Tab */}
+        {activeTab === "contact" && (
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            {contactsLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+              </div>
+            ) : contacts.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                No contact submissions yet.
+              </div>
+            ) : (
+              <>
+              {/* Mobile card view */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {contacts.map((c) => (
+                  <div key={c.id} className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-gray-900">{c.name}</p>
+                      <span className="text-[10px] text-gray-400">
+                        {new Date(c.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                      {c.email && <span>{c.email}</span>}
+                      {c.phone && <span>{c.phone}</span>}
+                    </div>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.message}</p>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table view */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Phone
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Message
+                      </th>
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {contacts.map((c) => (
+                      <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                          {c.name}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {c.email ? (
+                            <a href={`mailto:${c.email}`} className="text-purple-600 hover:underline">
+                              {c.email}
+                            </a>
+                          ) : (
+                            <span className="text-gray-300">&mdash;</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                          {c.phone || <span className="text-gray-300">&mdash;</span>}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-700 max-w-md">
+                          <p className="whitespace-pre-wrap">{c.message}</p>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                          {new Date(c.createdAt).toLocaleDateString()}
                         </td>
                       </tr>
                     ))}

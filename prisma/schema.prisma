@@ -270,6 +270,19 @@ model Invitation {
 }
 
 // ============================================
+// Contact Submissions
+// ============================================
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  message   String
+  createdAt DateTime @default(now())
+}
+
+// ============================================
 // Bug/Feedback Tracking
 // ============================================
 
