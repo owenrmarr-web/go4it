@@ -208,3 +208,91 @@ export async function sendVerificationEmail({
 
   return data;
 }
+
+interface AppUpdateEmailParams {
+  to: string;
+  ownerName: string;
+  appTitle: string;
+  appIcon: string;
+  newVersion: string;
+  updateSummary: string;
+  accountUrl: string;
+}
+
+export async function sendAppUpdateEmail({
+  to,
+  ownerName,
+  appTitle,
+  appIcon,
+  newVersion,
+  updateSummary,
+  accountUrl,
+}: AppUpdateEmailParams) {
+  const { data, error } = await resend.emails.send({
+    from: "GO4IT <noreply@go4it.live>",
+    to,
+    subject: `Update available: ${appTitle} ${newVersion}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb; padding: 40px 20px;">
+          <div style="max-width: 480px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <h1 style="display: inline-block; font-size: 28px; font-weight: 800; color: #ffffff; background: linear-gradient(135deg, #f97316, #ec4899, #9333ea); padding: 8px 24px; border-radius: 8px; margin: 0;">
+                GO4IT
+              </h1>
+            </div>
+
+            <h2 style="font-size: 20px; color: #111827; margin-bottom: 16px;">
+              ${appIcon} ${appTitle} ${newVersion} is available
+            </h2>
+
+            <p style="color: #4b5563; line-height: 1.6; margin-bottom: 16px;">
+              Hi ${ownerName},
+            </p>
+
+            <p style="color: #4b5563; line-height: 1.6; margin-bottom: 24px;">
+              A new version of <strong>${appTitle}</strong> is available for your organization.
+            </p>
+
+            <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+              <p style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600; margin: 0 0 8px 0;">
+                What's new in ${newVersion}
+              </p>
+              <p style="color: #374151; line-height: 1.6; margin: 0;">
+                ${updateSummary}
+              </p>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 32px;">
+              <a href="${accountUrl}" style="display: inline-block; background: linear-gradient(135deg, #f97316, #ec4899, #9333ea); color: white; font-weight: 600; padding: 14px 32px; border-radius: 8px; text-decoration: none;">
+                Update Now
+              </a>
+            </div>
+
+            <p style="color: #9ca3af; font-size: 14px; line-height: 1.6;">
+              Your current deployment will continue working until you choose to update. You can update at any time from your Account page.
+            </p>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+            <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+              GO4IT &middot; Free software tools to help small businesses do big things.
+            </p>
+          </div>
+        </body>
+      </html>
+    `,
+  });
+
+  if (error) {
+    console.error("Failed to send app update email:", error);
+    throw new Error(`Failed to send email: ${error.message}`);
+  }
+
+  return data;
+}

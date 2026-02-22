@@ -40,6 +40,9 @@ RUN npx tsc
 # Copy playbook and template (baked into image)
 COPY playbook ./playbook
 
+# Copy Go Suite app source (baked into image for preview redeploys)
+COPY apps ./apps
+
 # Create apps directory on volume mount point and give builder user ownership
 RUN mkdir -p /data/apps && chown -R builder:builder /data /app
 

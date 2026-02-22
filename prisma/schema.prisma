@@ -30,6 +30,7 @@ model User {
   organizations OrganizationMember[]
   generatedApps GeneratedApp[]
   orgAppMembers OrgAppMember[]
+  notifications Notification[]
   isAdmin       Boolean   @default(false)
   createdAt     DateTime  @default(now())
 }
@@ -139,6 +140,7 @@ model GeneratedApp {
   uploadBlobUrl      String?                      // Vercel Blob URL for uploaded zip
   manifestJson       String?                      // Raw go4it.json contents (JSON string)
   iterations         AppIteration[]
+  updates            AppUpdate[]
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 }
@@ -307,4 +309,40 @@ model BugReport {
   adminNote        String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+}
+
+// ============================================
+// App Update Tracking
+// ============================================
+
+model AppUpdate {
+  id             String   @id @default(cuid())
+  generatedAppId String
+  version        Int      // The marketplaceVersion this update bumped TO
+  summary        String   // Admin-provided changelog / update summary
+  publishedAt    DateTime @default(now())
+
+  generatedApp GeneratedApp @relation(fields: [generatedAppId], references: [id], onDelete: Cascade)
+
+  @@index([generatedAppId])
+}
+
+// ============================================
+// Notifications
+// ============================================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "app_update", etc.
+  title     String
+  body      String
+  link      String?  // e.g., "/account"
+  isRead    Boolean  @default(false)
+  metadata  String?  // JSON string for extra data (appId, version, etc.)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
 }

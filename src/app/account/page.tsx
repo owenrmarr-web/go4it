@@ -45,6 +45,7 @@ interface OrgApp {
   deployedVersion: string | null;
   latestVersion: string;
   needsUpdate: boolean;
+  updateSummary: string | null;
   generatedAppId: string | null;
   isOwnApp: boolean;
 }
@@ -767,6 +768,12 @@ function AccountPage() {
   };
 
   const handleUpdateApp = (orgApp: OrgApp) => {
+    // Dismiss update notifications
+    fetch("/api/account/notifications", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ markAllRead: true }),
+    }).catch(() => {});
     // Re-deploy using the same launch flow
     handleLaunchApp(orgApp);
   };
@@ -1250,6 +1257,11 @@ function AccountPage() {
                                 </span>
                               )}
                             </div>
+                            {orgApp.needsUpdate && orgApp.updateSummary && (
+                              <p className="text-xs text-gray-500 mt-1 max-w-md">
+                                {orgApp.updateSummary}
+                              </p>
+                            )}
                             <p className="text-sm text-gray-500 mt-0.5">
                               {orgApp.app.category}
                               {orgApp.subdomain && (

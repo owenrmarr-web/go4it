@@ -69,6 +69,18 @@ interface AdminContact {
   createdAt: string;
 }
 
+interface GoSuiteApp {
+  id: string;
+  title: string;
+  icon: string;
+  category: string;
+  generatedAppId: string;
+  marketplaceVersion: number;
+  previewFlyAppId: string | null;
+  deployedCount: number;
+  lastUpdate: { summary: string; publishedAt: string } | null;
+}
+
 interface AdminMachine {
   flyAppId: string;
   flyStatus: string;
@@ -86,7 +98,7 @@ interface AdminMachine {
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"users" | "organizations" | "creations" | "submissions" | "machines" | "contact">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "organizations" | "creations" | "submissions" | "machines" | "contact" | "gosuite">("users");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [orgs, setOrgs] = useState<AdminOrg[]>([]);
   const [generations, setGenerations] = useState<AdminGeneration[]>([]);
@@ -99,6 +111,11 @@ export default function AdminPage() {
   const [submissionsLoading, setSubmissionsLoading] = useState(true);
   const [machinesLoading, setMachinesLoading] = useState(true);
   const [contactsLoading, setContactsLoading] = useState(true);
+  const [goSuiteApps, setGoSuiteApps] = useState<GoSuiteApp[]>([]);
+  const [goSuiteLoading, setGoSuiteLoading] = useState(true);
+  const [publishModal, setPublishModal] = useState<GoSuiteApp | null>(null);
+  const [publishSummary, setPublishSummary] = useState("");
+  const [publishingUpdate, setPublishingUpdate] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -142,6 +159,12 @@ export default function AdminPage() {
       .then((data) => setContacts(data))
       .catch(() => {})
       .finally(() => setContactsLoading(false));
+
+    fetch("/api/admin/go-suite")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => setGoSuiteApps(data))
+      .catch(() => {})
+      .finally(() => setGoSuiteLoading(false));
   }, [session, status, router]);
 
   if (status === "loading" || !session?.user?.isAdmin) {
@@ -231,6 +254,16 @@ export default function AdminPage() {
             }`}
           >
             Contact ({contacts.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("gosuite")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "gosuite"
+                ? "bg-white shadow-sm text-gray-900"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Go Suite ({goSuiteApps.length})
           </button>
         </div>
 
@@ -1308,6 +1341,188 @@ export default function AdminPage() {
               </div>
               </>
             )}
+          </div>
+        )}
+        {/* Go Suite Tab */}
+        {activeTab === "gosuite" && (
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            {goSuiteLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+              </div>
+            ) : goSuiteApps.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                No Go Suite apps found.
+              </div>
+            ) : (
+              <>
+              {/* Mobile card view */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {goSuiteApps.map((app) => (
+                  <div key={app.id} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{app.icon}</span>
+                        <div>
+                          <p className="font-medium text-gray-900">{app.title}</p>
+                          <p className="text-xs text-gray-500">{app.category}</p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                        V{app.marketplaceVersion}.0
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span>{app.deployedCount} deployed</span>
+                      <span>{app.previewFlyAppId ? "Preview live" : "No preview"}</span>
+                      {app.lastUpdate && (
+                        <span>Updated {new Date(app.lastUpdate.publishedAt).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => { setPublishModal(app); setPublishSummary(""); }}
+                      className="w-full px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg hover:opacity-90 transition-opacity"
+                    >
+                      Publish Update
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table view */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">App</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Version</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Preview</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Deployed</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Update</th>
+                      <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {goSuiteApps.map((app) => (
+                      <tr key={app.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{app.icon}</span>
+                            <span className="font-medium text-gray-900">{app.title}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{app.category}</td>
+                        <td className="px-6 py-4">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                            V{app.marketplaceVersion}.0
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          {app.previewFlyAppId ? (
+                            <span className="text-green-600">Live</span>
+                          ) : (
+                            <span className="text-gray-400">None</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {app.deployedCount} org{app.deployedCount !== 1 ? "s" : ""}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {app.lastUpdate ? (
+                            <div>
+                              <p className="text-gray-700 truncate max-w-[200px]">{app.lastUpdate.summary}</p>
+                              <p className="text-xs">{new Date(app.lastUpdate.publishedAt).toLocaleDateString()}</p>
+                            </div>
+                          ) : (
+                            <span className="text-gray-300">&mdash;</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => { setPublishModal(app); setPublishSummary(""); }}
+                            className="px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg hover:opacity-90 transition-opacity"
+                          >
+                            Publish Update
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Publish Update Modal */}
+        {publishModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+              <h2 className="text-xl font-bold text-gray-900 mb-1">
+                {publishModal.icon} Publish {publishModal.title} Update
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Current version: V{publishModal.marketplaceVersion}.0 → V{publishModal.marketplaceVersion + 1}.0
+              </p>
+
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Update Summary
+              </label>
+              <textarea
+                value={publishSummary}
+                onChange={(e) => setPublishSummary(e.target.value)}
+                placeholder="Describe what changed in this update..."
+                rows={4}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              />
+              <p className="text-xs text-gray-400 mt-1 mb-4">
+                This summary will be shown to org owners in their notification email and account page.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPublishModal(null)}
+                  disabled={publishingUpdate}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (publishSummary.trim().length < 10) {
+                      toast.error("Summary must be at least 10 characters");
+                      return;
+                    }
+                    setPublishingUpdate(true);
+                    try {
+                      const res = await fetch(`/api/admin/apps/${publishModal.id}/publish-update`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ summary: publishSummary }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error || "Failed to publish update");
+                      toast.success(`Published ${data.newVersion}! Notified ${data.notifiedUsers} user(s) across ${data.notifiedOrgs} org(s).`);
+                      setPublishModal(null);
+                      // Refresh Go Suite apps
+                      fetch("/api/admin/go-suite")
+                        .then((r) => r.ok ? r.json() : Promise.reject())
+                        .then((d) => setGoSuiteApps(d))
+                        .catch(() => {});
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Failed to publish update");
+                    } finally {
+                      setPublishingUpdate(false);
+                    }
+                  }}
+                  disabled={publishingUpdate || publishSummary.trim().length < 10}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {publishingUpdate ? "Publishing..." : `Publish V${publishModal.marketplaceVersion + 1}.0`}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>

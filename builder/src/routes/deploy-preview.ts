@@ -15,9 +15,9 @@ import prisma from "../lib/prisma.js";
  */
 export default async function deployPreviewRoute(app: FastifyInstance) {
   app.post<{
-    Body: { generationId: string; type?: "store" | "draft" };
+    Body: { generationId: string; type?: "store" | "draft"; existingFlyAppId?: string };
   }>("/deploy-preview", async (request, reply) => {
-    const { generationId, type = "store" } = request.body;
+    const { generationId, type = "store", existingFlyAppId } = request.body;
 
     if (!generationId) {
       return reply.status(400).send({ error: "generationId is required" });
@@ -37,7 +37,8 @@ export default async function deployPreviewRoute(app: FastifyInstance) {
       return reply.status(404).send({ error: "GeneratedApp not found" });
     }
 
-    if (gen.previewFlyAppId) {
+    // Skip "already deployed" check when redeploying to existing app
+    if (gen.previewFlyAppId && !existingFlyAppId) {
       return reply.status(200).send({
         status: "already_deployed",
         generationId,
@@ -52,7 +53,7 @@ export default async function deployPreviewRoute(app: FastifyInstance) {
     }
 
     // Run async — return 202 immediately
-    runPreviewPipeline(generationId, gen.uploadBlobUrl, gen.sourceDir, gen.appId, type).catch(
+    runPreviewPipeline(generationId, gen.uploadBlobUrl, gen.sourceDir, gen.appId, type, existingFlyAppId).catch(
       (err) => {
         console.error(
           `[DeployPreview ${generationId}] Unhandled error:`,
@@ -70,7 +71,8 @@ async function runPreviewPipeline(
   uploadBlobUrl: string | null,
   existingSourceDir: string | null,
   appId: string | null,
-  type: "store" | "draft" = "store"
+  type: "store" | "draft" = "store",
+  existingFlyAppId?: string
 ) {
   const log = (msg: string) =>
     console.log(`[DeployPreview ${generationId}] ${msg}`);
@@ -163,9 +165,15 @@ async function runPreviewPipeline(
     }
   }
 
-  // 5. Create Fly infrastructure
-  log("Creating Fly infrastructure...");
-  const flyAppName = await preCreateFlyInfra(generationId, "preview");
+  // 5. Create Fly infrastructure (skip if redeploying to existing app)
+  let flyAppName: string;
+  if (existingFlyAppId) {
+    flyAppName = existingFlyAppId;
+    log(`Redeploying to existing Fly app: ${flyAppName}`);
+  } else {
+    log("Creating Fly infrastructure...");
+    flyAppName = await preCreateFlyInfra(generationId, "preview");
+  }
 
   // 6. Deploy preview app
   log("Deploying preview app...");
@@ -184,7 +192,7 @@ async function runPreviewPipeline(
     log(`Screenshot failed (non-fatal): ${(err as Error).message?.slice(0, 100)}`);
   }
 
-  // 8. Update GeneratedApp
+  // 8. Update GeneratedApp (set preview fields if new, update screenshot if redeploy)
   await prisma.generatedApp.update({
     where: { id: generationId },
     data: {

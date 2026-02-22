@@ -94,7 +94,7 @@ export async function GET(request: Request) {
       logo: org.logo,
       themeColors: org.themeColors ? JSON.parse(org.themeColors) : null,
     },
-    apps: org.apps.map((oa) => {
+    apps: await Promise.all(org.apps.map(async (oa) => {
       const genApp = oa.app.generatedApp;
       const latestX = genApp?.marketplaceVersion ?? 1;
       const latestY = oa.orgIterationCount ?? 0;
@@ -105,6 +105,16 @@ export async function GET(request: Request) {
         deployedX != null &&
         deployedY != null &&
         (deployedX < latestX || deployedY < latestY);
+
+      // Fetch update summary when an update is available
+      let updateSummary: string | null = null;
+      if (needsUpdate && genApp?.id) {
+        const latestUpdate = await prisma.appUpdate.findFirst({
+          where: { generatedAppId: genApp.id, version: latestX },
+          select: { summary: true },
+        });
+        updateSummary = latestUpdate?.summary ?? null;
+      }
 
       return {
         id: oa.id,
@@ -129,10 +139,11 @@ export async function GET(request: Request) {
         deployedVersion: deployedX != null ? `V${deployedX}.${deployedY ?? 0}` : null,
         latestVersion: `V${latestX}.${latestY}`,
         needsUpdate: !!needsUpdate,
+        updateSummary,
         generatedAppId: genApp?.id ?? null,
         isOwnApp: genApp?.createdById === session.user!.id,
       };
-    }),
+    })),
     members: org.members.map((m) => ({
       id: m.id,
       role: m.role,

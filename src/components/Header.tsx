@@ -30,6 +30,7 @@ export default function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const isGenerating =
     gen.stage !== "idle" && gen.stage !== "complete" && gen.stage !== "failed";
@@ -57,6 +58,22 @@ export default function Header() {
         })
         .catch(() => {});
     }
+  }, [session]);
+
+  // Poll for unread notifications
+  useEffect(() => {
+    if (!session?.user) return;
+    const fetchCount = () => {
+      fetch("/api/account/notifications?countOnly=true")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data) setUnreadCount(data.unreadCount);
+        })
+        .catch(() => {});
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 60000);
+    return () => clearInterval(interval);
   }, [session]);
 
   return (
@@ -175,6 +192,16 @@ export default function Header() {
             <Link href="/account" className="hidden md:inline">
               <span className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors max-w-52 truncate">
                 {activeOrg?.name || profile?.companyName}
+              </span>
+            </Link>
+          )}
+          {session && unreadCount > 0 && (
+            <Link href="/account" className="relative p-1.5 text-gray-500 hover:text-gray-700 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+              </svg>
+              <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             </Link>
           )}
