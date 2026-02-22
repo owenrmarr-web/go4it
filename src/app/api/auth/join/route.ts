@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import { generateUsernameFromName } from "@/lib/username-utils";
+import { validateUsername } from "@/lib/username";
 
 export async function POST(request: Request) {
   try {
-    const { token, name, password, image, profileColor, profileEmoji } =
+    const { token, name, password, username: requestedUsername, image, profileColor, profileEmoji } =
       await request.json();
 
     if (!token || !name?.trim()) {
@@ -69,11 +71,34 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Use requested username if provided, otherwise auto-generate from name
+    let username = requestedUsername?.trim();
+    if (username) {
+      const usernameCheck = await validateUsername(username);
+      if (!usernameCheck.valid) {
+        return NextResponse.json(
+          { error: usernameCheck.error },
+          { status: 400 }
+        );
+      }
+    } else {
+      username = generateUsernameFromName(name.trim());
+      if (username.length < 3) username = "user";
+      const existingUsername = await prisma.user.findUnique({
+        where: { username },
+        select: { id: true },
+      });
+      if (existingUsername) {
+        username = `${username}_${Math.random().toString(36).substring(2, 6)}`;
+      }
+    }
+
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           name: name.trim(),
           email: invitation.email,
+          username,
           password: hashedPassword,
           emailVerified: new Date(),
           image: image || null,

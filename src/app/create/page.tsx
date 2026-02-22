@@ -91,6 +91,11 @@ export default function CreatePage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalClosable, setAuthModalClosable] = useState(true);
   const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
+  const [userUsername, setUserUsername] = useState<string | null>(null);
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [usernameInput, setUsernameInput] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "saving" | "error">("idle");
+  const [usernameError, setUsernameError] = useState("");
 
   // Persist prompt and context to localStorage
   const updatePrompt = useCallback((value: string) => {
@@ -115,25 +120,65 @@ export default function CreatePage() {
 
   // Auth modal is shown only when user tries to generate without being signed in
 
-  // Re-populate business context from profile only if no localStorage value
+  // Re-populate business context from profile and check username
   useEffect(() => {
     if (session?.user) {
-      const hasLocal = !!localStorage.getItem(CONTEXT_STORAGE_KEY);
-      if (!hasLocal) {
-        fetch("/api/account/profile")
-          .then((r) => (r.ok ? r.json() : null))
-          .then((profile) => {
-            if (profile?.businessDescription) {
+      fetch("/api/account/profile")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((profile) => {
+          if (profile) {
+            setUserUsername(profile.username || null);
+            const hasLocal = !!localStorage.getItem(CONTEXT_STORAGE_KEY);
+            if (!hasLocal && profile.businessDescription) {
               setBusinessContext(profile.businessDescription);
             }
-          })
-          .catch(() => {});
-      }
+          }
+        })
+        .catch(() => {});
     }
   }, [session]);
 
 
   const pageState = localView === "default" ? derivePageState() : localView;
+
+  const handleSaveUsername = async () => {
+    const trimmed = usernameInput.trim().toLowerCase();
+    if (trimmed.length < 3) {
+      setUsernameError("Username must be at least 3 characters");
+      return;
+    }
+    setUsernameStatus("checking");
+    setUsernameError("");
+    try {
+      const checkRes = await fetch(`/api/auth/check-username?username=${encodeURIComponent(trimmed)}`);
+      const checkData = await checkRes.json();
+      if (!checkData.available) {
+        setUsernameError(checkData.error || "Username not available");
+        setUsernameStatus("error");
+        return;
+      }
+      setUsernameStatus("saving");
+      const saveRes = await fetch("/api/account/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: trimmed }),
+      });
+      if (!saveRes.ok) {
+        const saveData = await saveRes.json();
+        setUsernameError(saveData.error || "Failed to save username");
+        setUsernameStatus("error");
+        return;
+      }
+      setUserUsername(trimmed);
+      setShowUsernameModal(false);
+      setUsernameStatus("idle");
+      toast.success("Username set!");
+      setShowGenerateConfirm(true);
+    } catch {
+      setUsernameError("Failed to save username");
+      setUsernameStatus("error");
+    }
+  };
 
   const handleGenerate = async () => {
     if (!session?.user) {
@@ -347,6 +392,13 @@ export default function CreatePage() {
                   }
                   if (prompt.trim().length < 10) {
                     toast.error("Please describe your app in at least 10 characters.");
+                    return;
+                  }
+                  if (!userUsername) {
+                    setUsernameInput("");
+                    setUsernameError("");
+                    setUsernameStatus("idle");
+                    setShowUsernameModal(true);
                     return;
                   }
                   setShowGenerateConfirm(true);
@@ -950,6 +1002,61 @@ export default function CreatePage() {
             window.location.reload();
           }}
         />
+      )}
+
+      {showUsernameModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8">
+            <h2 className="text-2xl font-extrabold text-gray-900 text-center">
+              Choose a username
+            </h2>
+            <p className="mt-2 text-gray-500 text-center text-sm">
+              Your username will appear as the creator on apps you publish.
+            </p>
+            <div className="mt-6">
+              <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-100 transition-all">
+                <span className="text-gray-400 font-medium">@</span>
+                <input
+                  type="text"
+                  value={usernameInput}
+                  onChange={(e) => {
+                    const v = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").substring(0, 20);
+                    setUsernameInput(v);
+                    setUsernameError("");
+                    setUsernameStatus("idle");
+                  }}
+                  placeholder="your_username"
+                  className="flex-1 bg-transparent outline-none text-gray-900 placeholder:text-gray-300"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && usernameInput.length >= 3) handleSaveUsername();
+                  }}
+                />
+              </div>
+              {usernameError && (
+                <p className="mt-2 text-sm text-red-500">{usernameError}</p>
+              )}
+              <p className="mt-2 text-xs text-gray-400">
+                3-20 characters, lowercase letters, numbers, and underscores only
+              </p>
+            </div>
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                onClick={handleSaveUsername}
+                disabled={usernameInput.length < 3 || usernameStatus === "checking" || usernameStatus === "saving"}
+                className="gradient-brand px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {usernameStatus === "checking" ? "Checking..." : usernameStatus === "saving" ? "Saving..." : "Continue"}
+              </button>
+              <button
+                onClick={() => setShowUsernameModal(false)}
+                className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

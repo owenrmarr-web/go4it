@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
+import { useState, useEffect, useRef, useCallback, use } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { generateUsernameFromName } from "@/lib/username-utils";
 
 const PROFILE_COLORS = [
   { name: "Orange", hex: "#F97316" },
@@ -59,6 +60,10 @@ export default function JoinPage({
 
   // Form state
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [usernameError, setUsernameError] = useState("");
+  const usernameCheckTimer = useRef<ReturnType<typeof setTimeout>>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -66,6 +71,28 @@ export default function JoinPage({
   const [profileEmoji, setProfileEmoji] = useState<string | null>(null);
   const [profileColor, setProfileColor] = useState(PROFILE_COLORS[2].hex); // Default purple
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const checkUsername = useCallback(async (value: string) => {
+    if (!value || value.length < 3) {
+      setUsernameStatus("idle");
+      setUsernameError("");
+      return;
+    }
+    setUsernameStatus("checking");
+    try {
+      const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(value)}`);
+      const data = await res.json();
+      if (data.available) {
+        setUsernameStatus("available");
+        setUsernameError("");
+      } else {
+        setUsernameStatus("taken");
+        setUsernameError(data.error || "Username not available");
+      }
+    } catch {
+      setUsernameStatus("idle");
+    }
+  }, []);
 
   useEffect(() => {
     fetch(`/api/invite/${token}`)
@@ -79,6 +106,11 @@ export default function JoinPage({
         } else {
           setInvite(data);
           setName(data.name || "");
+          if (data.name) {
+            const suggested = generateUsernameFromName(data.name);
+            setUsername(suggested);
+            checkUsername(suggested);
+          }
         }
         setLoading(false);
       })
@@ -133,6 +165,7 @@ export default function JoinPage({
         body: JSON.stringify({
           token,
           name: name.trim(),
+          username: username.trim(),
           password,
           image: profilePhoto,
           profileColor,
@@ -300,11 +333,72 @@ export default function JoinPage({
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                // Auto-suggest username when name changes (only if user hasn't manually edited)
+                const suggested = generateUsernameFromName(e.target.value);
+                if (suggested && (!username || username === generateUsernameFromName(name))) {
+                  setUsername(suggested);
+                  if (usernameCheckTimer.current) clearTimeout(usernameCheckTimer.current);
+                  usernameCheckTimer.current = setTimeout(() => checkUsername(suggested), 400);
+                }
+              }}
               required
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
               placeholder="Your name"
             />
+          </div>
+
+          {/* Username */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Username <span className="text-red-400">*</span>
+            </label>
+            <div className="relative">
+              <div className="flex items-center border border-gray-200 rounded-lg focus-within:ring-2 focus-within:ring-purple-400 overflow-hidden">
+                <span className="pl-4 text-gray-400 font-medium select-none">@</span>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => {
+                    const v = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").substring(0, 20);
+                    setUsername(v);
+                    setUsernameError("");
+                    setUsernameStatus("idle");
+                    if (usernameCheckTimer.current) clearTimeout(usernameCheckTimer.current);
+                    usernameCheckTimer.current = setTimeout(() => checkUsername(v), 400);
+                  }}
+                  required
+                  className="flex-1 px-2 py-2.5 focus:outline-none text-gray-700"
+                  placeholder="your_username"
+                />
+                {usernameStatus === "checking" && (
+                  <div className="pr-3">
+                    <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                {usernameStatus === "available" && (
+                  <div className="pr-3 text-green-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </div>
+                )}
+                {usernameStatus === "taken" && (
+                  <div className="pr-3 text-red-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            </div>
+            {usernameError && (
+              <p className="text-xs text-red-500 mt-1">{usernameError}</p>
+            )}
+            <p className="text-xs text-gray-400 mt-1">
+              3-20 characters. This will appear as your creator name on any apps you publish.
+            </p>
           </div>
 
           {/* Password */}
@@ -495,6 +589,9 @@ export default function JoinPage({
             disabled={
               submitting ||
               !name.trim() ||
+              username.length < 3 ||
+              usernameStatus === "taken" ||
+              usernameStatus === "checking" ||
               password.length < 6 ||
               password !== confirmPassword
             }

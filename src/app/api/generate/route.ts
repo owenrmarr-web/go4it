@@ -73,6 +73,18 @@ export async function POST(request: Request) {
     );
   }
 
+  // Require username before generating — ensures creator attribution on publish
+  const creator = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { username: true },
+  });
+  if (!creator?.username) {
+    return NextResponse.json(
+      { error: "Please set a username before creating an app. Go to Account Settings or use the prompt on this page." },
+      { status: 400 }
+    );
+  }
+
   try {
     // Create the generation record
     const generatedApp = await prisma.generatedApp.create({
@@ -150,6 +162,18 @@ async function handleLocalGeneration(
   if (prompt.length > 5000) {
     return NextResponse.json(
       { error: "Prompt must be under 5000 characters" },
+      { status: 400 }
+    );
+  }
+
+  // Require username before generating
+  const creator = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { username: true },
+  });
+  if (!creator?.username) {
+    return NextResponse.json(
+      { error: "Please set a username before creating an app. Go to Account Settings or use the prompt on this page." },
       { status: 400 }
     );
   }

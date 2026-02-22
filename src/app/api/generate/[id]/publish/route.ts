@@ -152,14 +152,20 @@ export async function POST(
     });
     const isFirstPublish = existingApp && !existingApp.isPublic;
 
-    // Destroy old store preview machine if being replaced by a new one
+    // Destroy old store preview machine only if a new draft preview is replacing it
     const oldStoreFlyAppId = existingApp?.previewFlyAppId;
-    if (oldStoreFlyAppId && oldStoreFlyAppId !== generatedApp.previewFlyAppId && BUILDER_URL) {
+    if (oldStoreFlyAppId && generatedApp.previewFlyAppId && oldStoreFlyAppId !== generatedApp.previewFlyAppId && BUILDER_URL) {
       fetch(`${BUILDER_URL}/cleanup/${oldStoreFlyAppId}`, {
         method: "DELETE",
         headers: builderHeaders(),
       }).catch(() => {});
     }
+
+    // New draft preview promotes to store; if no new draft, keep existing store preview
+    const newStorePreviewId = generatedApp.previewFlyAppId || oldStoreFlyAppId || null;
+    const newStorePreviewUrl = generatedApp.previewFlyAppId
+      ? generatedApp.previewFlyUrl
+      : existingApp?.previewFlyAppId ? undefined : null; // keep existing URL if keeping existing machine
 
     const updatedApp = await prisma.app.update({
       where: { id: generatedApp.appId },
@@ -170,15 +176,17 @@ export async function POST(
         icon: icon || "🚀",
         author: authorDisplay,
         isPublic: isPublic !== false,
-        previewUrl: generatedApp.previewFlyUrl || null,
-        screenshot: generatedApp.screenshot || null,
-        previewFlyAppId: generatedApp.previewFlyAppId || oldStoreFlyAppId || null,
+        ...(generatedApp.previewFlyUrl ? { previewUrl: generatedApp.previewFlyUrl } : {}),
+        ...(generatedApp.screenshot ? { screenshot: generatedApp.screenshot } : {}),
+        previewFlyAppId: newStorePreviewId,
       },
     });
 
     const updatedGen = await prisma.generatedApp.update({
       where: { id },
       data: {
+        title: title.trim(),
+        iterationCount: 0, // Reset so "Unpublished changes" badge clears
         ...(isFirstPublish
           ? { marketplaceVersion: 1 }
           : { marketplaceVersion: { increment: 1 } }),
@@ -254,6 +262,8 @@ export async function POST(
   await prisma.generatedApp.update({
     where: { id },
     data: {
+      title: title.trim(),
+      iterationCount: 0, // Reset so "Unpublished changes" badge clears
       appId: app.id,
       // Clear draft preview — it's now the store preview
       previewFlyAppId: null,
