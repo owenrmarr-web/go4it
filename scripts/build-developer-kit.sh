@@ -35,10 +35,22 @@ You are building an app for the GO4IT marketplace — a platform where small bus
 
 ## Build Rules
 
-All technical rules are in `playbook/CLAUDE.md`. Follow them exactly — they ensure your app is compatible with GO4IT's deployment pipeline:
+All technical rules are in `playbook/CLAUDE.md`. **Read it fully before writing any code.** Follow the rules exactly — they ensure your app is compatible with GO4IT's deployment pipeline.
+
+### Critical Rules (Most Common Mistakes)
+
+1. **Use semantic color tokens, NOT hardcoded Tailwind colors.** Write `bg-page`, `bg-card`, `text-fg`, `text-fg-muted`, `border-edge` — NOT `bg-white`, `bg-gray-50`, `text-gray-900`, `border-gray-200`. The semantic tokens handle dark mode automatically. If you use hardcoded colors, dark mode will be broken.
+
+2. **Use the pre-built AppShell for navigation.** Edit `src/app/(app)/layout.tsx` to set your app name, emoji, and nav items. Do NOT build your own sidebar or navigation. The AppShell includes the dark/light mode toggle, user avatar, and sign-out button automatically.
+
+3. **Use the pre-built component library.** Import `Button`, `Modal`, `Badge`, `EmptyState`, `SearchInput`, `FormField`, `ConfirmDialog`, `PageHeader` from `@/components/`. Do NOT recreate these.
+
+4. **Do NOT install `next-themes` or any dark mode library.** Dark mode is already built into the template via CSS custom properties and the `ThemeToggle` component inside the AppShell. Do NOT use `dark:` prefix Tailwind classes.
+
+### Tech Stack
 
 - **Next.js 16** with App Router
-- **Tailwind CSS 4** with GO4IT brand palette
+- **Tailwind CSS 4** with GO4IT semantic color tokens
 - **Prisma 6 + SQLite** for data
 - **NextAuth** for authentication (pre-configured in the template)
 - **Standalone Docker output** for deployment
@@ -117,6 +129,11 @@ These files are pre-configured in the template and must not be modified:
 - `src/auth.ts`, `src/auth.config.ts` — authentication
 - `src/middleware.ts` — route protection
 - `src/lib/prisma.ts` — database client
+- `src/app/layout.tsx` — root layout (providers, font, dark mode FOUC script)
+- `src/app/globals.css` — semantic color tokens and Tailwind config
+- `src/components/AppShell.tsx` — sidebar + mobile drawer shell
+- `src/components/ThemeToggle.tsx` — dark/light mode toggle
+- All other files in `src/components/` — pre-built component library
 - `next.config.ts` — standalone output setting
 - `Dockerfile` — deployment configuration
 
