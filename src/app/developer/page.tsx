@@ -384,13 +384,13 @@ Follow the playbook rules exactly — use the pre-built AppShell, semantic color
             <pre>{`{
   "name": "My App",
   "description": "A short description (10+ chars)",
-  "category": "CRM | Scheduling | ...",
+  "category": "CRM / Sales",
   "icon": "🚀",
   "tags": ["keyword1", "keyword2", "keyword3"]
 }`}</pre>
           </div>
           <p className="mt-3 text-xs text-gray-400 text-center">
-            Valid categories: CRM, Scheduling, Communication, Finance, HR, Marketing, Operations, Analytics, Productivity, Legal, Sales, Support, Other
+            Valid categories: CRM / Sales, Project Management, Invoicing / Finance, Internal Chat, HR / People, Inventory, Scheduling / Bookings, Customer Support, Marketing / Analytics, Business Planning, Compliance / Legal, Document Management, Other
           </p>
         </section>
 
