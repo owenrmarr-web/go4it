@@ -93,14 +93,16 @@ export default function AppShell({
             </div>
           </div>
         )}
-        <div className="flex items-center gap-1 px-1">
+        <div className="flex items-center gap-1 px-2">
           <ThemeToggle />
           <button
             onClick={() => signOut({ callbackUrl: "/auth" })}
-            className="flex-1 flex items-center gap-2 px-3 py-2 text-sm text-fg-muted hover:text-fg hover:bg-hover rounded-lg transition-colors"
+            className="p-2 rounded-lg text-fg-muted hover:text-fg hover:bg-hover transition-colors"
+            aria-label="Sign out"
+            title="Sign out"
           >
             <svg
-              className="w-4 h-4"
+              className="w-5 h-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -112,7 +114,6 @@ export default function AppShell({
                 d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
               />
             </svg>
-            Sign out
           </button>
         </div>
       </div>

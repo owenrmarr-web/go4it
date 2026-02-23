@@ -181,6 +181,7 @@ The template includes a pre-built `AppShell` component that provides:
 - **Desktop:** Fixed 256px sidebar with app name/emoji at top, nav items in middle, user info + sign-out + theme toggle at bottom
 - **Mobile:** Hamburger icon → slide-in drawer with the same content
 - **Active state:** Auto-detected via current URL
+- **Sidebar color:** Uses `bg-card` — automatically adapts to light/dark mode. Do NOT apply gradient backgrounds, hardcoded colors, or brand colors to the sidebar. It must stay neutral and theme-aware.
 
 ### How to Set Up Navigation
 
