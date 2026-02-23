@@ -316,6 +316,10 @@ GO4IT's first-party apps follow a modular "Go Suite" strategy. Each app owns a s
 | **GoLedger** | Money | Invoices (B2B + B2C), estimates, payments (manual + Stripe), expenses, recurring invoices, financial reports (P&L, AR aging), QBO CSV export, public invoice payment page | Building |
 | **GoSales** | Sales performance | Advanced pipeline, forecasting, rep performance, commissions, quota tracking | Planned |
 
+### Known Issues
+
+- **GoLedger: half-implemented dark mode** — GoLedger has a partially implemented dark mode that needs to be removed or completed. Currently causes inconsistent styling (some components dark, others light). Fix: strip out all dark mode code and ensure the app uses the standard light theme consistent with other Go Suite apps.
+
 ### Domain Boundaries
 
 - **CRM owns relationships** — who your customers are and every touchpoint with them. It does NOT own financial transactions, appointment scheduling, project management, or sales analytics.
