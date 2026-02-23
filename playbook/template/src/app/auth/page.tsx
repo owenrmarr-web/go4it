@@ -54,8 +54,8 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="max-w-sm w-full bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+    <div className="min-h-screen bg-page flex items-center justify-center px-4">
+      <div className="max-w-sm w-full bg-card rounded-xl shadow-sm border border-edge p-8">
         <h1 className="text-2xl font-extrabold text-center bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
           {isSignUp ? "Create Account" : "Sign In"}
         </h1>
@@ -67,7 +67,7 @@ export default function AuthPage() {
               placeholder="Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+              className="w-full px-4 py-2.5 rounded-lg border border-edge-strong bg-input-bg text-fg-secondary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             />
           )}
           <input
@@ -76,7 +76,7 @@ export default function AuthPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+            className="w-full px-4 py-2.5 rounded-lg border border-edge-strong bg-input-bg text-fg-secondary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
           />
           <input
             type="password"
@@ -85,7 +85,7 @@ export default function AuthPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+            className="w-full px-4 py-2.5 rounded-lg border border-edge-strong bg-input-bg text-fg-secondary focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
           />
           <button
             type="submit"
@@ -96,11 +96,11 @@ export default function AuthPage() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-500">
+        <p className="mt-4 text-center text-sm text-fg-muted">
           {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-purple-600 font-medium hover:underline"
+            className="text-accent-fg font-medium hover:underline"
           >
             {isSignUp ? "Sign in" : "Sign up"}
           </button>

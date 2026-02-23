@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 import { Toaster } from "sonner";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,12 +18,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-gray-50 min-h-screen`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('go4it-theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}})()`,
+          }}
+        />
+      </head>
+      <body className={`${inter.className} bg-page text-fg min-h-screen`}>
         <SessionProvider>
           {children}
           <Toaster position="top-right" />
         </SessionProvider>
+        <ThemeToggle className="fixed bottom-4 right-4 z-50 bg-card border border-edge shadow-lg" />
       </body>
     </html>
   );

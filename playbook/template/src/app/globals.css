@@ -1,7 +1,97 @@
 @import "tailwindcss";
 
+/* --- Semantic color tokens (light) --- */
+:root {
+  --g4-page: #f9fafb;
+  --g4-card: #ffffff;
+  --g4-elevated: #f3f4f6;
+  --g4-input: #ffffff;
+  --g4-skeleton: #e5e7eb;
+  --g4-hover: #f9fafb;
+  --g4-edge: #f3f4f6;
+  --g4-edge-strong: #e5e7eb;
+  --g4-divider: #f9fafb;
+  --g4-fg: #111827;
+  --g4-fg-secondary: #4b5563;
+  --g4-fg-muted: #6b7280;
+  --g4-fg-dim: #9ca3af;
+  --g4-accent: #9333ea;
+  --g4-accent-soft: #faf5ff;
+  --g4-accent-fg: #7e22ce;
+  --g4-backdrop: rgba(0, 0, 0, 0.5);
+
+  --g4-blue: #eff6ff;
+  --g4-blue-fg: #1d4ed8;
+  --g4-green: #f0fdf4;
+  --g4-green-fg: #15803d;
+  --g4-red: #fef2f2;
+  --g4-red-fg: #b91c1c;
+  --g4-amber: #fffbeb;
+  --g4-amber-fg: #b45309;
+}
+
+/* --- Dark theme --- */
+.dark {
+  --g4-page: #0f172a;
+  --g4-card: #1e293b;
+  --g4-elevated: #334155;
+  --g4-input: #1e293b;
+  --g4-skeleton: #334155;
+  --g4-hover: rgba(255, 255, 255, 0.05);
+  --g4-edge: #334155;
+  --g4-edge-strong: #475569;
+  --g4-divider: #1e293b;
+  --g4-fg: #f1f5f9;
+  --g4-fg-secondary: #cbd5e1;
+  --g4-fg-muted: #94a3b8;
+  --g4-fg-dim: #64748b;
+  --g4-accent: #a855f7;
+  --g4-accent-soft: rgba(168, 85, 247, 0.15);
+  --g4-accent-fg: #c084fc;
+  --g4-backdrop: rgba(0, 0, 0, 0.7);
+
+  --g4-blue: rgba(59, 130, 246, 0.15);
+  --g4-blue-fg: #93c5fd;
+  --g4-green: rgba(34, 197, 94, 0.15);
+  --g4-green-fg: #86efac;
+  --g4-red: rgba(239, 68, 68, 0.15);
+  --g4-red-fg: #fca5a5;
+  --g4-amber: rgba(245, 158, 11, 0.15);
+  --g4-amber-fg: #fcd34d;
+
+  color-scheme: dark;
+}
+
+/* --- Register tokens as Tailwind utilities --- */
 @theme inline {
   --font-sans: var(--font-inter);
+
+  --color-page: var(--g4-page);
+  --color-card: var(--g4-card);
+  --color-elevated: var(--g4-elevated);
+  --color-input-bg: var(--g4-input);
+  --color-skeleton: var(--g4-skeleton);
+  --color-hover: var(--g4-hover);
+  --color-edge: var(--g4-edge);
+  --color-edge-strong: var(--g4-edge-strong);
+  --color-divider: var(--g4-divider);
+  --color-fg: var(--g4-fg);
+  --color-fg-secondary: var(--g4-fg-secondary);
+  --color-fg-muted: var(--g4-fg-muted);
+  --color-fg-dim: var(--g4-fg-dim);
+  --color-accent: var(--g4-accent);
+  --color-accent-soft: var(--g4-accent-soft);
+  --color-accent-fg: var(--g4-accent-fg);
+  --color-backdrop: var(--g4-backdrop);
+
+  --color-status-blue: var(--g4-blue);
+  --color-status-blue-fg: var(--g4-blue-fg);
+  --color-status-green: var(--g4-green);
+  --color-status-green-fg: var(--g4-green-fg);
+  --color-status-red: var(--g4-red);
+  --color-status-red-fg: var(--g4-red-fg);
+  --color-status-amber: var(--g4-amber);
+  --color-status-amber-fg: var(--g4-amber-fg);
 }
 
 .gradient-brand {

@@ -34,19 +34,19 @@ function SSOHandler() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-page">
         <div className="text-center">
-          <p className="text-sm text-gray-500">Sign-in link expired. Redirecting to login...</p>
+          <p className="text-sm text-fg-muted">Sign-in link expired. Redirecting to login...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-page">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-3" />
-        <p className="text-sm text-gray-500">Signing you in...</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-3" />
+        <p className="text-sm text-fg-muted">Signing you in...</p>
       </div>
     </div>
   );
@@ -56,8 +56,8 @@ export default function SSOPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+        <div className="min-h-screen flex items-center justify-center bg-page">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
         </div>
       }
     >

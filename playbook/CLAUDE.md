@@ -32,7 +32,7 @@ Breaking any of these will cause build or deployment failures.
 | `src/app/api/auth/[...nextauth]/route.ts` | NextAuth API handler |
 | `src/app/api/auth/signup/route.ts` | User registration endpoint |
 | `src/types/next-auth.d.ts` | TypeScript augmentations (adds `id` and `role` to session) |
-| `src/app/globals.css` | Tailwind CSS 4 imports + GO4IT brand gradient utilities |
+| `src/app/globals.css` | Tailwind CSS 4 imports, dark mode tokens, and GO4IT brand gradient utilities |
 | `next.config.ts` | `output: "standalone"` — required for Docker deployment |
 | `postcss.config.mjs` | Tailwind CSS v4 PostCSS plugin |
 | `tsconfig.json` | TypeScript strict mode, `@/` path alias |
@@ -41,6 +41,7 @@ Breaking any of these will cause build or deployment failures.
 | `src/app/api/access-requests/route.ts` | Access request API (seat upsell for unassigned members) |
 | `src/app/api/team-sync/route.ts` | Real-time team member sync (permission updates from platform) |
 | `src/components/UserAvatar.tsx` | Reusable avatar component with platform profile field support |
+| `src/components/ThemeToggle.tsx` | Dark/light mode toggle button (already placed in layout) |
 
 ### Infrastructure Rules
 
@@ -98,7 +99,8 @@ Replace the existing stub with seed data for your app:
 7. **Sonner for toasts** — Use `import { toast } from "sonner"` for notifications. `Toaster` is already in the root layout.
 8. **SQLite doesn't support `mode: "insensitive"`** — For case-insensitive search, convert both sides to lowercase or omit the `mode` option entirely.
 9. **Don't redefine Prisma types** — Never create local TypeScript interfaces that duplicate Prisma model names (e.g., a local `Booking` interface when `Booking` is a Prisma model). Use `import { Booking } from "@prisma/client"` instead. Duplicate type names cause `Type 'X[]' is not assignable to type 'X[]'` errors.
-10. **No external theme/dark-mode libraries** — Do not install `next-themes` or similar packages. The template does not include a ThemeProvider. Use Tailwind CSS classes for all styling. If you need a dark/light toggle, implement it with a simple React context and CSS variables — don't add third-party theme providers.
+10. **No external theme/dark-mode libraries** — Do not install `next-themes` or similar packages. Dark mode is built into the template via CSS custom properties and a `ThemeToggle` component. Use the semantic token classes (`bg-page`, `text-fg`, `bg-card`, etc.) for all styling — they handle dark mode automatically. Do NOT use `dark:` prefix classes.
+11. **Use semantic color tokens for dark mode** — The template includes semantic color tokens (`bg-page`, `text-fg`, `bg-card`, `border-edge`, etc.) that automatically adapt to light/dark mode. Never use hardcoded Tailwind colors like `bg-gray-50`, `bg-white`, or `text-gray-900` for surfaces, text, or borders. See the TIER 2 Design System section for the full token list.
 
 ---
 
@@ -106,39 +108,51 @@ Replace the existing stub with seed data for your app:
 
 Use these design tokens for a cohesive look across all GO4IT apps. Apply them creatively — they define the palette and feel, not the layout.
 
-### Colors — GO4IT Brand Palette
+### Colors — Semantic Token Classes
 
-| Role | Value | Usage |
-|---|---|---|
-| Primary | `purple-600` | Buttons, links, active states, accents |
-| Primary light | `purple-50` / `purple-100` | Selected states, light backgrounds, hover |
-| Accent warm | `orange-500` | Highlights, badges, attention |
-| Accent pink | `pink-500` | Secondary highlights, gradients |
-| Brand gradient | `.gradient-brand` class | Primary CTAs, headers, hero sections |
-| Brand gradient text | `.gradient-brand-text` class | Gradient-colored headings |
-| Page background | `gray-50` | Default page background |
-| Card background | `white` | Card and panel surfaces |
-| Text primary | `gray-900` | Headings |
-| Text secondary | `gray-700` | Body text |
-| Text muted | `gray-400` / `gray-500` | Labels, placeholders, timestamps |
+NEVER use hardcoded Tailwind colors (`bg-gray-50`, `bg-white`, `text-gray-900`, etc.) for surfaces, text, or borders. Use these semantic tokens — they automatically adapt to light and dark mode.
+
+| Category | Class | Light | Dark | Usage |
+|---|---|---|---|---|
+| **Surfaces** | `bg-page` | gray-50 | slate-900 | Page background |
+| | `bg-card` | white | slate-800 | Cards, panels, dropdowns |
+| | `bg-elevated` | gray-100 | slate-700 | Raised sections, secondary panels |
+| | `bg-input-bg` | white | slate-800 | Form inputs |
+| | `bg-hover` | gray-50 | white/5% | Hover states |
+| **Borders** | `border-edge` | gray-100 | slate-700 | Subtle borders (cards, dividers) |
+| | `border-edge-strong` | gray-200 | slate-600 | Prominent borders (inputs, active) |
+| **Text** | `text-fg` | gray-900 | slate-100 | Headings, primary text |
+| | `text-fg-secondary` | gray-600 | slate-300 | Body text |
+| | `text-fg-muted` | gray-500 | slate-400 | Labels, placeholders, timestamps |
+| | `text-fg-dim` | gray-400 | slate-500 | Disabled, de-emphasized |
+| **Accent** | `bg-accent` | purple-600 | purple-500 | Buttons, active states |
+| | `text-accent-fg` | purple-700 | purple-300 | Links, accent text |
+| | `bg-accent-soft` | purple-50 | purple/15% | Selected states, light accent bg |
+| **Status** | `bg-status-green` / `text-status-green-fg` | green-50 / green-700 | green/15% / green-300 | Success |
+| | `bg-status-red` / `text-status-red-fg` | red-50 / red-700 | red/15% / red-300 | Error, danger |
+| | `bg-status-blue` / `text-status-blue-fg` | blue-50 / blue-700 | blue/15% / blue-300 | Info |
+| | `bg-status-amber` / `text-status-amber-fg` | amber-50 / amber-700 | amber/15% / amber-300 | Warning |
+| **Brand** | `.gradient-brand` class | — | — | Primary CTAs, hero sections |
+| | `.gradient-brand-text` class | — | — | Gradient-colored headings |
+| **Utility** | `bg-backdrop` | black/50% | black/70% | Modal overlays |
 
 ### Typography & Shape
 
 - **Font:** Inter (already loaded in the template)
 - **Corners:** Always rounded — use `rounded-lg` for buttons/inputs, `rounded-xl` for cards/panels, `rounded-2xl` for modals
 - **Shadows:** Subtle — `shadow-sm` for cards, `shadow-lg` for modals/dropdowns
-- **Borders:** Light — `border border-gray-100` or `border-gray-200`
+- **Borders:** Light — `border border-edge` or `border-edge-strong`
 
 ### Component Tokens
 
 These are style recipes, not mandatory components. Use them when building similar elements:
 
 - **Primary button:** `gradient-brand text-white font-semibold rounded-lg hover:opacity-90`
-- **Secondary button:** `bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200`
-- **Danger button:** `bg-red-50 text-red-600 rounded-lg hover:bg-red-100`
-- **Form input:** `rounded-lg border border-gray-200 focus:ring-2 focus:ring-purple-400 focus:border-transparent`
-- **Card:** `bg-white rounded-xl border border-gray-100 shadow-sm`
-- **Active nav item:** `bg-purple-50 text-purple-700 font-medium`
+- **Secondary button:** `bg-elevated text-fg-secondary rounded-lg hover:bg-hover`
+- **Danger button:** `bg-status-red text-status-red-fg rounded-lg hover:opacity-80`
+- **Form input:** `rounded-lg border border-edge-strong bg-input-bg text-fg-secondary focus:ring-2 focus:ring-accent focus:border-transparent`
+- **Card:** `bg-card rounded-xl border border-edge shadow-sm`
+- **Active nav item:** `bg-accent-soft text-accent-fg font-medium`
 
 ---
 

@@ -811,6 +811,252 @@ export default function SSOPage() {
     console.log("[TemplateUpgrade] Added SSO landing page");
   }
 
+  // --- 12. Inject dark mode tokens into globals.css ---
+  const globalsCssPath = path.join(sourceDir, "src", "app", "globals.css");
+  if (existsSync(globalsCssPath)) {
+    let css = readFileSync(globalsCssPath, "utf-8");
+
+    if (!css.includes("--g4-page")) {
+      const tokenBlock = `
+/* --- Semantic color tokens (light) --- */
+:root {
+  --g4-page: #f9fafb;
+  --g4-card: #ffffff;
+  --g4-elevated: #f3f4f6;
+  --g4-input: #ffffff;
+  --g4-skeleton: #e5e7eb;
+  --g4-hover: #f9fafb;
+  --g4-edge: #f3f4f6;
+  --g4-edge-strong: #e5e7eb;
+  --g4-divider: #f9fafb;
+  --g4-fg: #111827;
+  --g4-fg-secondary: #4b5563;
+  --g4-fg-muted: #6b7280;
+  --g4-fg-dim: #9ca3af;
+  --g4-accent: #9333ea;
+  --g4-accent-soft: #faf5ff;
+  --g4-accent-fg: #7e22ce;
+  --g4-backdrop: rgba(0, 0, 0, 0.5);
+  --g4-blue: #eff6ff;
+  --g4-blue-fg: #1d4ed8;
+  --g4-green: #f0fdf4;
+  --g4-green-fg: #15803d;
+  --g4-red: #fef2f2;
+  --g4-red-fg: #b91c1c;
+  --g4-amber: #fffbeb;
+  --g4-amber-fg: #b45309;
+}
+
+/* --- Dark theme --- */
+.dark {
+  --g4-page: #0f172a;
+  --g4-card: #1e293b;
+  --g4-elevated: #334155;
+  --g4-input: #1e293b;
+  --g4-skeleton: #334155;
+  --g4-hover: rgba(255, 255, 255, 0.05);
+  --g4-edge: #334155;
+  --g4-edge-strong: #475569;
+  --g4-divider: #1e293b;
+  --g4-fg: #f1f5f9;
+  --g4-fg-secondary: #cbd5e1;
+  --g4-fg-muted: #94a3b8;
+  --g4-fg-dim: #64748b;
+  --g4-accent: #a855f7;
+  --g4-accent-soft: rgba(168, 85, 247, 0.15);
+  --g4-accent-fg: #c084fc;
+  --g4-backdrop: rgba(0, 0, 0, 0.7);
+  --g4-blue: rgba(59, 130, 246, 0.15);
+  --g4-blue-fg: #93c5fd;
+  --g4-green: rgba(34, 197, 94, 0.15);
+  --g4-green-fg: #86efac;
+  --g4-red: rgba(239, 68, 68, 0.15);
+  --g4-red-fg: #fca5a5;
+  --g4-amber: rgba(245, 158, 11, 0.15);
+  --g4-amber-fg: #fcd34d;
+  color-scheme: dark;
+}
+
+`;
+      css = css.replace(
+        '@import "tailwindcss";',
+        '@import "tailwindcss";\n' + tokenBlock
+      );
+
+      const themeMapping = `  --color-page: var(--g4-page);
+  --color-card: var(--g4-card);
+  --color-elevated: var(--g4-elevated);
+  --color-input-bg: var(--g4-input);
+  --color-skeleton: var(--g4-skeleton);
+  --color-hover: var(--g4-hover);
+  --color-edge: var(--g4-edge);
+  --color-edge-strong: var(--g4-edge-strong);
+  --color-divider: var(--g4-divider);
+  --color-fg: var(--g4-fg);
+  --color-fg-secondary: var(--g4-fg-secondary);
+  --color-fg-muted: var(--g4-fg-muted);
+  --color-fg-dim: var(--g4-fg-dim);
+  --color-accent: var(--g4-accent);
+  --color-accent-soft: var(--g4-accent-soft);
+  --color-accent-fg: var(--g4-accent-fg);
+  --color-backdrop: var(--g4-backdrop);
+  --color-status-blue: var(--g4-blue);
+  --color-status-blue-fg: var(--g4-blue-fg);
+  --color-status-green: var(--g4-green);
+  --color-status-green-fg: var(--g4-green-fg);
+  --color-status-red: var(--g4-red);
+  --color-status-red-fg: var(--g4-red-fg);
+  --color-status-amber: var(--g4-amber);
+  --color-status-amber-fg: var(--g4-amber-fg);`;
+
+      css = css.replace(
+        /--font-sans: var\(--font-inter\);/,
+        `--font-sans: var(--font-inter);\n\n${themeMapping}`
+      );
+
+      writeFileSync(globalsCssPath, css);
+      console.log("[TemplateUpgrade] Injected dark mode tokens into globals.css");
+    }
+  }
+
+  // --- 13. Add dark mode FOUC-prevention script to layout.tsx ---
+  const layoutPath = path.join(sourceDir, "src", "app", "layout.tsx");
+  if (existsSync(layoutPath)) {
+    let layout = readFileSync(layoutPath, "utf-8");
+
+    if (!layout.includes("go4it-theme")) {
+      layout = layout.replace(
+        '<html lang="en"',
+        '<html lang="en" suppressHydrationWarning'
+      );
+
+      const themeScript = `<script
+          dangerouslySetInnerHTML={{
+            __html: \`(function(){var t=localStorage.getItem('go4it-theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}})()\`,
+          }}
+        />`;
+
+      if (layout.includes("<head>")) {
+        layout = layout.replace("<head>", `<head>\n        ${themeScript}`);
+      } else {
+        layout = layout.replace(
+          /<html[^>]*>/,
+          (match) => `${match}\n      <head>\n        ${themeScript}\n      </head>`
+        );
+      }
+
+      layout = layout.replace("bg-gray-50", "bg-page text-fg");
+
+      writeFileSync(layoutPath, layout);
+      console.log("[TemplateUpgrade] Added dark mode script to layout.tsx");
+    }
+  }
+
+  // --- 14. Create ThemeToggle component if missing ---
+  const themeTogglePath = path.join(sourceDir, "src", "components", "ThemeToggle.tsx");
+  if (!existsSync(themeTogglePath)) {
+    writeFileSync(
+      themeTogglePath,
+      `"use client";
+
+import { useEffect, useState } from "react";
+
+export default function ThemeToggle({ className = "" }: { className?: string }) {
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    setDark(document.documentElement.classList.contains("dark"));
+  }, []);
+
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("go4it-theme", next ? "dark" : "light");
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      className={\`p-2 rounded-lg hover:bg-hover text-fg-muted transition-colors \${className}\`}
+      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {dark ? (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ) : (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+`
+    );
+    console.log("[TemplateUpgrade] Created ThemeToggle component");
+  }
+
+  // --- 15. Add ThemeToggle to layout.tsx ---
+  if (existsSync(layoutPath)) {
+    let layout = readFileSync(layoutPath, "utf-8");
+
+    if (!layout.includes("ThemeToggle")) {
+      layout = layout.replace(
+        'import { Toaster } from "sonner";',
+        'import { Toaster } from "sonner";\nimport ThemeToggle from "@/components/ThemeToggle";'
+      );
+
+      if (layout.includes("<Toaster")) {
+        layout = layout.replace(
+          /<Toaster[^/]*\/>/,
+          (match) => `${match}\n          <ThemeToggle className="fixed bottom-4 right-4 z-50 bg-card border border-edge shadow-lg" />`
+        );
+      } else {
+        layout = layout.replace(
+          "</body>",
+          '  <ThemeToggle className="fixed bottom-4 right-4 z-50 bg-card border border-edge shadow-lg" />\n      </body>'
+        );
+      }
+
+      writeFileSync(layoutPath, layout);
+      console.log("[TemplateUpgrade] Added ThemeToggle to layout.tsx");
+    }
+  }
+
+  // --- 16. Update auth page to use semantic tokens ---
+  if (existsSync(authPagePath)) {
+    let authPage = readFileSync(authPagePath, "utf-8");
+
+    if (authPage.includes("bg-gray-50") && !authPage.includes("bg-page")) {
+      authPage = authPage.replace(/bg-gray-50/g, "bg-page");
+      authPage = authPage.replace(/bg-white(?=[\s"'])/g, "bg-card");
+      authPage = authPage.replace(/border-gray-100/g, "border-edge");
+      authPage = authPage.replace(/border-gray-200/g, "border-edge-strong");
+      authPage = authPage.replace(/text-gray-700/g, "text-fg-secondary");
+      authPage = authPage.replace(/text-gray-500/g, "text-fg-muted");
+      authPage = authPage.replace(/text-purple-600/g, "text-accent-fg");
+      authPage = authPage.replace(/focus:ring-purple-400/g, "focus:ring-accent");
+      writeFileSync(authPagePath, authPage);
+      console.log("[TemplateUpgrade] Updated auth page to use semantic tokens");
+    }
+  }
+
+  // --- 17. Update SSO page to use semantic tokens ---
+  const ssoPagePath3 = path.join(sourceDir, "src", "app", "sso", "page.tsx");
+  if (existsSync(ssoPagePath3)) {
+    let ssoPage = readFileSync(ssoPagePath3, "utf-8");
+
+    if (ssoPage.includes("bg-gray-50") && !ssoPage.includes("bg-page")) {
+      ssoPage = ssoPage.replace(/bg-gray-50/g, "bg-page");
+      ssoPage = ssoPage.replace(/text-gray-500/g, "text-fg-muted");
+      ssoPage = ssoPage.replace(/border-purple-600/g, "border-accent");
+      writeFileSync(ssoPagePath3, ssoPage);
+      console.log("[TemplateUpgrade] Updated SSO page to use semantic tokens");
+    }
+  }
+
   console.log("[TemplateUpgrade] Done");
 }
 
