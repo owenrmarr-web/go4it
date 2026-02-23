@@ -881,8 +881,8 @@ export async function POST(request: Request) {
         // Already has profileFields block — no-op
       } else if (!provision.includes("profileFields")) {
         provision = provision.replace(
-          /const role = member\.role \|\| "member";/,
-          `const role = member.role || "member";
+          /const role = member\.role \|\| "(?:member|Member)";/,
+          (match) => `${match}
     const profileFields = {
       username: member.username || null,
       title: member.title || null,
@@ -891,14 +891,17 @@ export async function POST(request: Request) {
       profileEmoji: member.profileEmoji || null,
     };`
         );
-        provision = provision.replace(
-          /update:\s*\{[^}]*name:\s*member\.name[^}]*\}/,
-          (match) => match.includes("profileFields") ? match : match.replace("}", ", ...profileFields }")
-        );
-        provision = provision.replace(
-          /create:\s*\{[^}]*email:\s*member\.email[^}]*\}/,
-          (match) => match.includes("profileFields") ? match : match.replace("}", ", ...profileFields }")
-        );
+        // Only add ...profileFields if the variable was actually defined
+        if (provision.includes("profileFields")) {
+          provision = provision.replace(
+            /update:\s*\{[^}]*name:\s*member\.name[^}]*\}/,
+            (match) => match.includes("profileFields") ? match : match.replace("}", ", ...profileFields }")
+          );
+          provision = provision.replace(
+            /create:\s*\{[^}]*email:\s*member\.email[^}]*\}/,
+            (match) => match.includes("profileFields") ? match : match.replace("}", ", ...profileFields }")
+          );
+        }
       }
       writeFileSync(provisionPath2, provision);
       console.log("[TemplateUpgrade] Added profile fields to provision-users.ts");
