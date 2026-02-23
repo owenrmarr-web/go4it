@@ -583,12 +583,11 @@ export async function POST(request: Request) {
         /username\?: string; title\?: string;/,
         "username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string;"
       );
-      // If the old-style type exists without username, add all profile fields
+      // If the old-style type exists without username, replace entire members type declaration
       if (!provision.includes("username")) {
-        const hasAssigned = provision.includes("assigned?: boolean");
         provision = provision.replace(
-          /(passwordHash\?: string;?[^}]*)(\})/,
-          `$1 ${hasAssigned ? "" : "assigned?: boolean; "}username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string; $2`
+          /const members:\s*\{[^}]+\}\[\]/,
+          "const members: { name: string; email: string; role?: string; passwordHash?: string; assigned?: boolean; username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string }[]"
         );
       }
       // Add profile fields to upsert if not already present
