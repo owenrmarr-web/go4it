@@ -140,6 +140,26 @@ export default function DevelopersPage() {
       </section>
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-10 space-y-10">
+        {/* Developer Kit Download */}
+        <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Get the Developer Kit
+          </h2>
+          <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+            Download the GO4IT developer kit — includes the app template, pre-built components, and the full playbook with build rules.
+          </p>
+          <a
+            href="/go4it-developer-kit.zip"
+            download
+            className="inline-flex items-center gap-2 px-6 py-3 gradient-brand text-white font-semibold rounded-lg hover:opacity-90 transition-opacity"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Download Developer Kit
+          </a>
+        </section>
+
         {/* How It Works */}
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
@@ -167,8 +187,7 @@ export default function DevelopersPage() {
                 1. Build Your App
               </h3>
               <p className="mt-2 text-sm text-gray-600">
-                Build a Next.js app with a <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">go4it.json</code> manifest
-                that defines your app&apos;s name, category, and description
+                Download the developer kit above, then build your app following the included playbook and template
               </p>
             </div>
 
