@@ -1214,10 +1214,12 @@ export default function SSOPage() {
     let layout = readFileSync(layoutPath, "utf-8");
 
     if (!layout.includes("go4it-theme")) {
-      layout = layout.replace(
-        '<html lang="en"',
-        '<html lang="en" suppressHydrationWarning'
-      );
+      if (!layout.includes("suppressHydrationWarning")) {
+        layout = layout.replace(
+          '<html lang="en"',
+          '<html lang="en" suppressHydrationWarning'
+        );
+      }
 
       const themeScript = `<script
           dangerouslySetInnerHTML={{
