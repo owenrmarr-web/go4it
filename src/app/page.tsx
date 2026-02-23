@@ -182,13 +182,22 @@ export default function Home() {
         />
       )}
 
-      {/* Footer */}
+      {/* Footer — always uses GO4IT default brand colors */}
       <footer className="border-t border-gray-200 bg-white mt-8">
         <div className="max-w-7xl mx-auto px-4 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
-            <span className="text-lg font-extrabold gradient-brand-text">GO4IT</span>
+            <span
+              className="text-lg font-extrabold"
+              style={{
+                background: "linear-gradient(to right, #f97316, #ec4899, #9333ea)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >GO4IT</span>
             <p className="text-xs text-gray-400 mt-1 max-w-xs">
               AI-powered software tools for efficient businesses.
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
               &copy; {new Date().getFullYear()} GO4IT. All rights reserved.
             </p>
           </div>
