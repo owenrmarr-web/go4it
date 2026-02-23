@@ -1294,25 +1294,32 @@ export default function ThemeToggle({ className = "" }: { className?: string }) 
     let layout = readFileSync(layoutPath, "utf-8");
 
     if (!layout.includes("ThemeToggle")) {
-      layout = layout.replace(
-        'import { Toaster } from "sonner";',
-        'import { Toaster } from "sonner";\nimport ThemeToggle from "@/components/ThemeToggle";'
+      // Add import — handle both single and double quotes around 'sonner'
+      const importLine = '\nimport ThemeToggle from "@/components/ThemeToggle";';
+      const importAdded = layout.replace(
+        /import\s*\{[^}]*Toaster[^}]*\}\s*from\s*['"]sonner['"];/,
+        (match) => `${match}${importLine}`
       );
 
-      if (layout.includes("<Toaster")) {
-        layout = layout.replace(
-          /<Toaster[^/]*\/>/,
-          (match) => `${match}\n          <ThemeToggle className="fixed bottom-4 right-4 z-50 bg-card border border-edge shadow-lg" />`
-        );
+      // Only add JSX if the import was successfully added
+      if (importAdded !== layout) {
+        layout = importAdded;
+        if (layout.includes("<Toaster")) {
+          layout = layout.replace(
+            /<Toaster[^/]*\/>/,
+            (match) => `${match}\n          <ThemeToggle className="fixed bottom-4 right-4 z-50 bg-card border border-edge shadow-lg" />`
+          );
+        } else {
+          layout = layout.replace(
+            "</body>",
+            '  <ThemeToggle className="fixed bottom-4 right-4 z-50 bg-card border border-edge shadow-lg" />\n      </body>'
+          );
+        }
+        writeFileSync(layoutPath, layout);
+        console.log("[TemplateUpgrade] Added ThemeToggle to layout.tsx");
       } else {
-        layout = layout.replace(
-          "</body>",
-          '  <ThemeToggle className="fixed bottom-4 right-4 z-50 bg-card border border-edge shadow-lg" />\n      </body>'
-        );
+        console.log("[TemplateUpgrade] Could not find Toaster import in layout.tsx, skipping ThemeToggle");
       }
-
-      writeFileSync(layoutPath, layout);
-      console.log("[TemplateUpgrade] Added ThemeToggle to layout.tsx");
     }
   }
 
