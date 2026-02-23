@@ -1,0 +1,4 @@
+apps/*/node_modules
+apps/*/.next
+apps/*/.prisma
+node_modules

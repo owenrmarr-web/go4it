@@ -1,0 +1,7 @@
+{
+  "name": "GoChat",
+  "description": "Team messaging and collaboration with channels, direct messages, file sharing, and AI coworker",
+  "category": "Internal Chat",
+  "icon": "💬",
+  "tags": ["chat", "messaging", "collaboration", "channels", "teams"]
+}

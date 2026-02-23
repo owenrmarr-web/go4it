@@ -1,0 +1,7 @@
+{
+  "name": "GoLedger",
+  "description": "Invoicing, payments, and expense management for small businesses. Send professional invoices, accept online payments via Stripe, track expenses, and view financial reports.",
+  "category": "Invoicing / Finance",
+  "icon": "\ud83d\udcb0",
+  "tags": ["invoicing", "payments", "expenses", "accounting", "finance", "stripe", "small business"]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "GoProject",
+  "description": "Project management with tasks, milestones, team assignments, calendar views, and workload tracking",
+  "category": "Project Management",
+  "icon": "📋",
+  "tags": ["project-management", "tasks", "milestones", "teams", "kanban", "calendar"]
+}

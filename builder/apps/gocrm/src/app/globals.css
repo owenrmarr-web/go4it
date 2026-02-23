@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: var(--font-inter);
+  --animate-fade-in: fade-in 0.15s ease-out;
+  --animate-fade-in-up: fade-in-up 0.2s ease-out;
+
+  /* Semantic color tokens */
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-inset: var(--surface-inset);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-border-default: var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-input-bg: var(--input-bg);
+  --color-input-border: var(--input-border);
+  --color-hover-bg: var(--hover-bg);
+}
+
+/* Light mode values */
+:root {
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-inset: #f9fafb;
+  --surface-overlay: rgba(0, 0, 0, 0.5);
+  --border-default: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+  --input-bg: #ffffff;
+  --input-border: #e5e7eb;
+  --hover-bg: #f9fafb;
+}
+
+/* Dark mode overrides */
+.dark {
+  --surface: #1e1e2e;
+  --surface-raised: #262637;
+  --surface-inset: #16161f;
+  --surface-overlay: rgba(0, 0, 0, 0.7);
+  --border-default: #2e2e42;
+  --border-subtle: #252538;
+  --text-primary: #f1f1f4;
+  --text-secondary: #a8a8bd;
+  --text-muted: #8585a0;
+  --text-faint: #5c5c78;
+  --input-bg: #1e1e2e;
+  --input-border: #2e2e42;
+  --hover-bg: #252538;
+
+  color-scheme: dark;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.gradient-brand {
+  background: linear-gradient(to right, #f97316, #ec4899, #9333ea);
+}
+
+.gradient-brand-text {
+  background: linear-gradient(to right, #f97316, #ec4899, #9333ea);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

@@ -1,0 +1,40 @@
+{
+  "name": "go4it-goschedule",
+  "version": "1.0.0",
+  "description": "Appointment scheduling and booking management",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "postinstall": "prisma generate",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0",
+    "@stripe/react-stripe-js": "^3.0.0",
+    "@stripe/stripe-js": "^5.0.0",
+    "@tailwindcss/postcss": "^4.1.18",
+    "bcryptjs": "^2.4.3",
+    "date-fns": "^4.0.0",
+    "date-fns-tz": "^3.0.0",
+    "next": "^16.0.0",
+    "next-auth": "^5.0.0-beta.25",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "resend": "^4.0.0",
+    "sonner": "^1.7.1",
+    "stripe": "^17.0.0",
+    "typescript": "^5.7.2"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "prisma": "^6.0.0",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2"
+  }
+}

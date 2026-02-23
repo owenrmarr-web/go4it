@@ -94,6 +94,16 @@
   --color-status-amber-fg: var(--g4-amber-fg);
 }
 
+/* --- Animations --- */
+@keyframes slide-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.2s ease-out;
+}
+
 .gradient-brand {
   background: linear-gradient(to right, #f97316, #ec4899, #9333ea);
 }

@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-inter);
+}
+
+@variant dark (&:where(.dark, .dark *));
+
+.gradient-brand {
+  background: linear-gradient(to right, #f97316, #ec4899, #9333ea);
+}
+
+.gradient-brand-text {
+  background: linear-gradient(to right, #f97316, #ec4899, #9333ea);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Scrollbar styling for chat */
+.chat-scroll::-webkit-scrollbar { width: 6px; }
+.chat-scroll::-webkit-scrollbar-track { background: transparent; }
+.chat-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+.chat-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+.dark .chat-scroll::-webkit-scrollbar-thumb { background: #4b5563; }
+.dark .chat-scroll::-webkit-scrollbar-thumb:hover { background: #6b7280; }

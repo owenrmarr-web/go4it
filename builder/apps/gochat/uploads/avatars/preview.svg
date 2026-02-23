@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <defs>
+    <!-- Gold gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F2D06B"/>
+      <stop offset="35%" stop-color="#D4A934"/>
+      <stop offset="65%" stop-color="#C9982A"/>
+      <stop offset="100%" stop-color="#B8891E"/>
+    </linearGradient>
+    <!-- Deep blue gradient -->
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1B3A5C"/>
+      <stop offset="100%" stop-color="#0D2240"/>
+    </linearGradient>
+    <!-- Sail gradient -->
+    <linearGradient id="sailGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E8E0D0"/>
+    </linearGradient>
+    <!-- Water shimmer -->
+    <linearGradient id="waterGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1B4F7A"/>
+      <stop offset="50%" stop-color="#2A6A9E"/>
+      <stop offset="100%" stop-color="#1B4F7A"/>
+    </linearGradient>
+    <!-- Gold text gradient -->
+    <linearGradient id="goldText" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F2D06B"/>
+      <stop offset="50%" stop-color="#D4A934"/>
+      <stop offset="100%" stop-color="#B8891E"/>
+    </linearGradient>
+    <!-- Radial glow -->
+    <radialGradient id="glow" cx="50%" cy="45%" r="42%">
+      <stop offset="0%" stop-color="#2A6A9E" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#0D2240" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Rope border pattern -->
+    <pattern id="ropeBorder" patternUnits="userSpaceOnUse" width="12" height="12" patternTransform="rotate(45)">
+      <line x1="0" y1="6" x2="12" y2="6" stroke="#C9982A" stroke-width="2" stroke-opacity="0.3"/>
+    </pattern>
+  </defs>
+
+  <!-- Background circle - deep navy -->
+  <circle cx="300" cy="300" r="270" fill="url(#blueGrad)"/>
+  
+  <!-- Subtle glow behind boat -->
+  <circle cx="300" cy="280" r="200" fill="url(#glow)"/>
+
+  <!-- Outer gold ring -->
+  <circle cx="300" cy="300" r="270" fill="none" stroke="url(#goldGrad)" stroke-width="8"/>
+  <!-- Inner gold ring -->
+  <circle cx="300" cy="300" r="254" fill="none" stroke="#C9982A" stroke-width="1.5" stroke-opacity="0.5"/>
+  
+  <!-- Decorative gold corners - compass points -->
+  <!-- Top -->
+  <polygon points="300,38 305,52 295,52" fill="url(#goldGrad)"/>
+  <!-- Bottom -->
+  <polygon points="300,562 305,548 295,548" fill="url(#goldGrad)"/>
+  <!-- Left -->
+  <polygon points="38,300 52,295 52,305" fill="url(#goldGrad)"/>
+  <!-- Right -->
+  <polygon points="562,300 548,295 548,305" fill="url(#goldGrad)"/>
+
+  <!-- Stars decorating the ring -->
+  <g fill="url(#goldGrad)">
+    <!-- Star top-left -->
+    <polygon points="160,72 163,80 171,80 165,85 167,93 160,88 153,93 155,85 149,80 157,80" transform="scale(0.6) translate(110,55)"/>
+    <!-- Star top-right -->
+    <polygon points="440,72 443,80 451,80 445,85 447,93 440,88 433,93 435,85 429,80 437,80" transform="scale(0.6) translate(360,55)"/>
+  </g>
+
+  <!-- Water waves -->
+  <g opacity="0.9">
+    <path d="M130,340 Q165,325 200,340 Q235,355 270,340 Q305,325 340,340 Q375,355 410,340 Q445,325 470,340" 
+          fill="none" stroke="url(#waterGrad)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M115,360 Q155,345 195,360 Q235,375 275,360 Q315,345 355,360 Q395,375 435,360 Q460,350 485,360" 
+          fill="none" stroke="url(#waterGrad)" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+    <path d="M125,378 Q160,365 195,378 Q230,391 265,378 Q300,365 335,378 Q370,391 405,378 Q440,365 475,378" 
+          fill="none" stroke="url(#waterGrad)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  </g>
+
+  <!-- Yacht hull -->
+  <path d="M190,335 L215,335 L410,335 L385,335 L390,310 C390,310 370,335 300,335 C230,335 210,310 210,310 Z" 
+        fill="url(#goldGrad)" opacity="0"/>
+  <!-- Hull shape - sleek -->
+  <path d="M195,330 Q210,350 300,350 Q390,350 405,330 L380,330 L220,330 Z" 
+        fill="url(#goldGrad)"/>
+  <!-- Hull accent line -->
+  <path d="M215,338 Q260,348 300,348 Q340,348 385,338" 
+        fill="none" stroke="#0D2240" stroke-width="1" opacity="0.4"/>
+
+  <!-- Mast -->
+  <rect x="297" y="130" width="6" height="205" fill="url(#goldGrad)" rx="2"/>
+  
+  <!-- Mast top ornament (masthead) -->
+  <circle cx="300" cy="126" r="6" fill="url(#goldGrad)"/>
+  <line x1="290" y1="126" x2="310" y2="126" stroke="url(#goldGrad)" stroke-width="2"/>
+
+  <!-- Main sail (right) -->
+  <path d="M308,145 L308,320 L420,320 Q400,230 308,145 Z" 
+        fill="url(#sailGrad)" opacity="0.95"/>
+  <!-- Sail shadow/detail -->
+  <path d="M308,180 Q360,250 395,320" 
+        fill="none" stroke="#C9982A" stroke-width="0.8" opacity="0.4"/>
+  <path d="M308,220 Q345,270 375,320" 
+        fill="none" stroke="#C9982A" stroke-width="0.6" opacity="0.3"/>
+
+  <!-- Jib sail (left) -->
+  <path d="M292,155 L292,320 L185,320 Q200,240 292,155 Z" 
+        fill="url(#sailGrad)" opacity="0.85"/>
+  <!-- Jib detail -->
+  <path d="M292,200 Q240,260 210,320" 
+        fill="none" stroke="#C9982A" stroke-width="0.6" opacity="0.3"/>
+
+  <!-- Pennant/flag at top -->
+  <path d="M306,115 L335,122 L306,130" fill="#C41E3A" opacity="0.9"/>
+
+  <!-- Gold horizontal divider lines -->
+  <line x1="110" y1="395" x2="220" y2="395" stroke="url(#goldGrad)" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="380" y1="395" x2="490" y2="395" stroke="url(#goldGrad)" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- Small diamond center divider -->
+  <polygon points="300,389 308,395 300,401 292,395" fill="url(#goldGrad)"/>
+
+  <!-- Text: LAKE UNION -->
+  <text x="300" y="440" text-anchor="middle" font-family="'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif" 
+        font-size="42" font-weight="bold" letter-spacing="10" fill="url(#goldText)">
+    LAKE UNION
+  </text>
+
+  <!-- Text: YACHTING -->
+  <text x="300" y="485" text-anchor="middle" font-family="'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif" 
+        font-size="32" letter-spacing="14" fill="url(#goldText)">
+    YACHTING
+  </text>
+
+  <!-- Est. text -->
+  <text x="300" y="520" text-anchor="middle" font-family="'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif" 
+        font-size="14" letter-spacing="4" fill="#C9982A" opacity="0.7">
+    — EST. —
+  </text>
+
+  <!-- Anchor icon (small, below text) -->
+  <g transform="translate(300,548) scale(0.5)" fill="none" stroke="#C9982A" stroke-width="2.5" stroke-linecap="round" opacity="0.6">
+    <line x1="0" y1="-18" x2="0" y2="18"/>
+    <line x1="-8" y1="-18" x2="8" y2="-18"/>
+    <circle cx="0" cy="-22" r="4"/>
+    <path d="M-16,10 Q-16,22 0,22 Q16,22 16,10"/>
+  </g>
+
+</svg>

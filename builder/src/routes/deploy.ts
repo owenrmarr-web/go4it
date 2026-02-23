@@ -1,8 +1,13 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import { FastifyInstance } from "fastify";
-import { existsSync } from "fs";
+import { cpSync, existsSync, mkdtempSync } from "fs";
+import { tmpdir } from "os";
 import { deployApp, launchApp } from "../lib/fly.js";
 import prisma from "../lib/prisma.js";
 import { downloadAndExtractBlob } from "../lib/blob.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default async function deployRoute(app: FastifyInstance) {
   app.post<{
@@ -11,6 +16,7 @@ export default async function deployRoute(app: FastifyInstance) {
       orgSlug: string;
       generationId?: string;
       uploadBlobUrl?: string;
+      templateApp?: string;
       teamMembers: { name: string; email: string; assigned?: boolean; passwordHash?: string }[];
       subdomain?: string;
       existingFlyAppId?: string;
@@ -22,13 +28,14 @@ export default async function deployRoute(app: FastifyInstance) {
       orgSlug,
       generationId,
       uploadBlobUrl,
+      templateApp,
       teamMembers,
       subdomain,
       existingFlyAppId,
       isPreviewLaunch,
     } = request.body;
 
-    console.log(`[Deploy Route] Received: orgAppId=${orgAppId}, isPreviewLaunch=${isPreviewLaunch}, existingFlyAppId=${existingFlyAppId}`);
+    console.log(`[Deploy Route] Received: orgAppId=${orgAppId}, isPreviewLaunch=${isPreviewLaunch}, existingFlyAppId=${existingFlyAppId}, templateApp=${templateApp || "none"}`);
 
     if (!orgAppId || !orgSlug) {
       return reply
@@ -36,10 +43,10 @@ export default async function deployRoute(app: FastifyInstance) {
         .send({ error: "orgAppId and orgSlug are required" });
     }
 
-    if (!generationId && !uploadBlobUrl) {
+    if (!generationId && !uploadBlobUrl && !templateApp) {
       return reply
         .status(400)
-        .send({ error: "Either generationId or uploadBlobUrl is required" });
+        .send({ error: "Either generationId, uploadBlobUrl, or templateApp is required" });
     }
 
     // Fast path: promote existing preview app to production via secret flip
@@ -59,7 +66,22 @@ export default async function deployRoute(app: FastifyInstance) {
     // Full deploy path: resolve source directory
     let sourceDir: string | undefined;
 
-    if (generationId) {
+    // Priority 1: templateApp — deploy from local Go Suite source
+    if (templateApp) {
+      const templateDir = path.resolve(__dirname, "../../apps", templateApp);
+      if (existsSync(templateDir)) {
+        // Copy to a temp directory so upgradeTemplateInfra can modify without affecting the template
+        const tmpDir = mkdtempSync(path.join(tmpdir(), `go4it-template-${orgAppId.slice(0, 8)}-`));
+        cpSync(templateDir, tmpDir, { recursive: true, filter: (src) => !src.includes("node_modules") && !src.includes(".next") });
+        sourceDir = tmpDir;
+        console.log(`[Deploy ${orgAppId}] Using template source: ${templateApp} → ${tmpDir}`);
+      } else {
+        console.log(`[Deploy ${orgAppId}] Template ${templateApp} not found at ${templateDir}`);
+      }
+    }
+
+    // Priority 2: generationId — look up stored source
+    if (!sourceDir && generationId) {
       const gen = await prisma.generatedApp.findUnique({
         where: { id: generationId },
         select: { sourceDir: true, uploadBlobUrl: true },
@@ -80,8 +102,10 @@ export default async function deployRoute(app: FastifyInstance) {
           sourceDir = await downloadAndExtractBlob(blobUrl, orgAppId);
         }
       }
-    } else if (uploadBlobUrl) {
-      // No generationId at all — direct blob deploy
+    }
+
+    // Priority 3: uploadBlobUrl — direct blob deploy
+    if (!sourceDir && uploadBlobUrl) {
       console.log(`[Deploy ${orgAppId}] Direct blob deploy...`);
       sourceDir = await downloadAndExtractBlob(uploadBlobUrl, orgAppId);
     }

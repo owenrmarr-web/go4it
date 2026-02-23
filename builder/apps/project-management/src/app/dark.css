@@ -1,0 +1,3 @@
+@import "./globals.css";
+
+@custom-variant dark (&:where(.dark, .dark *));

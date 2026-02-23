@@ -253,6 +253,22 @@ dev.db
 function upgradeTemplateInfra(sourceDir: string): void {
   console.log(`[TemplateUpgrade] Upgrading template infrastructure in ${sourceDir}`);
 
+  // --- Version check: apps built with template v2+ have all patches pre-applied ---
+  const go4itPath = path.join(sourceDir, "src", "lib", "go4it.ts");
+  let templateVersion = 0;
+  if (existsSync(go4itPath)) {
+    const content = readFileSync(go4itPath, "utf-8");
+    const match = content.match(/GO4IT_TEMPLATE_VERSION\s*=\s*(\d+)/);
+    if (match) templateVersion = parseInt(match[1], 10);
+  }
+
+  if (templateVersion >= 2) {
+    console.log(`[TemplateUpgrade] Template v${templateVersion} — all patches pre-applied, skipping`);
+    return;
+  }
+
+  console.log(`[TemplateUpgrade] Template v${templateVersion} — applying legacy patches...`);
+
   // --- 1. Patch schema.prisma: add isAssigned + AccessRequest ---
   const schemaPath = path.join(sourceDir, "prisma", "schema.prisma");
   if (existsSync(schemaPath)) {
@@ -1068,6 +1084,15 @@ export default function ThemeToggle({ className = "" }: { className?: string }) 
       console.log("[TemplateUpgrade] Updated SSO page to use semantic tokens");
     }
   }
+
+  // --- Write template version marker so future deploys skip patches ---
+  const go4itDir = path.join(sourceDir, "src", "lib");
+  mkdirSync(go4itDir, { recursive: true });
+  writeFileSync(
+    path.join(go4itDir, "go4it.ts"),
+    `// GO4IT template version — used by upgradeTemplateInfra to apply only newer patches.\nexport const GO4IT_TEMPLATE_VERSION = 2;\n`
+  );
+  console.log("[TemplateUpgrade] Wrote template version marker (v2)");
 
   console.log("[TemplateUpgrade] Done");
 }

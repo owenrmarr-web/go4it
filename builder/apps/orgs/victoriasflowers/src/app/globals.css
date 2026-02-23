@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-inter);
+}
+
+.gradient-brand {
+  background: linear-gradient(to right, #f97316, #ec4899, #9333ea);
+}
+
+.gradient-brand-text {
+  background: linear-gradient(to right, #f97316, #ec4899, #9333ea);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

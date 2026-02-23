@@ -23,6 +23,15 @@ const client = createClient({
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
+// Go Suite apps: deploy from local template source instead of stored blob.
+// Maps app title → directory name under builder/apps/.
+const GO_SUITE_TEMPLATE_MAP: Record<string, string> = {
+  GoCRM: "gocrm",
+  GoChat: "gochat",
+  GoProject: "project-management",
+  GoLedger: "goledger",
+};
+
 async function main() {
   // 1. Get all RUNNING OrgApps with their details
   const orgApps = await client.execute(`
@@ -35,6 +44,7 @@ async function main() {
       oa.subdomain,
       oa.organizationId,
       o.slug as orgSlug,
+      a.title as appTitle,
       ga.id as generationId,
       ga.uploadBlobUrl
     FROM OrgApp oa
@@ -46,7 +56,8 @@ async function main() {
 
   console.log(`Found ${orgApps.rows.length} RUNNING apps:\n`);
   for (const row of orgApps.rows) {
-    console.log(`  ${row.orgAppId} → ${row.flyAppId} (${row.orgSlug})`);
+    const template = GO_SUITE_TEMPLATE_MAP[row.appTitle as string];
+    console.log(`  ${row.orgAppId} → ${row.flyAppId} (${row.orgSlug}) [${row.appTitle}]${template ? ` → templateApp: ${template}` : ""}`);
   }
   console.log();
 
@@ -113,18 +124,28 @@ async function main() {
         profileEmoji: (m.profileEmoji as string) || null,
       }));
 
-    console.log(`Redeploying ${flyAppId} (${orgSlug})...`);
+    const appTitle = row.appTitle as string | null;
+    const templateApp = appTitle ? GO_SUITE_TEMPLATE_MAP[appTitle] : undefined;
+
+    console.log(`Redeploying ${flyAppId} (${orgSlug}) [${appTitle}]${templateApp ? ` via templateApp: ${templateApp}` : ""}...`);
     console.log(`  Team: ${teamMembers.map((m) => `${m.email}${m.assigned ? "" : " [unassigned]"}`).join(", ")}`);
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       orgAppId,
       orgSlug,
-      generationId: generationId || undefined,
-      uploadBlobUrl: uploadBlobUrl || undefined,
       teamMembers,
       subdomain: subdomain || undefined,
       existingFlyAppId: flyAppId,
     };
+
+    if (templateApp) {
+      // Go Suite apps: deploy from local template source
+      payload.templateApp = templateApp;
+    } else {
+      // Generated apps: deploy from stored blob
+      payload.generationId = generationId || undefined;
+      payload.uploadBlobUrl = uploadBlobUrl || undefined;
+    }
 
     try {
       const res = await fetch(`${BUILDER_URL}/deploy`, {

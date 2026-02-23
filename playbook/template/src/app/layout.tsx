@@ -3,13 +3,15 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 import { Toaster } from "sonner";
-import ThemeToggle from "@/components/ThemeToggle";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "GO4IT App",
   description: "A GO4IT marketplace application",
+  icons: {
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>",
+  },
 };
 
 export default function RootLayout({
@@ -31,7 +33,6 @@ export default function RootLayout({
           {children}
           <Toaster position="top-right" />
         </SessionProvider>
-        <ThemeToggle className="fixed bottom-4 right-4 z-50 bg-card border border-edge shadow-lg" />
       </body>
     </html>
   );
