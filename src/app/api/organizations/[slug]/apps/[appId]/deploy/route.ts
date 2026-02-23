@@ -106,13 +106,22 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   // Determine if this is a re-deploy or preview launch
-  const existingFlyAppId =
+  let existingFlyAppId =
     (orgApp.status === "RUNNING" || orgApp.status === "PREVIEW") && orgApp.flyAppId
       ? orgApp.flyAppId
       : undefined;
 
   // Fast-path flag: promote existing preview to production via secret flip
-  const isPreviewLaunch = orgApp.status === "PREVIEW" && !!orgApp.flyAppId;
+  let isPreviewLaunch = orgApp.status === "PREVIEW" && !!orgApp.flyAppId;
+
+  // Safety guard: don't flip the store preview machine into an org production instance.
+  // If the OrgApp's flyAppId matches the App's store preview, force a full deploy instead.
+  const storePreviewId = orgApp.app.previewFlyAppId;
+  if (isPreviewLaunch && existingFlyAppId && storePreviewId && existingFlyAppId === storePreviewId) {
+    console.log(`[Deploy Route] OrgApp flyAppId matches store preview — forcing full deploy`);
+    isPreviewLaunch = false;
+    existingFlyAppId = undefined;
+  }
 
   console.log(`[Deploy Route] orgApp.status=${orgApp.status}, orgApp.flyAppId=${orgApp.flyAppId}, isPreviewLaunch=${isPreviewLaunch}, existingFlyAppId=${existingFlyAppId}`);
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { randomBytes } from "crypto";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
+import { generateSubdomain, validateSubdomain } from "@/lib/subdomain";
 
 const BUILDER_URL = process.env.BUILDER_URL;
 const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
@@ -28,41 +28,98 @@ type TeamMemberInput = {
 };
 
 /**
- * Flip a preview Fly app to production:
- * - Set AUTH_SECRET + GO4IT_TEAM_MEMBERS
- * - Unset PREVIEW_MODE
- * This triggers a machine restart with the new env vars.
+ * Create an OrgApp with ADDED status and trigger a full deploy via the builder.
+ * The org gets a brand-new Fly machine — completely separate from the store preview.
  */
-async function launchPreviewApp(
-  flyAppId: string,
-  members: TeamMemberInput[],
-  ownerEmail: string,
-  ownerPasswordHash?: string | null
-) {
-  if (!BUILDER_URL) return;
-
-  const teamMembers = members.map((m) => ({
-    name: m.name,
-    email: m.email,
-    role: m.role || "Member",
-    ...(m.email === ownerEmail && ownerPasswordHash
-      ? { passwordHash: ownerPasswordHash }
-      : {}),
-  }));
-
-  const authSecret = randomBytes(32).toString("hex");
-
-  await fetch(`${BUILDER_URL}/secrets/${flyAppId}`, {
-    method: "POST",
-    headers: builderHeaders(),
-    body: JSON.stringify({
-      secrets: {
-        AUTH_SECRET: authSecret,
-        GO4IT_TEAM_MEMBERS: JSON.stringify(teamMembers),
-      },
-      unset: ["PREVIEW_MODE"],
-    }),
+async function triggerOrgDeploy(
+  appId: string,
+  appTitle: string,
+  generationId: string,
+  userId: string,
+  teamMemberInputs?: TeamMemberInput[],
+): Promise<boolean> {
+  const orgMember = await prisma.organizationMember.findFirst({
+    where: { userId, role: { in: ["OWNER", "ADMIN"] } },
+    include: { organization: { select: { id: true, slug: true } } },
   });
+  if (!orgMember) return false;
+
+  // Check if OrgApp already exists for this app+org
+  const existingOrgApp = await prisma.orgApp.findFirst({
+    where: {
+      organizationId: orgMember.organization.id,
+      appId,
+    },
+  });
+  if (existingOrgApp) return false; // already deployed — user can redeploy from account page
+
+  // Create OrgApp with ADDED status — no Fly app yet
+  const orgApp = await prisma.orgApp.create({
+    data: {
+      organizationId: orgMember.organization.id,
+      appId,
+      status: "ADDED",
+    },
+  });
+
+  // Auto-add all org members as OrgAppMembers
+  const allMembers = await prisma.organizationMember.findMany({
+    where: { organizationId: orgMember.organization.id },
+    include: { user: { select: { id: true, name: true, email: true, password: true } } },
+  });
+  for (const m of allMembers) {
+    await prisma.orgAppMember.upsert({
+      where: { orgAppId_userId: { orgAppId: orgApp.id, userId: m.userId } },
+      create: { orgAppId: orgApp.id, userId: m.userId },
+      update: {},
+    });
+  }
+
+  // Build team members list with password hashes for assigned members
+  const assignedEmails = new Set(
+    teamMemberInputs?.map((m) => m.email) || allMembers.map((m) => m.user.email).filter(Boolean)
+  );
+  const deployTeamMembers = allMembers
+    .filter((m) => m.user.email)
+    .map((m) => ({
+      name: m.user.name || m.user.email!,
+      email: m.user.email!,
+      assigned: assignedEmails.has(m.user.email!),
+      ...(m.user.password && assignedEmails.has(m.user.email!)
+        ? { passwordHash: m.user.password }
+        : {}),
+    }));
+
+  // Auto-generate subdomain
+  const slug = orgMember.organization.slug;
+  const suggested = generateSubdomain(appTitle, slug);
+  const validation = await validateSubdomain(suggested);
+  const subdomain = validation.valid ? suggested : undefined;
+  if (subdomain) {
+    await prisma.orgApp.update({
+      where: { id: orgApp.id },
+      data: { subdomain },
+    });
+  }
+
+  // Trigger full deploy via builder (fire-and-forget)
+  if (BUILDER_URL) {
+    fetch(`${BUILDER_URL}/deploy`, {
+      method: "POST",
+      headers: builderHeaders(),
+      body: JSON.stringify({
+        orgAppId: orgApp.id,
+        orgSlug: slug,
+        generationId,
+        teamMembers: deployTeamMembers,
+        subdomain,
+      }),
+    }).catch((err) => {
+      console.error("Failed to trigger org deploy (non-fatal):", err);
+    });
+  }
+
+  return true;
 }
 
 export async function POST(
@@ -197,40 +254,29 @@ export async function POST(
       },
     });
 
-    // Deploy to org: promote preview OrgApp to RUNNING + set secrets
-    if (deployToOrg && generatedApp.previewFlyAppId) {
-      await prisma.orgApp.updateMany({
-        where: { appId: updatedApp.id, status: "PREVIEW" },
-        data: { status: "RUNNING" },
-      });
-
-      // Flip preview → production (fire-and-forget — don't block the response)
-      const owner = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { email: true, name: true, password: true },
-      });
-      const defaultMembers: TeamMemberInput[] = [{
-        name: owner?.name || owner?.email?.split("@")[0] || "Owner",
-        email: owner?.email || "",
-        role: "Admin",
-      }];
-      launchPreviewApp(
-        generatedApp.previewFlyAppId,
-        teamMembers || defaultMembers,
-        owner?.email || "",
-        owner?.password
-      ).catch((err) => {
-        console.error("Failed to set secrets (non-fatal):", err);
-      });
+    // Deploy to org: create a NEW Fly machine (separate from store preview)
+    let deployed = false;
+    if (deployToOrg) {
+      deployed = await triggerOrgDeploy(
+        updatedApp.id,
+        title.trim(),
+        id,
+        session.user.id,
+        teamMembers,
+      );
     }
 
-    cleanupBuilderWorkspace(id);
+    // Only cleanup workspace immediately if not deploying to org
+    // (org deploy needs the source directory; hourly cleanup handles published app workspaces)
+    if (!deployToOrg) {
+      cleanupBuilderWorkspace(id);
+    }
 
     return NextResponse.json({
       appId: updatedApp.id,
       marketplaceVersion: updatedGen.marketplaceVersion,
       republished: true,
-      deployed: !!deployToOrg,
+      deployed,
     });
   }
 
@@ -272,48 +318,22 @@ export async function POST(
     },
   });
 
-  // Deploy to org: create OrgApp record linked to preview Fly app + set secrets
+  // Deploy to org: create a NEW Fly machine (separate from store preview)
   let deployed = false;
-  if (deployToOrg && generatedApp.previewFlyAppId && generatedApp.previewFlyUrl) {
-    const orgMember = await prisma.organizationMember.findFirst({
-      where: { userId: session.user.id, role: { in: ["OWNER", "ADMIN"] } },
-      include: { organization: { select: { id: true } } },
-    });
-    if (orgMember) {
-      await prisma.orgApp.create({
-        data: {
-          organizationId: orgMember.organization.id,
-          appId: app.id,
-          status: "RUNNING",
-          flyAppId: generatedApp.previewFlyAppId,
-          flyUrl: generatedApp.previewFlyUrl,
-          deployedAt: new Date(),
-        },
-      });
-      deployed = true;
-
-      // Flip preview → production (fire-and-forget — don't block the response)
-      const owner = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { email: true, name: true, password: true },
-      });
-      const defaultMembers: TeamMemberInput[] = [{
-        name: owner?.name || owner?.email?.split("@")[0] || "Owner",
-        email: owner?.email || "",
-        role: "Admin",
-      }];
-      launchPreviewApp(
-        generatedApp.previewFlyAppId,
-        teamMembers || defaultMembers,
-        owner?.email || "",
-        owner?.password
-      ).catch((err) => {
-        console.error("Failed to set secrets (non-fatal):", err);
-      });
-    }
+  if (deployToOrg) {
+    deployed = await triggerOrgDeploy(
+      app.id,
+      title.trim(),
+      id,
+      session.user.id,
+      teamMembers,
+    );
   }
 
-  cleanupBuilderWorkspace(id);
+  // Only cleanup workspace immediately if not deploying to org
+  if (!deployToOrg) {
+    cleanupBuilderWorkspace(id);
+  }
 
   return NextResponse.json({ appId: app.id, marketplaceVersion: 1, deployed }, { status: 201 });
 }

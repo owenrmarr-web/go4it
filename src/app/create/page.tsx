@@ -280,7 +280,7 @@ export default function CreatePage() {
 
       gen.setPublished();
       const msg = publishDeploy
-        ? "Published and deployed to your account!"
+        ? "Published! Org deployment starting..."
         : "Published to the marketplace!";
       toast.success(msg);
       setLocalView("default");
@@ -301,7 +301,7 @@ export default function CreatePage() {
     setPublishCategory(APP_CATEGORIES[0]);
     setPublishIcon(APP_ICONS[0]);
     setPublishIsPublic(true);
-    setPublishDeploy(true);
+    setPublishDeploy(false);
     setSelectedMembers(new Map());
     setOrgMembersLoaded(false);
     setShowStartOverConfirm(false);
