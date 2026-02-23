@@ -586,8 +586,8 @@ export async function POST(request: Request) {
       // If the old-style type exists without username, add all profile fields
       if (!provision.includes("username")) {
         provision = provision.replace(
-          /(name: string; email: string; role\?: string; passwordHash\?: string;)/,
-          "$1 assigned?: boolean; username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string;"
+          /(passwordHash\?: string;?)\s*(\})/,
+          "$1 assigned?: boolean; username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string; $2"
         );
       }
       // Add profile fields to upsert if not already present
