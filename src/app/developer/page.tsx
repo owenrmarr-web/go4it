@@ -158,6 +158,51 @@ export default function DevelopersPage() {
             </svg>
             Download Developer Kit
           </a>
+
+          {/* Claude Prompt Snippet */}
+          <div className="mt-8 text-left max-w-2xl mx-auto">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Quick Start with Claude</h3>
+            <p className="text-xs text-gray-500 mb-3">
+              After downloading, open the kit folder in Claude Code and paste this prompt:
+            </p>
+            <div className="relative bg-gray-50 rounded-lg border border-gray-200 p-4 font-mono text-xs text-gray-700 whitespace-pre-wrap">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(
+`I want to build a GO4IT marketplace app. I've downloaded the GO4IT developer kit zip — extract it and follow these steps:
+
+1. Read CLAUDE.md in the kit root for the quick start guide
+2. Read playbook/CLAUDE.md for all build rules, component library, and constraints
+3. Copy everything from template/ into a new project directory
+4. Run npm install and npx prisma generate
+5. Build the app based on my description below
+
+App idea: [describe your app here]
+
+Follow the playbook rules exactly — use the pre-built AppShell, semantic color tokens, and component library. Make sure every data model has full CRUD (create, read, update, delete). Generate the go4it.json manifest when done. Test with npm run dev before finishing.`
+                  );
+                  toast.success("Copied to clipboard!");
+                }}
+                className="absolute top-2 right-2 p-1.5 rounded-md bg-white border border-gray-200 hover:bg-gray-100 transition-colors"
+                title="Copy to clipboard"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-gray-500">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                </svg>
+              </button>
+{`I want to build a GO4IT marketplace app. I've downloaded the GO4IT developer kit zip — extract it and follow these steps:
+
+1. Read CLAUDE.md in the kit root for the quick start guide
+2. Read playbook/CLAUDE.md for all build rules, component library, and constraints
+3. Copy everything from template/ into a new project directory
+4. Run npm install and npx prisma generate
+5. Build the app based on my description below
+
+App idea: [describe your app here]
+
+Follow the playbook rules exactly — use the pre-built AppShell, semantic color tokens, and component library. Make sure every data model has full CRUD (create, read, update, delete). Generate the go4it.json manifest when done. Test with npm run dev before finishing.`}
+            </div>
+          </div>
         </section>
 
         {/* How It Works */}
