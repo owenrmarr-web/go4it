@@ -181,14 +181,14 @@ export default function Header() {
               )}
             </Link>
           )}
-          {session && (activeOrg?.logo || profile?.logo) && (
+          {session && !isAdmin && (activeOrg?.logo || profile?.logo) && (
             <img
               src={(activeOrg?.logo || profile?.logo)!}
               alt="Company logo"
               className="h-10 w-10 rounded-lg object-contain border border-gray-200 hidden sm:block"
             />
           )}
-          {session && (activeOrg?.name || profile?.companyName) && (
+          {session && !isAdmin && (activeOrg?.name || profile?.companyName) && (
             <Link href="/account" className="hidden md:inline">
               <span className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors max-w-52 truncate">
                 {activeOrg?.name || profile?.companyName}

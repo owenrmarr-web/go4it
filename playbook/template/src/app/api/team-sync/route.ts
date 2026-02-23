@@ -26,7 +26,10 @@ export async function POST(request: Request) {
   }
 
   const { members } = JSON.parse(body) as {
-    members: { email: string; name: string; assigned: boolean; passwordHash?: string; role?: string }[];
+    members: {
+      email: string; name: string; assigned: boolean; passwordHash?: string; role?: string;
+      username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string;
+    }[];
   };
 
   if (!Array.isArray(members)) {
@@ -40,11 +43,18 @@ export async function POST(request: Request) {
       ? (member.passwordHash || await bcrypt.hash(crypto.randomUUID(), 12))
       : await bcrypt.hash(crypto.randomUUID(), 12);
     const role = member.role || "member";
+    const profileFields = {
+      username: member.username || null,
+      title: member.title || null,
+      image: member.image || null,
+      profileColor: member.profileColor || null,
+      profileEmoji: member.profileEmoji || null,
+    };
 
     await prisma.user.upsert({
       where: { email: member.email },
-      update: { name: member.name, isAssigned, ...(member.passwordHash ? { password } : {}) },
-      create: { email: member.email, name: member.name, password, isAssigned, role },
+      update: { name: member.name, isAssigned, ...(member.passwordHash ? { password } : {}), ...profileFields },
+      create: { email: member.email, name: member.name, password, isAssigned, role, ...profileFields },
     });
     results.push(`${member.email}: ${isAssigned ? "assigned" : "unassigned"}`);
   }

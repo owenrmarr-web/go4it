@@ -848,6 +848,93 @@ export async function POST(request: Request) {
     }
   }
 
+  // --- 8. Add profile fields (username, title, image, profileColor, profileEmoji) ---
+  if (existsSync(schemaPath)) {
+    let schema = readFileSync(schemaPath, "utf-8");
+    if (!schema.includes("profileColor")) {
+      schema = schema.replace(
+        /(isAssigned\s+Boolean\s+@default\(true\)[^\n]*\n)/,
+        `  username       String?\n  title          String?\n  image          String?\n  profileColor   String?\n  profileEmoji   String?\n$1`
+      );
+      writeFileSync(schemaPath, schema);
+      console.log("[TemplateUpgrade] Added profile fields to User model in schema");
+    }
+  }
+
+  if (existsSync(provisionPath2)) {
+    let provision = readFileSync(provisionPath2, "utf-8");
+    if (!provision.includes("profileColor")) {
+      // Expand member type to include profile fields
+      provision = provision.replace(
+        /username\?: string; title\?: string;/,
+        "username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string;"
+      );
+      // If the old-style type exists without username, add all profile fields
+      if (!provision.includes("username")) {
+        provision = provision.replace(
+          /(name: string; email: string; role\?: string; passwordHash\?: string;)/,
+          "$1 assigned?: boolean; username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string;"
+        );
+      }
+      // Add profile fields to upsert if not already present
+      if (!provision.includes("profileColor") && provision.includes("profileFields")) {
+        // Already has profileFields block — no-op
+      } else if (!provision.includes("profileFields")) {
+        provision = provision.replace(
+          /const role = member\.role \|\| "member";/,
+          `const role = member.role || "member";
+    const profileFields = {
+      username: member.username || null,
+      title: member.title || null,
+      image: member.image || null,
+      profileColor: member.profileColor || null,
+      profileEmoji: member.profileEmoji || null,
+    };`
+        );
+        provision = provision.replace(
+          /update:\s*\{[^}]*name:\s*member\.name[^}]*\}/,
+          (match) => match.includes("profileFields") ? match : match.replace("}", ", ...profileFields }")
+        );
+        provision = provision.replace(
+          /create:\s*\{[^}]*email:\s*member\.email[^}]*\}/,
+          (match) => match.includes("profileFields") ? match : match.replace("}", ", ...profileFields }")
+        );
+      }
+      writeFileSync(provisionPath2, provision);
+      console.log("[TemplateUpgrade] Added profile fields to provision-users.ts");
+    }
+  }
+
+  // Patch team-sync route to handle profile fields
+  const teamSyncPath2 = path.join(sourceDir, "src", "app", "api", "team-sync", "route.ts");
+  if (existsSync(teamSyncPath2)) {
+    let teamSync = readFileSync(teamSyncPath2, "utf-8");
+    if (!teamSync.includes("profileColor")) {
+      // Expand member type
+      teamSync = teamSync.replace(
+        /members:\s*\{[^}]*email:\s*string;[^}]*role\?\s*:\s*string[^}]*\}/,
+        (match) => match.includes("profileColor") ? match : match.replace("}", "; username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string }")
+      );
+      // Add profile fields to upsert
+      teamSync = teamSync.replace(
+        /update:\s*\{[^}]*name:\s*member\.name[^}]*\}/,
+        (match) => {
+          if (match.includes("profileColor")) return match;
+          return match.replace("}", ", username: member.username || null, title: member.title || null, image: member.image || null, profileColor: member.profileColor || null, profileEmoji: member.profileEmoji || null }");
+        }
+      );
+      teamSync = teamSync.replace(
+        /create:\s*\{[^}]*email:\s*member\.email[^}]*\}/,
+        (match) => {
+          if (match.includes("profileColor")) return match;
+          return match.replace("}", ", username: member.username || null, title: member.title || null, image: member.image || null, profileColor: member.profileColor || null, profileEmoji: member.profileEmoji || null }");
+        }
+      );
+      writeFileSync(teamSyncPath2, teamSync);
+      console.log("[TemplateUpgrade] Added profile fields to team-sync route");
+    }
+  }
+
   console.log("[TemplateUpgrade] Done");
 }
 

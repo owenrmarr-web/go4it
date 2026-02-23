@@ -56,6 +56,7 @@ export async function GET(request: Request, context: RouteContext) {
   return NextResponse.json({
     email: invitation.email,
     name: invitation.name,
+    title: invitation.title,
     role: invitation.role,
     organization: invitation.organization,
     expiresAt: invitation.expiresAt,
@@ -135,6 +136,7 @@ export async function POST(request: Request, context: RouteContext) {
         organizationId: invitation.organizationId,
         userId: session.user.id,
         role: invitation.role,
+        title: invitation.title || null,
       },
     }),
     prisma.invitation.update({

@@ -15,6 +15,11 @@ model User {
   email          String           @unique
   password       String
   name           String?
+  username       String?
+  title          String?
+  image          String?          // Profile image from platform (base64)
+  profileColor   String?          // Hex color for avatar bg (e.g. "#9333EA")
+  profileEmoji   String?          // Emoji avatar (e.g. "🚀")
   role           String           @default("member") // "admin" or "member"
   isAssigned     Boolean          @default(true) // false = org member not on this app's plan
   createdAt      DateTime         @default(now())

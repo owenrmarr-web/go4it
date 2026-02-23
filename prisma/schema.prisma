@@ -191,6 +191,7 @@ model OrganizationMember {
   organizationId String
   userId         String
   role           OrgRole      @default(MEMBER)
+  title          String?      // Job title within this organization
   joinedAt       DateTime     @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)

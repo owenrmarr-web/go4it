@@ -25,7 +25,10 @@ async function main() {
     return;
   }
 
-  const members: { name: string; email: string; role?: string; passwordHash?: string; assigned?: boolean }[] = JSON.parse(raw);
+  const members: {
+    name: string; email: string; role?: string; passwordHash?: string; assigned?: boolean;
+    username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string;
+  }[] = JSON.parse(raw);
 
   for (const member of members) {
     const isAssigned = member.assigned !== false; // backward compat: missing = assigned
@@ -33,10 +36,17 @@ async function main() {
       ? (member.passwordHash || adminHash)
       : await bcrypt.hash(crypto.randomUUID(), 12); // random unusable password
     const role = member.role || "member";
+    const profileFields = {
+      username: member.username || null,
+      title: member.title || null,
+      image: member.image || null,
+      profileColor: member.profileColor || null,
+      profileEmoji: member.profileEmoji || null,
+    };
     await prisma.user.upsert({
       where: { email: member.email },
-      update: { name: member.name, password, isAssigned },
-      create: { email: member.email, name: member.name, password, isAssigned, role },
+      update: { name: member.name, password, isAssigned, ...profileFields },
+      create: { email: member.email, name: member.name, password, isAssigned, role, ...profileFields },
     });
     console.log(`Provisioned: ${member.name} (${member.email}) [${role}]${isAssigned ? "" : " [unassigned]"}${member.passwordHash ? " [platform credentials]" : ""}`);
   }

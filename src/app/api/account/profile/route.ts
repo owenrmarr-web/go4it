@@ -166,6 +166,12 @@ export async function PUT(request: Request) {
       }
     }
 
+    // Sync profile changes to all deployed apps the user has access to
+    const { syncUserApps } = await import("@/lib/team-sync");
+    syncUserApps(session.user.id).catch((err) => {
+      console.error("[ProfileSync] Failed to sync apps:", err);
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     const errorMessage =

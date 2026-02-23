@@ -19,7 +19,14 @@ export async function syncTeamMembersToFly(orgAppId: string): Promise<void> {
       organization: {
         include: {
           members: {
-            include: { user: { select: { id: true, name: true, email: true, password: true } } },
+            include: {
+              user: {
+                select: {
+                  id: true, name: true, email: true, password: true,
+                  username: true, image: true, profileColor: true, profileEmoji: true,
+                },
+              },
+            },
           },
         },
       },
@@ -50,6 +57,11 @@ export async function syncTeamMembersToFly(orgAppId: string): Promise<void> {
       ...(m.user.password && assignedUserIds.has(m.user.id)
         ? { passwordHash: m.user.password }
         : {}),
+      username: m.user.username || null,
+      title: m.title || null,
+      image: m.user.image || null,
+      profileColor: m.user.profileColor || null,
+      profileEmoji: m.user.profileEmoji || null,
     }));
 
   // --- Fast path: direct HTTP to deployed app's /api/team-sync ---

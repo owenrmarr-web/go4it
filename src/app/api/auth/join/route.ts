@@ -6,7 +6,7 @@ import { validateUsername } from "@/lib/username";
 
 export async function POST(request: Request) {
   try {
-    const { token, name, password, username: requestedUsername, image, profileColor, profileEmoji } =
+    const { token, name, password, username: requestedUsername, image, profileColor, profileEmoji, title } =
       await request.json();
 
     if (!token || !name?.trim()) {
@@ -112,6 +112,7 @@ export async function POST(request: Request) {
           organizationId: invitation.organizationId,
           userId: user.id,
           role: invitation.role,
+          title: title?.trim() || invitation.title || null,
         },
       });
 

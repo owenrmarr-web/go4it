@@ -39,6 +39,7 @@ Breaking any of these will cause build or deployment failures.
 | `prisma/provision-users.ts` | Team member provisioning (runs at deploy time) |
 | `src/app/api/access-requests/route.ts` | Access request API (seat upsell for unassigned members) |
 | `src/app/api/team-sync/route.ts` | Real-time team member sync (permission updates from platform) |
+| `src/components/UserAvatar.tsx` | Reusable avatar component with platform profile field support |
 
 ### Infrastructure Rules
 
@@ -164,6 +165,7 @@ Regardless of layout choices, every app must include:
 5. **Loading states** — Show spinners or skeletons while data loads
 6. **Delete confirmation** — Always confirm before deleting records
 7. **Form validation** — Required fields enforced, appropriate input types
+8. **User avatars** — Use the pre-built `UserAvatar` component from `src/components/UserAvatar.tsx` wherever you display a user's name or identity (sidebars, assignment lists, activity feeds, comments). It handles platform profile images, emojis, colors, and initials automatically.
 
 ### When the User Describes a Layout
 

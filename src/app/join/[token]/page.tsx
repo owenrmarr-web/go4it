@@ -29,6 +29,7 @@ const PROFILE_EMOJIS = [
 interface InviteDetails {
   email: string;
   name: string | null;
+  title: string | null;
   role: string;
   organization: {
     name: string;
@@ -64,6 +65,7 @@ export default function JoinPage({
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [usernameError, setUsernameError] = useState("");
   const usernameCheckTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  const [title, setTitle] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -106,6 +108,7 @@ export default function JoinPage({
         } else {
           setInvite(data);
           setName(data.name || "");
+          if (data.title) setTitle(data.title);
           if (data.name) {
             const suggested = generateUsernameFromName(data.name);
             setUsername(suggested);
@@ -170,6 +173,7 @@ export default function JoinPage({
           image: profilePhoto,
           profileColor,
           profileEmoji,
+          title: title.trim() || null,
         }),
       });
 
@@ -399,6 +403,20 @@ export default function JoinPage({
             <p className="text-xs text-gray-400 mt-1">
               3-20 characters. This will appear as your creator name on any apps you publish.
             </p>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Title <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+              placeholder="e.g. Marketing Director"
+            />
           </div>
 
           {/* Password */}

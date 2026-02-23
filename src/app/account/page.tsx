@@ -72,6 +72,7 @@ interface CreatedApp {
 interface Member {
   id: string;
   role: "OWNER" | "ADMIN" | "MEMBER";
+  title?: string | null;
   joinedAt: string;
   user: { id: string; name: string; email: string; image: string | null };
 }
@@ -198,6 +199,7 @@ function AccountPage() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [profileColor, setProfileColor] = useState("#9333EA");
   const [profileEmoji, setProfileEmoji] = useState<string | null>(null);
+  const [profileTitle, setProfileTitle] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const profileFileRef = useRef<HTMLInputElement>(null);
@@ -235,6 +237,10 @@ function AccountPage() {
       setMembers(data.members || []);
       setInvitations(data.invitations || []);
       setUserRole(data.role || null);
+      // Sync profile title from membership data
+      const myMembership = (data.members || []).find((m: { user: { id: string } }) => m.user.id === session?.user?.id);
+      if (myMembership?.title) setProfileTitle(myMembership.title);
+      else setProfileTitle("");
       // Sync branding state from this org's data
       if (data.org?.logo) setBrandingLogo(data.org.logo);
       if (data.org?.themeColors) setBrandingColors(data.org.themeColors);
@@ -888,6 +894,14 @@ function AccountPage() {
         const data = await res.json();
         throw new Error(data.error || "Failed to save");
       }
+      // Save title to org membership if in an org context
+      if (org) {
+        await fetch("/api/account/title", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: profileTitle.trim(), organizationId: org.id }),
+        });
+      }
       toast.success("Profile updated!");
       setShowProfileEditor(false);
     } catch (err) {
@@ -996,6 +1010,16 @@ function AccountPage() {
                           onChange={(e) => setProfileName(e.target.value)}
                           className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
                           placeholder="Your name"
+                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1 mt-3">
+                          Title <span className="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profileTitle}
+                          onChange={(e) => setProfileTitle(e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                          placeholder="e.g. CEO, Project Manager"
                         />
                       </div>
 
@@ -1702,6 +1726,9 @@ function AccountPage() {
                               <p className="text-sm text-gray-500">
                                 {member.user.email}
                               </p>
+                              {member.title && (
+                                <p className="text-xs text-gray-400">{member.title}</p>
+                              )}
                             </div>
                           </div>
 
