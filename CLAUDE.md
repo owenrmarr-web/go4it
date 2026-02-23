@@ -316,10 +316,6 @@ GO4IT's first-party apps follow a modular "Go Suite" strategy. Each app owns a s
 | **GoLedger** | Money | Invoices (B2B + B2C), estimates, payments (manual + Stripe), expenses, recurring invoices, financial reports (P&L, AR aging), QBO CSV export, public invoice payment page | Building |
 | **GoSales** | Sales performance | Advanced pipeline, forecasting, rep performance, commissions, quota tracking | Planned |
 
-### Known Issues
-
-- **GoLedger: half-implemented dark mode** — GoLedger has a partially implemented dark mode that needs to be removed or completed. Currently causes inconsistent styling (some components dark, others light). Fix: strip out all dark mode code and ensure the app uses the standard light theme consistent with other Go Suite apps.
-
 ### Domain Boundaries
 
 - **CRM owns relationships** — who your customers are and every touchpoint with them. It does NOT own financial transactions, appointment scheduling, project management, or sales analytics.
@@ -496,11 +492,20 @@ Modified routes: `/api/generate`, `/api/generate/[id]/iterate`, `/api/generate/[
 - **Playbook + template:** baked into Docker image via `build.sh`
 
 ### Deploying the builder
+**IMPORTANT:** Pushing to GitHub only auto-deploys the platform (Vercel). The builder must be manually redeployed via flyctl whenever `src/lib/fly.ts` patches change.
+
 ```bash
+# 1. Sync Go Suite apps into builder Docker context (if apps/ changed)
+rsync -a --exclude='node_modules' --exclude='.next' --exclude='.prisma' \
+  apps/gochat apps/gocrm apps/goledger apps/goschedule apps/project-management apps/orgs \
+  builder/apps/
+
+# 2. Deploy builder
 cd builder
-./build.sh                    # copies prisma/, playbook/, prisma.config.ts
-flyctl deploy --app go4it-builder
+~/.fly/bin/flyctl deploy
 ```
+
+The builder Dockerfile copies `apps/`, `playbook/`, `prisma/`, and `src/` into the image. `.dockerignore` excludes `node_modules`, `.next`, `.prisma` from the `apps/` copies.
 
 ### Docker build notes
 - Prisma 7 requires `prisma.config.ts` which reads `DATABASE_URL` at generate time
@@ -548,6 +553,8 @@ flyctl deploy --app go4it-builder
 19. **POS integration** — Connect generated apps to point-of-sale systems so businesses can accept payments, sync inventory, and pull real sales data. Priority targets by SMB adoption: (1) **Square** — largest SMB install base, free REST API, no approval needed, OAuth for third-party apps. Key endpoints: Orders, Payments, Inventory, Customers, Catalog. (2) **Shopify POS** — popular with retail businesses that also sell online. GraphQL Admin API + REST. (3) **Clover** — common in restaurants/retail (Fiserv-owned), REST API. (4) **Toast** — restaurant-focused (200K+ locations), requires partner approval. Start with Square: add a "Connect Square" OAuth pattern to the playbook so generated apps can accept payments on public-facing pages (ties into #8 B2B2C) and pull sales data for dashboards/analytics. Playbook needs: OAuth flow template, payment collection on public routes, sales data sync pattern.
 
 ### Completed
+- ~~Dark mode for all GO4IT apps (2026-02-23)~~ — Added dark mode support to all generated apps via template + `upgradeTemplateInfra` patches 12-17. Implementation: `:root`/`.dark` CSS custom properties with `--g4-*` semantic tokens (surfaces, borders, text, accent, status colors) in `globals.css`, FOUC-preventing inline `<script>` in `layout.tsx` that reads `localStorage('go4it-theme')` or `prefers-color-scheme`, `ThemeToggle.tsx` floating button (fixed bottom-right, sun/moon icons), auth/SSO pages converted to semantic token classes. Template files: `playbook/template/src/app/globals.css`, `layout.tsx`, `auth/page.tsx`, `sso/page.tsx`, new `src/components/ThemeToggle.tsx`. Playbook `CLAUDE.md` updated: TIER 2 Colors section replaced with semantic token table, Component Tokens updated, new pitfall about using semantic tokens. All 5 deployed apps (GoCRM, GoChat, GoProject, GoLedger, RocketBook) successfully redeployed with dark mode. **Patch debugging lessons** (6 commits, 6 builder deploys): (1) `provision-users.ts` type expansion regex was fragile — replaced with wholesale `const members: {...}[]` replacement, (2) `suppressHydrationWarning` must be guarded to prevent duplicate attributes on apps that already have it, (3) ThemeToggle import regex must handle both single and double quotes around `'sonner'` — also guard JSX insertion on successful import, (4) role casing varies (`"member"` vs `"Member"`) — use `(?:member|Member)` regex, (5) GoCRM has extra `assigned?: boolean` field already in member type. Key takeaway: **always test `upgradeTemplateInfra` patches against ALL existing app source code before deploying** — source code varies because Claude generates it. Use the pattern from this session: download blob sources to `/tmp/go4it-debug/`, run all patches in a simulation script.
+- ~~SSO for deployed apps (2026-02-22)~~ — Added SSO endpoint (`/sso` page + `/api/auth/sso` route) to template and `upgradeTemplateInfra` patches 9-11. Platform "Visit" button now passes a signed JWT token to the deployed app's `/sso` endpoint, which validates the signature, auto-signs the user in via NextAuth, and redirects to `/`. Eliminates the need for users to manually sign in to each deployed app. Template files: `playbook/template/src/app/sso/page.tsx`, `playbook/template/src/app/api/auth/sso/route.ts`. Auth config updated to accept SSO callback.
 - ~~Consumer-facing public pages / B2B2C (2026-02-21)~~ — GoSchedule proved the model: public booking page (no auth) for end customers + authenticated business owner dashboard. Public route support, customer-facing UI, data flows back to business dashboard. Template for all future generated apps with customer-facing pages.
 - ~~GoSchedule customer-facing version (2026-02-21)~~ — Polished customer-facing scheduling app as flagship B2B2C demo. Business owner dashboard (services, availability, team calendar) + public booking page (no auth required) for customers to browse slots, book appointments, and pay. Proves the B2B2C model for generated apps.
 - ~~Multi-org account page (2026-02-21)~~ — Tabbed org navigation on account page. Users with 2+ orgs see pill-style tabs with org name + role badge (OWNER/ADMIN/MEMBER). Switching tabs loads that org's apps/members/invitations, applies org theme colors to CSS variables, and updates header. Single-org users see no change. URL state via `?org={slug}` for deep linking + invite redirects. New endpoint `/api/account/orgs` returns lightweight org list. `ActiveOrgContext` + localStorage persistence shares active org across components. `/api/account/org` accepts `?slug=` filter. Header shows active org name (clickable → account page). Credential sync fix: all assigned team members' password hashes synced to deployed apps (not just owner), with `syncUserApps()` triggered on password change/reset. Files: `src/app/api/account/orgs/route.ts`, `src/contexts/ActiveOrgContext.tsx`, modified `src/app/account/page.tsx`, `src/components/Header.tsx`, `src/app/invite/[token]/page.tsx`, `src/app/layout.tsx`, `src/lib/team-sync.ts`, deploy route, password routes.
