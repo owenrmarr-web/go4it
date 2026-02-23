@@ -126,6 +126,8 @@ export default function OrgAdminPage({
   const [sendingInvite, setSendingInvite] = useState(false);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
 
+  const [ssoLaunchingId, setSsoLaunchingId] = useState<string | null>(null);
+
   const canManage =
     org?.currentUserRole === "OWNER" || org?.currentUserRole === "ADMIN";
   const isOwner = org?.currentUserRole === "OWNER";
@@ -242,6 +244,24 @@ export default function OrgAdminPage({
     }
   };
 
+  const ssoLaunchApp = async (orgAppId: string) => {
+    setSsoLaunchingId(orgAppId);
+    try {
+      const res = await fetch("/api/sso/launch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgAppId }),
+      });
+      if (!res.ok) throw new Error("SSO failed");
+      const { url } = await res.json();
+      window.open(url, "_blank");
+    } catch {
+      console.error("SSO launch failed");
+    } finally {
+      setSsoLaunchingId(null);
+    }
+  };
+
   const handleLaunchApp = async (orgApp: OrgApp) => {
     if (orgApp.members.length === 0) {
       toast.error("Configure team access before launching");
@@ -276,10 +296,10 @@ export default function OrgAdminPage({
             eventSource.close();
             setDeployingAppId(null);
             toast.success("App deployed successfully!", {
-              action: progress.flyUrl
+              action: orgApp.id
                 ? {
                     label: "Visit",
-                    onClick: () => window.open(progress.flyUrl, "_blank"),
+                    onClick: () => ssoLaunchApp(orgApp.id),
                   }
                 : undefined,
             });
@@ -686,14 +706,13 @@ export default function OrgAdminPage({
 
                       {/* Visit button for running apps */}
                       {orgApp.status === "RUNNING" && orgApp.flyUrl && (
-                        <a
-                          href={orgApp.flyUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-1.5 text-sm font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+                        <button
+                          onClick={() => ssoLaunchApp(orgApp.id)}
+                          disabled={ssoLaunchingId === orgApp.id}
+                          className="px-3 py-1.5 text-sm font-medium text-green-600 border border-green-200 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-60"
                         >
-                          Visit
-                        </a>
+                          {ssoLaunchingId === orgApp.id ? "Opening..." : "Visit"}
+                        </button>
                       )}
 
                       {canManage && deployingAppId !== orgApp.appId && (

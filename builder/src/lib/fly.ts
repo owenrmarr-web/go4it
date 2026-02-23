@@ -935,6 +935,168 @@ export async function POST(request: Request) {
     }
   }
 
+  // --- 9. Patch auth.config.ts: add SSO token verification ---
+  if (existsSync(authConfigPath)) {
+    let authConfig = readFileSync(authConfigPath, "utf-8");
+
+    if (!authConfig.includes("ssoToken")) {
+      // Add crypto import if missing
+      if (!authConfig.includes("import crypto")) {
+        authConfig = authConfig.replace(
+          'import bcrypt from "bcryptjs";',
+          'import bcrypt from "bcryptjs";\nimport crypto from "crypto";'
+        );
+      }
+
+      // Add verifySsoToken function before export default
+      authConfig = authConfig.replace(
+        "export default {",
+        `function verifySsoToken(token: string, email: string): boolean {
+  const authSecret = process.env.AUTH_SECRET;
+  if (!authSecret) return false;
+  const dotIndex = token.lastIndexOf(".");
+  if (dotIndex === -1) return false;
+  const payload = token.slice(0, dotIndex);
+  const signature = token.slice(dotIndex + 1);
+  const expected = crypto.createHmac("sha256", authSecret).update(payload).digest("base64url");
+  if (expected.length !== signature.length) return false;
+  if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) return false;
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString());
+    if (data.email !== email) return false;
+    if (Math.floor(Date.now() / 1000) > data.exp) return false;
+    return true;
+  } catch { return false; }
+}
+
+export default {`
+      );
+
+      // Add ssoToken to credentials schema
+      authConfig = authConfig.replace(
+        'password: { label: "Password", type: "password" },',
+        'password: { label: "Password", type: "password" },\n        ssoToken: { label: "SSO Token", type: "text" },'
+      );
+
+      // Replace the authorize entry to handle SSO token
+      authConfig = authConfig.replace(
+        /if \(!credentials\?\.email \|\| !credentials\?\.password\) return null;/,
+        `const email = credentials?.email as string;
+        const ssoToken = credentials?.ssoToken as string;
+
+        if (!email) return null;
+
+        // SSO flow: verify HMAC token instead of password
+        if (ssoToken) {
+          if (!verifySsoToken(ssoToken, email)) return null;
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user || !user.isAssigned) return null;
+          return { id: user.id, email: user.email, name: user.name, role: user.role };
+        }
+
+        // Standard password flow
+        if (!credentials?.password) return null;`
+      );
+
+      writeFileSync(authConfigPath, authConfig);
+      console.log("[TemplateUpgrade] Added SSO token verification to auth.config.ts");
+    }
+  }
+
+  // --- 10. Patch middleware: allow /sso path through ---
+  const middlewarePath = path.join(sourceDir, "src", "middleware.ts");
+  if (existsSync(middlewarePath)) {
+    let middleware = readFileSync(middlewarePath, "utf-8");
+
+    if (!middleware.includes('"/sso"')) {
+      middleware = middleware.replace(
+        'path.startsWith("/api")',
+        'path.startsWith("/api") || path === "/sso"'
+      );
+      writeFileSync(middlewarePath, middleware);
+      console.log("[TemplateUpgrade] Added /sso to middleware skip paths");
+    }
+  }
+
+  // --- 11. Add SSO landing page if missing ---
+  const ssoDir = path.join(sourceDir, "src", "app", "sso");
+  const ssoPagePath = path.join(ssoDir, "page.tsx");
+  if (!existsSync(ssoPagePath)) {
+    mkdirSync(ssoDir, { recursive: true });
+    writeFileSync(
+      ssoPagePath,
+      `"use client";
+
+import { Suspense, useEffect, useState } from "react";
+import { signIn } from "next-auth/react";
+import { useSearchParams, useRouter } from "next/navigation";
+
+function SSOHandler() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const token = params.get("token");
+    const email = params.get("email");
+
+    if (!token || !email) {
+      router.replace("/auth");
+      return;
+    }
+
+    signIn("credentials", {
+      email,
+      ssoToken: token,
+      redirect: false,
+    }).then((result) => {
+      if (result?.ok) {
+        router.replace("/");
+      } else {
+        setError(true);
+        setTimeout(() => router.replace("/auth"), 2000);
+      }
+    });
+  }, [params, router]);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-sm text-gray-500">Sign-in link expired. Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-3" />
+        <p className="text-sm text-gray-500">Signing you in...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function SSOPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+        </div>
+      }
+    >
+      <SSOHandler />
+    </Suspense>
+  );
+}
+`
+    );
+    console.log("[TemplateUpgrade] Added SSO landing page");
+  }
+
   console.log("[TemplateUpgrade] Done");
 }
 

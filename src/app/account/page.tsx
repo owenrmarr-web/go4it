@@ -173,6 +173,7 @@ function AccountPage() {
   const [deployMessage, setDeployMessage] = useState("");
   const [forkingAppId, setForkingAppId] = useState<string | null>(null);
   const [deployingDraftId, setDeployingDraftId] = useState<string | null>(null);
+  const [ssoLaunchingId, setSsoLaunchingId] = useState<string | null>(null);
 
   // Subdomain state
   const [subdomainInput, setSubdomainInput] = useState("");
@@ -512,6 +513,24 @@ function AccountPage() {
     }
   };
 
+  const ssoLaunchApp = async (orgAppId: string) => {
+    setSsoLaunchingId(orgAppId);
+    try {
+      const res = await fetch("/api/sso/launch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgAppId }),
+      });
+      if (!res.ok) throw new Error("SSO failed");
+      const { url } = await res.json();
+      window.open(url, "_blank");
+    } catch {
+      console.error("SSO launch failed");
+    } finally {
+      setSsoLaunchingId(null);
+    }
+  };
+
   const handleLaunchApp = async (orgApp: OrgApp) => {
     if (!org) return;
     if (orgApp.members.length === 0) {
@@ -546,10 +565,10 @@ function AccountPage() {
             eventSource.close();
             setDeployingAppId(null);
             toast.success("App deployed successfully!", {
-              action: progress.flyUrl
+              action: orgApp.id
                 ? {
                     label: "Visit",
-                    onClick: () => window.open(progress.flyUrl, "_blank"),
+                    onClick: () => ssoLaunchApp(orgApp.id),
                   }
                 : undefined,
             });
@@ -1323,18 +1342,17 @@ function AccountPage() {
                           )}
 
                           {(orgApp.status === "RUNNING" || orgApp.status === "PREVIEW") && orgApp.flyUrl && (
-                            <a
-                              href={orgApp.flyUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
+                            <button
+                              onClick={() => ssoLaunchApp(orgApp.id)}
+                              disabled={ssoLaunchingId === orgApp.id}
+                              className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors disabled:opacity-60 ${
                                 orgApp.status === "PREVIEW"
                                   ? "text-blue-600 border-blue-200 hover:bg-blue-50"
                                   : "text-green-600 border-green-200 hover:bg-green-50"
                               }`}
                             >
-                              Visit
-                            </a>
+                              {ssoLaunchingId === orgApp.id ? "Opening..." : "Visit"}
+                            </button>
                           )}
 
                           {deployingAppId !== orgApp.appId && userRole !== "MEMBER" && (

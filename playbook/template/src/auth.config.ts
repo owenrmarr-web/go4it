@@ -1,7 +1,34 @@
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import prisma from "@/lib/prisma";
+
+function verifySsoToken(token: string, email: string): boolean {
+  const authSecret = process.env.AUTH_SECRET;
+  if (!authSecret) return false;
+
+  const dotIndex = token.lastIndexOf(".");
+  if (dotIndex === -1) return false;
+
+  const payload = token.slice(0, dotIndex);
+  const signature = token.slice(dotIndex + 1);
+
+  // Verify HMAC signature
+  const expected = crypto.createHmac("sha256", authSecret).update(payload).digest("base64url");
+  if (expected.length !== signature.length) return false;
+  if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) return false;
+
+  // Decode and validate payload
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString());
+    if (data.email !== email) return false;
+    if (Math.floor(Date.now() / 1000) > data.exp) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export default {
   providers: [
@@ -9,12 +36,29 @@ export default {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        ssoToken: { label: "SSO Token", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        const email = credentials?.email as string;
+        const ssoToken = credentials?.ssoToken as string;
+
+        if (!email) return null;
+
+        // SSO flow: verify HMAC token instead of password
+        if (ssoToken) {
+          if (!verifySsoToken(ssoToken, email)) return null;
+
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user || !user.isAssigned) return null;
+
+          return { id: user.id, email: user.email, name: user.name, role: user.role };
+        }
+
+        // Standard password flow
+        if (!credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
         });
 
         if (!user) return null;

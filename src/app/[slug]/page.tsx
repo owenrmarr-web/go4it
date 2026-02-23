@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface PortalApp {
   id: string;
+  orgAppId: string;
   title: string;
   description: string;
   icon: string;
@@ -37,15 +38,19 @@ const defaultColors: ThemeColors = {
 
 export default function OrgPortalPage() {
   const params = useParams();
+  const router = useRouter();
   const slug = params.slug as string;
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [errorCode, setErrorCode] = useState<number | null>(null);
 
   useEffect(() => {
     fetch(`/api/portal/${slug}`)
       .then((r) => {
-        if (!r.ok) throw new Error("Not found");
+        if (!r.ok) {
+          setErrorCode(r.status);
+          throw new Error(`${r.status}`);
+        }
         return r.json();
       })
       .then((d) => {
@@ -59,7 +64,9 @@ export default function OrgPortalPage() {
           }
         }
       })
-      .catch(() => setError(true))
+      .catch(() => {
+        if (!errorCode) setErrorCode(404);
+      })
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -71,7 +78,35 @@ export default function OrgPortalPage() {
     );
   }
 
-  if (error || !data) {
+  // Unauthorized — redirect to auth (shouldn't happen if middleware works, but defensive)
+  if (errorCode === 401) {
+    router.replace(`/auth?callbackUrl=/${slug}`);
+    return null;
+  }
+
+  // Forbidden — not a member of this org
+  if (errorCode === 403) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Restricted
+          </h1>
+          <p className="text-gray-500 mb-6">
+            You&apos;re not a member of this organization.
+          </p>
+          <Link
+            href="/account"
+            className="inline-block bg-purple-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+          >
+            Go to My Account
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -106,11 +141,11 @@ export default function OrgPortalPage() {
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-16">
           <Link
-            href="/"
+            href="/account"
             className="inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm font-medium mb-6 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-            Visit GO4IT
+            My Account
           </Link>
           <div className="flex items-center gap-5">
             {data.logo ? (
@@ -182,6 +217,22 @@ export default function OrgPortalPage() {
   );
 }
 
+async function launchAppWithSSO(orgAppId: string): Promise<void> {
+  try {
+    const res = await fetch("/api/sso/launch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orgAppId }),
+    });
+    if (!res.ok) throw new Error("SSO failed");
+    const { url } = await res.json();
+    window.open(url, "_blank");
+  } catch {
+    // SSO failed — this shouldn't normally happen
+    console.error("SSO launch failed");
+  }
+}
+
 function AppLauncherCard({
   app,
   accentColor,
@@ -190,6 +241,13 @@ function AppLauncherCard({
   accentColor: string;
 }) {
   const canLaunch = !!app.url;
+  const [launching, setLaunching] = useState(false);
+
+  const handleLaunch = async () => {
+    setLaunching(true);
+    await launchAppWithSSO(app.orgAppId);
+    setLaunching(false);
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group border border-gray-100">
@@ -217,15 +275,14 @@ function AppLauncherCard({
 
         {/* Launch Button */}
         {canLaunch ? (
-          <a
-            href={app.url!}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full text-center py-2.5 px-4 rounded-xl text-white font-semibold text-sm transition-all duration-200 hover:opacity-90 hover:scale-[1.01] active:scale-[0.99]"
+          <button
+            onClick={handleLaunch}
+            disabled={launching}
+            className="block w-full text-center py-2.5 px-4 rounded-xl text-white font-semibold text-sm transition-all duration-200 hover:opacity-90 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60"
             style={{ backgroundColor: accentColor }}
           >
-            Launch App
-          </a>
+            {launching ? "Opening..." : "Launch App"}
+          </button>
         ) : app.status === "DEPLOYING" ? (
           <div className="block w-full text-center py-2.5 px-4 rounded-xl bg-amber-50 text-amber-600 font-semibold text-sm">
             <span className="inline-block animate-pulse">Deploying — usually takes 1-2 minutes</span>

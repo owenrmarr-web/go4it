@@ -28,6 +28,7 @@ Breaking any of these will cause build or deployment failures.
 | `src/lib/prisma.ts` | Prisma client singleton |
 | `src/components/SessionProvider.tsx` | NextAuth session wrapper |
 | `src/app/auth/page.tsx` | Sign in / sign up page (fully working) |
+| `src/app/sso/page.tsx` | SSO landing page — auto-signs in users from platform |
 | `src/app/api/auth/[...nextauth]/route.ts` | NextAuth API handler |
 | `src/app/api/auth/signup/route.ts` | User registration endpoint |
 | `src/types/next-auth.d.ts` | TypeScript augmentations (adds `id` and `role` to session) |
