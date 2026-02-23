@@ -62,7 +62,7 @@ async function main() {
     // Get all org members
     const orgMembers = await client.execute({
       sql: `
-        SELECT u.name, u.email, u.password
+        SELECT u.name, u.email, u.password, u.username, u.image, u.profileColor, u.profileEmoji, om.title
         FROM OrganizationMember om
         JOIN User u ON om.userId = u.id
         WHERE om.organizationId = ?
@@ -106,6 +106,11 @@ async function main() {
         ...(m.email === ownerEmail && ownerPassword && assignedEmails.has(m.email as string)
           ? { passwordHash: ownerPassword }
           : {}),
+        username: (m.username as string) || null,
+        title: (m.title as string) || null,
+        image: (m.image as string) || null,
+        profileColor: (m.profileColor as string) || null,
+        profileEmoji: (m.profileEmoji as string) || null,
       }));
 
     console.log(`Redeploying ${flyAppId} (${orgSlug})...`);
