@@ -871,9 +871,10 @@ export async function POST(request: Request) {
       );
       // If the old-style type exists without username, add all profile fields
       if (!provision.includes("username")) {
+        const hasAssigned = provision.includes("assigned?: boolean");
         provision = provision.replace(
-          /(passwordHash\?: string;?)\s*(\})/,
-          "$1 assigned?: boolean; username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string; $2"
+          /(passwordHash\?: string;?[^}]*)(\})/,
+          `$1 ${hasAssigned ? "" : "assigned?: boolean; "}username?: string; title?: string; image?: string; profileColor?: string; profileEmoji?: string; $2`
         );
       }
       // Add profile fields to upsert if not already present
