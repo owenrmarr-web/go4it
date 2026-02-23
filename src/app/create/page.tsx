@@ -80,7 +80,7 @@ export default function CreatePage() {
   const [publishCategory, setPublishCategory] = useState(APP_CATEGORIES[0]);
   const [publishIcon, setPublishIcon] = useState(APP_ICONS[0]);
   const [publishIsPublic, setPublishIsPublic] = useState(true);
-  const [publishDeploy, setPublishDeploy] = useState(true);
+  const [publishDeploy, setPublishDeploy] = useState(false);
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
   const [selectedMembers, setSelectedMembers] = useState<Map<string, TeamMemberSelection>>(new Map());
   const [orgMembersLoaded, setOrgMembersLoaded] = useState(false);
