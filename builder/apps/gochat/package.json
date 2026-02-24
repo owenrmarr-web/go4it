@@ -11,8 +11,14 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/ios": "^8.1.0",
+    "@capacitor/push-notifications": "^8.0.1",
     "@prisma/client": "^6.0.0",
     "@tailwindcss/postcss": "^4.1.18",
+    "apns2": "^12.2.0",
     "bcryptjs": "^2.4.3",
     "next": "^16.0.0",
     "next-auth": "^5.0.0-beta.25",

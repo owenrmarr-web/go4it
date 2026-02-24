@@ -1,0 +1,353 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --- Auth models (do not remove) ---
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String
+  name        String?
+  username    String?
+  title       String?
+  image       String?     // Platform profile image (base64)
+  profileColor String?    // Hex color from platform (e.g. "#9333EA")
+  profileEmoji String?    // Emoji from platform (e.g. "🚀")
+  avatarUrl   String?
+  avatarColor String?
+  role        String    @default("member") // "admin" or "member"
+  isAssigned  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  accounts  Account[]
+  sessions  Session[]
+
+  // GoChat relations
+  channels         ChannelMember[]
+  messages         Message[]
+  reactions        Reaction[]
+  files            FileAttachment[]
+  presence         UserPresence?
+  sentDMs          DirectMessage[]    @relation("SentDMs")
+  receivedDMs      DirectMessage[]    @relation("ReceivedDMs")
+  dmMessages       DMMessage[]
+  dmReactions      DMReaction[]
+  dmFiles          DMFileAttachment[]
+  pinnedMessages   PinnedMessage[]
+  channelsCreated  Channel[]
+  readReceipts     ChannelReadReceipt[]
+  dmReadReceipts   DMReadReceipt[]
+  mentions         Mention[]
+  dmMentions       DMMention[]
+  polls            Poll[]
+  pollVotes        PollVote[]
+  pushDevices      PushDevice[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// === Add app-specific models below this line ===
+
+// --- Channels ---
+
+model Channel {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  isDefault   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  members        ChannelMember[]
+  messages       Message[]
+  pinnedMessages PinnedMessage[]
+  readReceipts   ChannelReadReceipt[]
+}
+
+model ChannelMember {
+  id          String    @id @default(cuid())
+  channelId   String
+  userId      String
+  role        String    @default("member") // "admin" or "member"
+  visibleFrom DateTime?
+  isMuted     Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  channel     Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+}
+
+// --- Channel Messages ---
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  channelId String
+  userId    String
+  isAI      Boolean  @default(false)
+  isEdited  Boolean  @default(false)
+  isDeleted Boolean  @default(false)
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+  parent    Message? @relation("MessageThreads", fields: [parentId], references: [id])
+  replies   Message[] @relation("MessageThreads")
+
+  reactions  Reaction[]
+  files      FileAttachment[]
+  pinnedBy   PinnedMessage?
+  mentions   Mention[]
+  poll       Poll?
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  emoji     String
+  messageId String
+  userId    String
+  createdAt DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId, emoji])
+}
+
+model FileAttachment {
+  id        String   @id @default(cuid())
+  filename  String
+  mimeType  String
+  size      Int
+  path      String
+  messageId String
+  userId    String
+  createdAt DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model PinnedMessage {
+  id        String   @id @default(cuid())
+  messageId String   @unique
+  channelId String
+  userId    String
+  createdAt DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model ChannelReadReceipt {
+  id            String   @id @default(cuid())
+  channelId     String
+  userId        String
+  lastReadAt    DateTime @default(now())
+  lastMessageId String?
+  channel       Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+}
+
+// --- Direct Messages ---
+
+model DirectMessage {
+  id        String   @id @default(cuid())
+  user1Id   String
+  user2Id   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user1     User     @relation("SentDMs", fields: [user1Id], references: [id])
+  user2     User     @relation("ReceivedDMs", fields: [user2Id], references: [id])
+
+  messages     DMMessage[]
+  readReceipts DMReadReceipt[]
+
+  @@unique([user1Id, user2Id])
+}
+
+model DMMessage {
+  id               String        @id @default(cuid())
+  content          String
+  directMessageId  String
+  userId           String
+  isAI             Boolean       @default(false)
+  isEdited         Boolean       @default(false)
+  isDeleted        Boolean       @default(false)
+  parentId         String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  directMessage    DirectMessage @relation(fields: [directMessageId], references: [id], onDelete: Cascade)
+  user             User          @relation(fields: [userId], references: [id])
+  parent           DMMessage?    @relation("DMMessageThreads", fields: [parentId], references: [id])
+  replies          DMMessage[]   @relation("DMMessageThreads")
+
+  reactions   DMReaction[]
+  files       DMFileAttachment[]
+  dmMentions  DMMention[]
+}
+
+model DMReaction {
+  id          String    @id @default(cuid())
+  emoji       String
+  dmMessageId String
+  userId      String
+  createdAt   DateTime  @default(now())
+  message     DMMessage @relation(fields: [dmMessageId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([dmMessageId, userId, emoji])
+}
+
+model DMFileAttachment {
+  id          String    @id @default(cuid())
+  filename    String
+  mimeType    String
+  size        Int
+  path        String
+  dmMessageId String
+  userId      String
+  createdAt   DateTime  @default(now())
+  message     DMMessage @relation(fields: [dmMessageId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+model DMReadReceipt {
+  id              String        @id @default(cuid())
+  directMessageId String
+  userId          String
+  lastReadAt      DateTime      @default(now())
+  lastMessageId   String?
+  directMessage   DirectMessage @relation(fields: [directMessageId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([directMessageId, userId])
+}
+
+// --- User Presence ---
+
+model UserPresence {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  status     String    @default("offline") // "online", "away", "offline"
+  lastSeen   DateTime  @default(now())
+  isOOO      Boolean   @default(false)
+  oooMessage String?
+  oooUntil   DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// --- Mentions ---
+
+model Mention {
+  id        String  @id @default(cuid())
+  messageId String
+  userId    String
+  type      String  // "user" | "channel" | "here"
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+}
+
+model DMMention {
+  id          String    @id @default(cuid())
+  dmMessageId String
+  userId      String
+  type        String    @default("user")
+  message     DMMessage @relation(fields: [dmMessageId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([dmMessageId, userId])
+}
+
+// --- Polls ---
+
+model Poll {
+  id        String       @id @default(cuid())
+  question  String
+  messageId String       @unique
+  channelId String?
+  creatorId String
+  isClosed  Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  message   Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  creator   User         @relation(fields: [creatorId], references: [id])
+  options   PollOption[]
+}
+
+model PollOption {
+  id     String     @id @default(cuid())
+  text   String
+  pollId String
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes  PollVote[]
+}
+
+model PollVote {
+  id       String     @id @default(cuid())
+  optionId String
+  userId   String
+  pollId   String
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [userId], references: [id])
+
+  @@unique([pollId, userId])
+}
+
+// --- Push Notifications ---
+
+model PushDevice {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String   @default("ios")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

@@ -3,7 +3,8 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { transformMessage } from "@/lib/transformMessage";
 import { containsAIMention, generateAIResponse, AI_USER_EMAIL, AI_USER_NAME } from "@/lib/ai";
-import { chatEvents } from "@/lib/events";
+import { chatEvents, isUserConnectedViaSSE } from "@/lib/events";
+import { sendPushToUser } from "@/lib/push";
 
 // GET /api/channels/[id]/messages — messages with reactions, files, user info
 // Supports ?after= cursor for polling new messages, ?limit= for pagination
@@ -322,5 +323,28 @@ export async function POST(
     userId: session.user!.id,
     data: transformed,
   });
+
+  // Send push notifications to offline channel members
+  sendPushToChannelMembers(id, session.user!.id, session.user!.name || "Someone", messageContent);
+
   return NextResponse.json({ message: transformed }, { status: 201 });
+}
+
+// Fire-and-forget push to channel members who are not connected via SSE
+function sendPushToChannelMembers(channelId: string, senderId: string, senderName: string, messageText: string) {
+  prisma.channelMember.findMany({
+    where: { channelId },
+    select: { userId: true },
+  }).then((members) => {
+    const body = messageText.length > 100 ? messageText.substring(0, 100) + "..." : messageText;
+    for (const member of members) {
+      if (member.userId !== senderId && !isUserConnectedViaSSE(member.userId)) {
+        sendPushToUser(member.userId, {
+          title: senderName,
+          body,
+          data: { channelId },
+        }).catch((err) => console.error("Push failed:", err));
+      }
+    }
+  }).catch((err) => console.error("Push member lookup failed:", err));
 }

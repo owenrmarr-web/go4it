@@ -5,6 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import MessageView from "@/components/MessageView";
 import SearchModal from "@/components/SearchModal";
 import { useSSE, type SSEEvent } from "@/hooks/useSSE";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import type { MessageData } from "@/components/MessageBubble";
 
 export interface ChannelInfo {
@@ -76,6 +77,8 @@ export default function ChatLayout({
   allUsers: initialAllUsers,
   isPlatformManaged,
 }: ChatLayoutProps) {
+  usePushNotifications();
+
   const [activeView, setActiveView] = useState<"channel" | "dm">("channel");
   const [activeId, setActiveId] = useState<string | null>(
     initialChannels.find((c) => c.isDefault)?.id || initialChannels[0]?.id || null

@@ -3,7 +3,8 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { transformMessage } from "@/lib/transformMessage";
 import { generateAIResponse, AI_USER_EMAIL } from "@/lib/ai";
-import { chatEvents } from "@/lib/events";
+import { chatEvents, isUserConnectedViaSSE } from "@/lib/events";
+import { sendPushToUser } from "@/lib/push";
 
 // GET /api/dm/[id]/messages — messages with reactions, files; supports ?after= cursor
 export async function GET(
@@ -277,5 +278,17 @@ export async function POST(
     userId: session.user!.id,
     data: transformed,
   });
+
+  // Send push notification to the other user if they're not connected via SSE
+  const dmOtherUserId = dm.user1Id === session.user.id ? dm.user2Id : dm.user1Id;
+  if (!isUserConnectedViaSSE(dmOtherUserId)) {
+    const msgBody = hasContent ? content.trim() : "Shared a file";
+    sendPushToUser(dmOtherUserId, {
+      title: session.user!.name || "New message",
+      body: msgBody.length > 100 ? msgBody.substring(0, 100) + "..." : msgBody,
+      data: { dmId: id },
+    }).catch((err) => console.error("DM push failed:", err));
+  }
+
   return NextResponse.json({ message: transformed }, { status: 201 });
 }
