@@ -490,7 +490,7 @@ export default function MessageView({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
-      <div className="hidden lg:flex items-center justify-between px-6 py-3 min-h-[57px] bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="hidden lg:flex items-center justify-between px-6 min-h-[57px] bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2 min-w-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
