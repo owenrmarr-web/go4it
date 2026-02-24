@@ -13,6 +13,7 @@ import cleanupRoute from "./routes/cleanup.js";
 import secretsRoute from "./routes/secrets.js";
 import deployPreviewRoute from "./routes/deploy-preview.js";
 import machinesRoute from "./routes/machines.js";
+import redeployPreviewTemplateRoute from "./routes/redeploy-preview-template.js";
 import { cleanupExpiredPreviews, cleanupOrphanedPreviews, cleanupStaleWorkspaces } from "./lib/cleanup.js";
 
 const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
@@ -23,7 +24,7 @@ const app = Fastify({
 });
 
 // Auth middleware — only require auth for builder API routes, not preview proxy
-const PROTECTED_PATHS = new Set(["generate", "iterate", "deploy", "deploy-preview", "preview", "workspace", "secrets", "machines", "cancel"]);
+const PROTECTED_PATHS = new Set(["generate", "iterate", "deploy", "deploy-preview", "redeploy-preview-template", "preview", "workspace", "secrets", "machines", "cancel"]);
 
 app.addHook("onRequest", async (request, reply) => {
   const firstSegment = request.url.split("?")[0].split("/")[1] || "";
@@ -50,6 +51,7 @@ app.register(cleanupRoute);
 app.register(secretsRoute);
 app.register(deployPreviewRoute);
 app.register(machinesRoute);
+app.register(redeployPreviewTemplateRoute);
 
 // Preview proxy — forward unmatched routes to active preview app
 // This runs AFTER all registered routes fail to match, so builder API routes

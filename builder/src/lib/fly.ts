@@ -82,7 +82,7 @@ export function cleanupDeployProgress(orgAppId: string) {
 // Shell command helpers
 // ============================================
 
-function runCommand(
+export function runCommand(
   cmd: string,
   args: string[],
   options?: { cwd?: string }
@@ -114,7 +114,7 @@ function runCommand(
   });
 }
 
-function flyctl(
+export function flyctl(
   args: string[],
   options?: { cwd?: string }
 ): Promise<{ stdout: string; stderr: string; code: number }> {
@@ -125,7 +125,7 @@ function flyctl(
 // Deployment files generation
 // ============================================
 
-function generateFlyToml(appName: string): string {
+export function generateFlyToml(appName: string): string {
   return `app = "${appName}"
 primary_region = "${FLY_REGION}"
 
@@ -154,7 +154,7 @@ primary_region = "${FLY_REGION}"
 `;
 }
 
-function generateStartScript(): string {
+export function generateStartScript(): string {
   return `#!/bin/sh
 set -e
 
@@ -194,7 +194,7 @@ exec node server.js
 `;
 }
 
-function generateDeployDockerfile(isPrisma7: boolean): string {
+export function generateDeployDockerfile(isPrisma7: boolean): string {
   const prismaConfigCopy = isPrisma7 ? "\nCOPY prisma.config.ts ./" : "";
   const prismaConfigCopyRunner = isPrisma7
     ? "\nCOPY --from=builder /app/prisma.config.ts ./"
@@ -242,7 +242,7 @@ CMD ["sh", "start.sh"]
 `;
 }
 
-function generateDockerignore(): string {
+export function generateDockerignore(): string {
   return `node_modules
 .next
 .git
@@ -538,7 +538,7 @@ export async function deployPreviewApp(
 // Idempotent — safe to run on apps that already have the changes.
 // ============================================
 
-function upgradeTemplateInfra(sourceDir: string): void {
+export function upgradeTemplateInfra(sourceDir: string): void {
   console.log(`[TemplateUpgrade] Upgrading template infrastructure in ${sourceDir}`);
 
   // --- Version check: apps built with template v2+ have all patches pre-applied ---
