@@ -77,6 +77,7 @@ model App {
   author           String
   tags             String
   isPublic         Boolean           @default(true)
+  isGoSuite        Boolean           @default(false)
   previewUrl       String?
   screenshot       String?
   previewFlyAppId  String?

@@ -29,7 +29,7 @@ interface AdminGeneration {
   iterationCount: number;
   createdAt: string;
   createdBy: { id: string; name: string; email: string };
-  app: { id: string } | null;
+  app: { id: string; isGoSuite: boolean } | null;
 }
 
 interface AdminSubmission {
@@ -564,6 +564,31 @@ export default function AdminPage() {
                           </span>
                           <button
                             onClick={async () => {
+                              try {
+                                const res = await fetch(`/api/admin/apps/${gen.app!.id}/go-suite`, { method: "PUT" });
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  toast.success(data.isGoSuite ? "Marked as Go Suite" : "Removed from Go Suite");
+                                  setGenerations((prev) =>
+                                    prev.map((g) => g.id === gen.id && g.app ? { ...g, app: { ...g.app, isGoSuite: data.isGoSuite } } : g)
+                                  );
+                                } else {
+                                  toast.error("Failed to update");
+                                }
+                              } catch {
+                                toast.error("Failed to update");
+                              }
+                            }}
+                            className={`px-2 py-0.5 text-xs font-medium rounded-md transition-colors ${
+                              gen.app.isGoSuite
+                                ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                            }`}
+                          >
+                            {gen.app.isGoSuite ? "Go Suite" : "Go Suite"}
+                          </button>
+                          <button
+                            onClick={async () => {
                               if (!confirm(`Remove "${gen.title}" from the store? This cannot be undone.`)) return;
                               try {
                                 const res = await fetch(`/api/admin/apps/${gen.app!.id}`, { method: "DELETE" });
@@ -662,9 +687,16 @@ export default function AdminPage() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           {gen.app ? (
-                            <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
-                              Yes
-                            </span>
+                            <div className="flex items-center justify-center gap-2">
+                              <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                                Yes
+                              </span>
+                              {gen.app.isGoSuite && (
+                                <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 text-orange-700">
+                                  Go Suite
+                                </span>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-gray-300">—</span>
                           )}
@@ -674,28 +706,60 @@ export default function AdminPage() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           {gen.app && (
-                            <button
-                              onClick={async () => {
-                                if (!confirm(`Remove "${gen.title}" from the store? This cannot be undone.`)) return;
-                                try {
-                                  const res = await fetch(`/api/admin/apps/${gen.app!.id}`, { method: "DELETE" });
-                                  if (res.ok) {
-                                    toast.success("App removed from store");
-                                    setGenerations((prev) =>
-                                      prev.map((g) => g.id === gen.id ? { ...g, app: null } : g)
-                                    );
-                                  } else {
-                                    const data = await res.json();
-                                    toast.error(data.error || "Failed to remove");
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`/api/admin/apps/${gen.app!.id}/go-suite`, { method: "PUT" });
+                                    if (res.ok) {
+                                      const data = await res.json();
+                                      toast.success(data.isGoSuite ? "Marked as Go Suite" : "Removed from Go Suite");
+                                      setGenerations((prev) =>
+                                        prev.map((g) => g.id === gen.id && g.app ? { ...g, app: { ...g.app, isGoSuite: data.isGoSuite } } : g)
+                                      );
+                                      // Refresh Go Suite tab data
+                                      fetch("/api/admin/go-suite")
+                                        .then((r) => r.ok ? r.json() : Promise.reject())
+                                        .then((d) => setGoSuiteApps(d))
+                                        .catch(() => {});
+                                    } else {
+                                      toast.error("Failed to update");
+                                    }
+                                  } catch {
+                                    toast.error("Failed to update");
                                   }
-                                } catch {
-                                  toast.error("Failed to remove");
-                                }
-                              }}
-                              className="px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                            >
-                              Remove from Store
-                            </button>
+                                }}
+                                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                                  gen.app.isGoSuite
+                                    ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                }`}
+                              >
+                                {gen.app.isGoSuite ? "Go Suite ✓" : "Go Suite"}
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!confirm(`Remove "${gen.title}" from the store? This cannot be undone.`)) return;
+                                  try {
+                                    const res = await fetch(`/api/admin/apps/${gen.app!.id}`, { method: "DELETE" });
+                                    if (res.ok) {
+                                      toast.success("App removed from store");
+                                      setGenerations((prev) =>
+                                        prev.map((g) => g.id === gen.id ? { ...g, app: null } : g)
+                                      );
+                                    } else {
+                                      const data = await res.json();
+                                      toast.error(data.error || "Failed to remove");
+                                    }
+                                  } catch {
+                                    toast.error("Failed to remove");
+                                  }
+                                }}
+                                className="px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                              >
+                                Remove
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>

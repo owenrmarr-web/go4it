@@ -29,7 +29,7 @@ export async function GET() {
         select: { id: true, name: true, email: true },
       },
       app: {
-        select: { id: true },
+        select: { id: true, isGoSuite: true },
       },
     },
     orderBy: { createdAt: "desc" },
