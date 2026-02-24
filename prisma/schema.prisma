@@ -178,6 +178,7 @@ model Organization {
   members       OrganizationMember[]
   invitations   Invitation[]
   apps          OrgApp[]
+  imports       ImportJob[]
 }
 
 enum OrgRole {
@@ -346,4 +347,60 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+}
+
+// ============================================
+// Data Import Models
+// ============================================
+
+enum ImportStatus {
+  UPLOADING
+  ANALYZING
+  READY
+  IMPORTING
+  COMPLETED
+  FAILED
+}
+
+model ImportJob {
+  id                String       @id @default(cuid())
+  organizationId    String
+  createdById       String
+  status            ImportStatus @default(UPLOADING)
+  description       String?
+  analysisJson      String?      // AI response: mappings, suggestions
+  confirmedJson     String?      // User-confirmed mappings after adjustment
+  totalRows         Int          @default(0)
+  importedRows      Int          @default(0)
+  skippedRows       Int          @default(0)
+  errorRows         Int          @default(0)
+  errorsJson        String?      // JSON array of { row, field, message }
+  targetOrgAppId    String?
+  targetModel       String?
+  duplicateStrategy String?      // "skip", "overwrite", "create_new"
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  files        ImportFile[]
+
+  @@index([organizationId])
+  @@index([createdById])
+}
+
+model ImportFile {
+  id          String   @id @default(cuid())
+  importJobId String
+  filename    String
+  blobUrl     String
+  fileSize    Int
+  mimeType    String
+  rowCount    Int      @default(0)
+  columns     String?  // JSON array of detected column names
+  sampleData  String?  // JSON: first 50 rows for AI analysis
+  createdAt   DateTime @default(now())
+
+  importJob ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+
+  @@index([importJobId])
 }

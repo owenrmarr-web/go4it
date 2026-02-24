@@ -1237,6 +1237,21 @@ function AccountPage() {
                 </div>
               )}
 
+              {/* Import Data button — OWNER/ADMIN with at least one RUNNING app */}
+              {org && userRole !== "MEMBER" && orgApps.some((a) => a.status === "RUNNING") && (
+                <div className="mb-4">
+                  <Link
+                    href={`/account/import?org=${org.slug}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-purple-300 transition-colors shadow-sm"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                    </svg>
+                    Import Data
+                  </Link>
+                </div>
+              )}
+
               {!org ? (
                 <div className="text-center py-10 bg-white rounded-xl shadow-sm">
                   {userRole === "OWNER" || !userRole ? (

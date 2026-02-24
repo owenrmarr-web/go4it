@@ -1386,6 +1386,113 @@ export default function ThemeToggle({ className = "" }: { className?: string }) 
     }
   }
 
+  // --- 18. Add data-import API route if missing ---
+  const dataImportDir = path.join(sourceDir, "src", "app", "api", "data-import");
+  const dataImportPath = path.join(dataImportDir, "route.ts");
+  if (!existsSync(dataImportPath)) {
+    mkdirSync(dataImportDir, { recursive: true });
+    writeFileSync(
+      dataImportPath,
+      `import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import crypto from "crypto";
+
+function verifySignature(payload: string, signature: string, secret: string): boolean {
+  const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+  if (expected.length !== signature.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+}
+
+export async function POST(request: Request) {
+  const authSecret = process.env.AUTH_SECRET;
+  if (!authSecret) {
+    return NextResponse.json({ error: "Not configured" }, { status: 500 });
+  }
+
+  const signature = request.headers.get("x-go4it-signature");
+  if (!signature) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.text();
+  if (!verifySignature(body, signature, authSecret)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
+
+  const { model, records, userId, duplicateStrategy } = JSON.parse(body) as {
+    model: string;
+    records: Record<string, unknown>[];
+    userId: string;
+    duplicateStrategy: "skip" | "overwrite" | "create_new";
+  };
+
+  const allowedModels = [
+    "contact", "company", "deal", "activity", "task", "tag",
+    "client", "invoice", "estimate", "payment", "expense", "category",
+    "project", "milestone", "label", "subtask"
+  ];
+
+  if (!allowedModels.includes(model)) {
+    return NextResponse.json({ error: "Unknown model: " + model }, { status: 400 });
+  }
+
+  if (!Array.isArray(records) || records.length === 0) {
+    return NextResponse.json({ error: "No records provided" }, { status: 400 });
+  }
+
+  // Find admin user to use as owner
+  const adminUser = await prisma.user.findFirst({ where: { role: "admin" } });
+  const ownerId = adminUser?.id || userId;
+
+  const results = { imported: 0, skipped: 0, errors: [] as { row: number; message: string }[] };
+
+  for (let i = 0; i < records.length; i++) {
+    try {
+      const data = { ...records[i], userId: ownerId };
+
+      if (duplicateStrategy === "skip" || duplicateStrategy === "overwrite") {
+        // Try to find duplicate by model-specific unique fields
+        const dupWhere = getDuplicateWhere(model, data, ownerId);
+        if (dupWhere) {
+          const existing = await (prisma as any)[model].findFirst({ where: dupWhere });
+          if (existing) {
+            if (duplicateStrategy === "skip") {
+              results.skipped++;
+              continue;
+            }
+            // overwrite
+            await (prisma as any)[model].update({ where: { id: existing.id }, data });
+            results.imported++;
+            continue;
+          }
+        }
+      }
+
+      await (prisma as any)[model].create({ data });
+      results.imported++;
+    } catch (err: any) {
+      results.errors.push({ row: i, message: err.message || String(err) });
+    }
+  }
+
+  return NextResponse.json(results);
+}
+
+function getDuplicateWhere(model: string, data: Record<string, unknown>, userId: string): Record<string, unknown> | null {
+  switch (model) {
+    case "contact": return data.email ? { email: data.email, userId } : null;
+    case "company": return data.name ? { name: data.name, userId } : null;
+    case "client": return data.email ? { email: data.email, userId } : (data.name ? { name: data.name, userId } : null);
+    case "category": return data.name && data.type ? { name_type_userId: { name: data.name as string, type: data.type as string, userId } } : null;
+    case "project": return data.name ? { name: data.name, userId } : null;
+    default: return null;
+  }
+}
+`
+    );
+    console.log("[TemplateUpgrade] Added data-import API route");
+  }
+
   // --- Write template version marker so future deploys skip patches ---
   const go4itDir = path.join(sourceDir, "src", "lib");
   mkdirSync(go4itDir, { recursive: true });

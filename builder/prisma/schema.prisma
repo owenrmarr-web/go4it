@@ -22,12 +22,15 @@ model User {
   businessDescription String?   // Free-text business description for AI context
   logo          String?   // Base64 encoded logo image
   themeColors   String?   // JSON object with extracted colors { primary, secondary, accent }
+  profileColor  String?   // Preset hex color for avatar background
+  profileEmoji  String?   // Emoji avatar (alternative to photo upload)
   accounts      Account[]
   sessions      Session[]
   interactions  UserInteraction[]
   organizations OrganizationMember[]
   generatedApps GeneratedApp[]
   orgAppMembers OrgAppMember[]
+  notifications Notification[]
   isAdmin       Boolean   @default(false)
   createdAt     DateTime  @default(now())
 }
@@ -137,6 +140,7 @@ model GeneratedApp {
   uploadBlobUrl      String?                      // Vercel Blob URL for uploaded zip
   manifestJson       String?                      // Raw go4it.json contents (JSON string)
   iterations         AppIteration[]
+  updates            AppUpdate[]
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 }
@@ -187,6 +191,7 @@ model OrganizationMember {
   organizationId String
   userId         String
   role           OrgRole      @default(MEMBER)
+  title          String?      // Job title within this organization
   joinedAt       DateTime     @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -267,4 +272,78 @@ model Invitation {
 
   @@index([email])
   @@index([token])
+}
+
+// ============================================
+// Contact Submissions
+// ============================================
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  message   String
+  createdAt DateTime @default(now())
+}
+
+// ============================================
+// Bug/Feedback Tracking
+// ============================================
+
+enum BugStatus {
+  OPEN
+  IN_PROGRESS
+  FIXED
+  WONTFIX
+}
+
+model BugReport {
+  id               String    @id @default(cuid())
+  reporterName     String
+  location         String?
+  description      String
+  stepsToReproduce String?
+  screenshotUrl    String?
+  status           BugStatus @default(OPEN)
+  commitId         String?
+  adminNote        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+// ============================================
+// App Update Tracking
+// ============================================
+
+model AppUpdate {
+  id             String   @id @default(cuid())
+  generatedAppId String
+  version        Int      // The marketplaceVersion this update bumped TO
+  summary        String   // Admin-provided changelog / update summary
+  publishedAt    DateTime @default(now())
+
+  generatedApp GeneratedApp @relation(fields: [generatedAppId], references: [id], onDelete: Cascade)
+
+  @@index([generatedAppId])
+}
+
+// ============================================
+// Notifications
+// ============================================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "app_update", etc.
+  title     String
+  body      String
+  link      String?  // e.g., "/account"
+  isRead    Boolean  @default(false)
+  metadata  String?  // JSON string for extra data (appId, version, etc.)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
 }
