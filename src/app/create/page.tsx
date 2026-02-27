@@ -11,6 +11,8 @@ import AuthModal from "@/components/AuthModal";
 
 const PROMPT_STORAGE_KEY = "go4it_create_prompt";
 const CONTEXT_STORAGE_KEY = "go4it_create_context";
+const PROMPT_TIMESTAMP_KEY = "go4it_create_timestamp";
+const PROMPT_EXPIRY_MS = 60 * 1000; // 1 minute
 
 type PageState = "input" | "generating" | "complete" | "refine" | "publish" | "error";
 
@@ -97,20 +99,36 @@ export default function CreatePage() {
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "saving" | "error">("idle");
   const [usernameError, setUsernameError] = useState("");
 
-  // Persist prompt and context to localStorage
+  // Persist prompt and context to localStorage with timestamp
   const updatePrompt = useCallback((value: string) => {
     setPrompt(value);
-    try { localStorage.setItem(PROMPT_STORAGE_KEY, value); } catch {}
+    try {
+      localStorage.setItem(PROMPT_STORAGE_KEY, value);
+      localStorage.setItem(PROMPT_TIMESTAMP_KEY, String(Date.now()));
+    } catch {}
   }, []);
 
   const updateContext = useCallback((value: string) => {
     setBusinessContext(value);
-    try { localStorage.setItem(CONTEXT_STORAGE_KEY, value); } catch {}
+    try {
+      localStorage.setItem(CONTEXT_STORAGE_KEY, value);
+      localStorage.setItem(PROMPT_TIMESTAMP_KEY, String(Date.now()));
+    } catch {}
   }, []);
 
-  // Restore from localStorage on mount
+  // Restore from localStorage on mount — wipe if older than 1 minute
   useEffect(() => {
     try {
+      const ts = localStorage.getItem(PROMPT_TIMESTAMP_KEY);
+      const expired = !ts || Date.now() - Number(ts) > PROMPT_EXPIRY_MS;
+
+      if (expired) {
+        localStorage.removeItem(PROMPT_STORAGE_KEY);
+        localStorage.removeItem(CONTEXT_STORAGE_KEY);
+        localStorage.removeItem(PROMPT_TIMESTAMP_KEY);
+        return;
+      }
+
       const savedPrompt = localStorage.getItem(PROMPT_STORAGE_KEY);
       if (savedPrompt) setPrompt(savedPrompt);
       const savedContext = localStorage.getItem(CONTEXT_STORAGE_KEY);
