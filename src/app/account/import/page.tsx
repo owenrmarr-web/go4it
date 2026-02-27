@@ -15,7 +15,6 @@ interface FieldMapping {
 }
 
 interface AnalysisResult {
-  importId: string;
   targetApp: string;
   targetEntity: string;
   mappings: FieldMapping[];

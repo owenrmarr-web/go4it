@@ -180,17 +180,49 @@ Return ONLY valid JSON (no markdown):
     // Calculate total rows from files
     const totalRows = importJob.files.reduce((sum, f) => sum + f.rowCount, 0);
 
-    // Update ImportJob with analysis
+    // Resolve targetApp title → targetOrgAppId
+    const primaryImport = analysis.imports?.[0];
+    const targetAppTitle = analysis.targetApp as string | undefined;
+    const targetModel = primaryImport?.targetModel as string | undefined;
+
+    let targetOrgAppId: string | null = null;
+    if (targetAppTitle) {
+      const matchingOrgApp = orgApps.find((oa) => oa.app.title === targetAppTitle);
+      if (matchingOrgApp) {
+        targetOrgAppId = matchingOrgApp.id;
+      }
+    }
+
+    // Update ImportJob with analysis and resolved target
     await prisma.importJob.update({
       where: { id: importJob.id },
       data: {
         analysisJson: JSON.stringify(analysis),
         status: "READY",
         totalRows,
+        ...(targetOrgAppId && { targetOrgAppId }),
+        ...(targetModel && { targetModel }),
       },
     });
 
-    return NextResponse.json(analysis);
+    // Transform AI response into frontend-compatible shape
+    const mappings = (primaryImport?.mappings ?? []).map(
+      (m: { source: string; target: string; transform: string | null; confidence: number }) => ({
+        sourceColumn: m.source,
+        targetField: m.target,
+        confidence: m.confidence,
+        transform: m.transform,
+      })
+    );
+
+    return NextResponse.json({
+      targetApp: targetAppTitle ?? "Unknown",
+      targetEntity: targetModel ?? "Unknown",
+      mappings,
+      qualityNotes: primaryImport?.cleaningSuggestions ?? [],
+      missingRequired: primaryImport?.missingRequiredFields ?? [],
+      totalRows,
+    });
   } catch (error) {
     console.error("Import analyze error:", error);
     return NextResponse.json(

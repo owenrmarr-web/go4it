@@ -10,11 +10,11 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { jobId, targetOrgAppId, targetModel, mappings, duplicateStrategy } = body;
+    const { jobId, duplicateStrategy } = body;
 
-    if (!jobId || !targetOrgAppId || !targetModel || !mappings || !duplicateStrategy) {
+    if (!jobId || !duplicateStrategy) {
       return NextResponse.json(
-        { error: "Missing required fields: jobId, targetOrgAppId, targetModel, mappings, duplicateStrategy" },
+        { error: "Missing required fields: jobId, duplicateStrategy" },
         { status: 400 }
       );
     }
@@ -44,13 +44,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Pull targetOrgAppId, targetModel, and mappings from stored analysis
+    if (!job.analysisJson) {
+      return NextResponse.json(
+        { error: "Job has not been analyzed yet" },
+        { status: 400 }
+      );
+    }
+
+    if (!job.targetOrgAppId || !job.targetModel) {
+      return NextResponse.json(
+        { error: "Analysis did not resolve a target app. Please re-analyze." },
+        { status: 400 }
+      );
+    }
+
+    const analysis = JSON.parse(job.analysisJson);
+    const primaryImport = analysis.imports?.[0];
+    const mappings = primaryImport?.mappings ?? [];
+
     // Update ImportJob with confirmed mappings
     await prisma.importJob.update({
       where: { id: jobId },
       data: {
-        confirmedJson: JSON.stringify({ targetOrgAppId, targetModel, mappings, duplicateStrategy }),
-        targetOrgAppId,
-        targetModel,
+        confirmedJson: JSON.stringify({
+          targetOrgAppId: job.targetOrgAppId,
+          targetModel: job.targetModel,
+          mappings,
+          duplicateStrategy,
+        }),
         duplicateStrategy,
       },
     });
