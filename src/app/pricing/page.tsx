@@ -193,7 +193,7 @@ export default function PricingPage() {
             </h2>
             <div className="space-y-6">
               {/* $5/app card */}
-              <div className="rounded-xl border-2 border-theme-accent bg-orange-50/50 p-6">
+              <div className="rounded-xl border-2 border-theme-accent bg-white p-6">
                 <div className="text-3xl md:text-4xl font-extrabold text-theme-accent">
                   $5<span className="text-lg md:text-xl font-bold text-gray-500">/app/month</span>
                 </div>
@@ -204,7 +204,7 @@ export default function PricingPage() {
               </div>
 
               {/* $1/seat card */}
-              <div className="rounded-xl border-2 border-theme-primary bg-purple-50/50 p-6">
+              <div className="rounded-xl border-2 border-theme-primary bg-white p-6">
                 <div className="text-3xl md:text-4xl font-extrabold text-theme-primary">
                   $1<span className="text-lg md:text-xl font-bold text-gray-500">/seat/app/month</span>
                 </div>

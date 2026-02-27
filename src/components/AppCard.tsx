@@ -157,7 +157,7 @@ export default function AppCard({
             <div className="flex items-center gap-1">
               {app.isGoSuite && (
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-100 text-orange-700">
-                  GO4IT
+                  Made by GO4IT
                 </span>
               )}
               <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-700 min-h-[18px]">
