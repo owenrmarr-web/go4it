@@ -108,7 +108,7 @@ export default function Home() {
           AI-enabled software tools to help small businesses do big things.
         </p>
         <p className="mt-2 opacity-70 text-base max-w-2xl mx-auto">
-          Browse, deploy, and start using apps tailored to your business in minutes — Let&apos;s GO4IT
+          Browse, deploy, and start using apps for your business in minutes — Let&apos;s GO4IT
         </p>
       </section>
 
