@@ -337,7 +337,7 @@ export default function AuthPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Company Name{" "}
+                  Organization Name{" "}
                   <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <input
