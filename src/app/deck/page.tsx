@@ -8,8 +8,8 @@ const hideSpinners = `
   input[type=number] { -moz-appearance: textfield; }
 `;
 
-function StepInput({ value, onChange, min = 0, max = Infinity, step = 1 }: {
-  value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number;
+function StepInput({ value, onChange, min = 0, max = Infinity, step = 1, small = false, suffix }: {
+  value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; small?: boolean; suffix?: string;
 }) {
   // Round to step precision to avoid floating point artifacts (0.7999999 → 0.8)
   const decimals = step < 1 ? Math.ceil(-Math.log10(step)) : 0;
@@ -33,9 +33,10 @@ function StepInput({ value, onChange, min = 0, max = Infinity, step = 1 }: {
         max={max}
         step={step}
         onChange={(e) => onChange(clamp(parseFloat(e.target.value) || min))}
-        className="w-28 md:w-36 text-right font-bold text-sm md:text-base rounded-lg border border-gray-300 px-2 md:px-3 py-1 focus:outline-none focus:border-purple-400"
+        className={`${small ? "w-16 md:w-20" : "w-[88px] md:w-[104px]"} text-right font-bold text-sm md:text-base rounded-lg border border-gray-300 px-2 md:px-3 py-1 focus:outline-none focus:border-purple-400`}
         style={{ color: "var(--theme-primary)" }}
       />
+      {suffix && <span className="font-bold" style={{ color: "var(--theme-primary)" }}>{suffix}</span>}
     </div>
   );
 }
@@ -274,10 +275,7 @@ function DCFSlide() {
                 <tr className="border-b border-gray-100">
                   <td className="py-1.5 text-gray-600">Market Penetration</td>
                   <td className="py-1.5 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <StepInput value={penetration} onChange={setPenetration} min={0} max={100} step={penetration < 1 ? 0.1 : 1} />
-                      <span className="font-bold text-xs" style={{ color: "var(--theme-primary)" }}>%</span>
-                    </div>
+                      <StepInput value={penetration} onChange={setPenetration} min={0} max={100} step={penetration < 1 ? 0.1 : 1} small suffix="%" />
                   </td>
                 </tr>
                 <tr className="border-b border-gray-100">
@@ -415,7 +413,7 @@ function DCFSlide() {
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-1 text-gray-600">Penetration</td>
-                <td className="py-1 text-right"><div className="flex items-center justify-end gap-1"><StepInput value={penetration} onChange={setPenetration} min={0} max={100} step={penetration < 1 ? 0.1 : 1} /><span className="font-bold" style={{ color: "var(--theme-primary)" }}>%</span></div></td>
+                <td className="py-1 text-right"><StepInput value={penetration} onChange={setPenetration} min={0} max={100} step={penetration < 1 ? 0.1 : 1} small suffix="%" /></td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-1 text-gray-600">Seats/Biz</td>
@@ -550,10 +548,7 @@ function FinancialModelSlide() {
           <tr className="border-b border-gray-100">
             <td className="py-3 text-gray-600">Market Penetration</td>
             <td className="py-3 text-right">
-              <div className="flex items-center justify-end gap-1">
-                <StepInput value={penetration} onChange={setPenetration} min={0} max={100} step={penetration < 1 ? 0.1 : 1} />
-                <span className="font-bold" style={{ color: "var(--theme-primary)" }}>%</span>
-              </div>
+                <StepInput value={penetration} onChange={setPenetration} min={0} max={100} step={penetration < 1 ? 0.1 : 1} small suffix="%" />
             </td>
             <td></td>
             <td className="py-3 text-gray-600">Total Users</td>
@@ -584,7 +579,7 @@ function FinancialModelSlide() {
             </td>
           </tr>
           <tr className="border-b border-gray-100">
-            <td className="py-3 text-gray-600">Price</td>
+            <td className="py-3 text-gray-600">Monthly Price</td>
             <td className="py-3 text-right font-bold text-gray-800">
               $5/app + $1/seat/app
             </td>
@@ -606,10 +601,8 @@ function FinancialModelSlide() {
             </td>
           </tr>
           <tr>
-            <td className="py-3 text-gray-600">Hosting Costs/Month</td>
-            <td className="py-3 text-right font-bold" style={{ color: "var(--theme-secondary)" }}>
-              {fmt(monthlyHostingCost)}
-            </td>
+            <td className="py-3"></td>
+            <td className="py-3"></td>
             <td></td>
             <td className="py-3 text-gray-600 font-semibold">Gross Margin</td>
             <td className="py-3 text-right text-xl font-bold" style={{ color: "var(--theme-accent)" }}>
@@ -632,10 +625,7 @@ function FinancialModelSlide() {
               <tr className="border-b border-gray-100">
                 <td className="py-2 text-gray-600">Penetration</td>
                 <td className="py-2 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <StepInput value={penetration} onChange={setPenetration} min={0} max={100} step={penetration < 1 ? 0.1 : 1} />
-                    <span className="font-bold text-sm" style={{ color: "var(--theme-primary)" }}>%</span>
-                  </div>
+                    <StepInput value={penetration} onChange={setPenetration} min={0} max={100} step={penetration < 1 ? 0.1 : 1} small suffix="%" />
                 </td>
               </tr>
               <tr className="border-b border-gray-100">
@@ -647,7 +637,7 @@ function FinancialModelSlide() {
                 <td className="py-2 text-right"><StepInput value={appsPerUser} onChange={setAppsPerUser} min={1} /></td>
               </tr>
               <tr>
-                <td className="py-2 text-gray-600">Price</td>
+                <td className="py-2 text-gray-600">Monthly Price</td>
                 <td className="py-2 text-right font-bold text-gray-800">$5/app + $1/seat/app</td>
               </tr>
             </tbody>
@@ -670,8 +660,8 @@ function FinancialModelSlide() {
                 <td className="py-2 text-right font-bold gradient-brand-text">{fmt(totalAnnualRevenue)}</td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="py-2 text-gray-600">Hosting Cost</td>
-                <td className="py-2 text-right font-bold text-gray-500">{fmt(annualInfraCost)}</td>
+                <td className="py-2"></td>
+                <td className="py-2"></td>
               </tr>
               <tr className="border-b border-gray-100">
                 <td className="py-2 text-gray-600">Inference Cost</td>
@@ -1295,191 +1285,27 @@ const slides = [
       </div>
     ),
   },
-  {
-    id: "addendum",
-    content: (
-      <div className="flex items-center justify-center h-full">
-        <h1 className="text-4xl md:text-7xl font-extrabold gradient-brand-text">
-          Addendum Slides
-        </h1>
-      </div>
-    ),
-  },
-  { id: "strategy", content: null },
+  // Addendum slides hidden
+  // {
+  //   id: "addendum",
+  //   content: (
+  //     <div className="flex items-center justify-center h-full">
+  //       <h1 className="text-4xl md:text-7xl font-extrabold gradient-brand-text">
+  //         Addendum Slides
+  //       </h1>
+  //     </div>
+  //   ),
+  // },
+  // { id: "strategy", content: null },
   // { id: "dcf", content: null },
-  {
-    id: "marketplace",
-    content: (
-      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
-        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
-          Why a Marketplace?
-        </h2>
-
-        <div className="space-y-4 md:space-y-6">
-          <p className="text-lg md:text-2xl text-gray-700">
-            Other AI app builders expect users to be <span className="text-gray-400">prompt engineers</span> and{" "}
-            <span className="text-gray-400">architects</span>.
-          </p>
-          <p className="text-lg md:text-2xl text-gray-700">
-            <span className="gradient-brand-text font-bold">GO4IT</span> lets users focus on{" "}
-            <span className="font-semibold" style={{ color: "var(--theme-primary)" }}>operating their business</span>.
-          </p>
-          <p className="text-lg md:text-2xl text-gray-700">
-            Most small businesses need the same tools — CRM, invoicing, scheduling, project management.
-            Our curated library means they can{" "}
-            <span className="font-semibold" style={{ color: "var(--theme-primary)" }}>browse, select, and launch in minutes</span> —
-            not describe from scratch and wait.
-          </p>
-        </div>
-
-        <p className="text-base md:text-xl text-gray-600 text-center mt-6 md:mt-8 italic">
-          We preserve the freedom to create unique apps, while market meritocracy ensures the best common apps reach more users, leading to better products and faster deployments.
-        </p>
-
-        {/* Flywheel */}
-        <div className="mt-6 md:mt-8">
-          {/* Desktop: horizontal flywheel */}
-          <div className="hidden md:flex items-center justify-center gap-3">
-            {[
-              { icon: "🛠️", label: "Creators build apps" },
-              { icon: "⭐", label: "Best apps rise to the top" },
-              { icon: "👥", label: "Users quickly find and deploy the best tools" },
-              { icon: "🔄", label: "Product quality attracts more users" },
-            ].map((step, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="flex flex-col items-center text-center w-40">
-                  <div className="text-3xl mb-2">{step.icon}</div>
-                  <p className="text-sm font-medium text-gray-600">{step.label}</p>
-                </div>
-                {i < 3 && (
-                  <div className="text-2xl font-bold gradient-brand-text">→</div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Mobile: vertical flywheel */}
-          <div className="md:hidden flex flex-col items-center gap-2">
-            {[
-              { icon: "🛠️", label: "Creators build apps" },
-              { icon: "⭐", label: "Best apps rise to the top" },
-              { icon: "👥", label: "Users quickly find and deploy the best tools" },
-              { icon: "🔄", label: "Product quality attracts more users" },
-            ].map((step, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <div className="flex items-center gap-3">
-                  <div className="text-2xl">{step.icon}</div>
-                  <p className="text-sm font-medium text-gray-600">{step.label}</p>
-                </div>
-                {i < 3 && (
-                  <div className="text-lg font-bold gradient-brand-text my-1">↓</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-      </div>
-    ),
-  },
-  {
-    id: "competition",
-    content: (
-      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
-        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
-          Competitive Landscape
-        </h2>
-
-        {/* Desktop comparison grid */}
-        <div className="hidden md:block">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className="py-3 px-4 text-base font-semibold text-gray-500 w-[200px]"></th>
-                <th className="py-3 px-3 text-center">
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-lg font-bold gradient-brand-text">GO4IT</span>
-                  </div>
-                </th>
-                <th className="py-3 px-3 text-center">
-                  <span className="text-lg font-bold text-gray-700">Base44</span>
-                </th>
-                <th className="py-3 px-3 text-center">
-                  <span className="text-lg font-bold text-gray-700">Softr</span>
-                </th>
-                <th className="py-3 px-3 text-center">
-                  <span className="text-lg font-bold text-gray-700">Bolt.new</span>
-                </th>
-                <th className="py-3 px-3 text-center">
-                  <span className="text-lg font-bold text-gray-700">Replit</span>
-                </th>
-                <th className="py-3 px-3 text-center">
-                  <span className="text-lg font-bold text-gray-700">Lovable</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="text-base text-gray-700">
-              {[
-                { feature: "App Marketplace", go4it: true, base44: false, lovable: false, bolt: false, replit: false, softr: false },
-                { feature: "AI Generation", go4it: true, base44: true, lovable: true, bolt: true, replit: true, softr: true },
-                { feature: "Managed Hosting", go4it: true, base44: true, lovable: true, bolt: true, replit: true, softr: true },
-                { feature: "Team Provisioning", go4it: true, base44: false, lovable: false, bolt: false, replit: false, softr: true },
-                { feature: "Pre-Made Popular Apps", go4it: true, base44: false, lovable: false, bolt: false, replit: false, softr: false },
-                { feature: "Auto-Deploy Pipeline", go4it: true, base44: true, lovable: true, bolt: true, replit: true, softr: true },
-                { feature: "Business-Focused Pricing", go4it: true, base44: false, lovable: false, bolt: false, replit: false, softr: false },
-              ].map((row, i) => (
-                <tr key={i} className={i < 6 ? "border-b border-gray-100" : ""}>
-                  <td className="py-3 px-4 font-medium text-gray-600">{row.feature}</td>
-                  <td className="py-3 px-3 text-center">
-                    {row.go4it ? (
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-sm" style={{ background: "linear-gradient(135deg, #f97316, #ec4899, #9333ea)" }}>&#10003;</span>
-                    ) : (
-                      <span className="text-gray-300 text-lg">—</span>
-                    )}
-                  </td>
-                  {[row.base44, row.softr, row.bolt, row.replit, row.lovable].map((val, j) => (
-                    <td key={j} className="py-3 px-3 text-center">
-                      {val ? (
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-200 text-gray-500 text-sm">&#10003;</span>
-                      ) : (
-                        <span className="text-gray-300 text-lg">—</span>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile comparison */}
-        <div className="md:hidden space-y-3">
-          {[
-            { feature: "App Marketplace", go4it: true, others: "None" },
-            { feature: "AI Generation", go4it: true, others: "All" },
-            { feature: "Managed Hosting", go4it: true, others: "All" },
-            { feature: "Team Provisioning", go4it: true, others: "Softr" },
-            { feature: "Pre-Made Popular Apps", go4it: true, others: "None" },
-            { feature: "Auto-Deploy Pipeline", go4it: true, others: "All" },
-            { feature: "Business-Focused Pricing", go4it: true, others: "None" },
-          ].map((row, i) => (
-            <div key={i} className="flex items-center justify-between py-2 border-b border-gray-100">
-              <span className="text-sm font-medium text-gray-600">{row.feature}</span>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-xs" style={{ background: "linear-gradient(135deg, #f97316, #ec4899, #9333ea)" }}>&#10003;</span>
-                <span className="text-xs text-gray-400">{row.others === "None" ? "Only GO4IT" : `Also: ${row.others}`}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-lg md:text-2xl font-semibold text-gray-700 mt-6 md:mt-10 text-center">
-          Others build tools for <span className="text-gray-500">developers</span>.{" "}
-          <span className="gradient-brand-text font-bold">GO4IT</span> builds tools for <span className="gradient-brand-text font-bold">businesses</span>.
-        </p>
-      </div>
-    ),
-  },
+  // {
+  //   id: "marketplace",
+  //   ...marketplace slide hidden
+  // },
+  // {
+  //   id: "competition",
+  //   ...competition slide hidden
+  // },
 ];
 
 export default function DeckPage() {
