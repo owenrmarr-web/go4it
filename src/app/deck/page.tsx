@@ -91,7 +91,7 @@ function MarketSlide({ active }: { active: boolean }) {
                 }}
               />
               <div className="flex justify-center items-end h-full">
-                <div className="rounded-full flex items-center justify-center text-on-accent font-bold" style={{ width: 78, height: 78, backgroundColor: "var(--theme-accent)" }}>$44B</div>
+                <div className="rounded-full flex items-center justify-center text-white font-bold" style={{ width: 78, height: 78, backgroundColor: "var(--theme-accent)" }}>$44B</div>
               </div>
             </th>
             <th className="py-2 pr-4 align-bottom">
@@ -161,7 +161,7 @@ function MarketSlide({ active }: { active: boolean }) {
                 className="absolute border-2 rounded-lg transition-opacity duration-[2000ms]"
                 style={{ borderColor: "var(--theme-accent)", opacity: showHighlight ? 1 : 0, top: -6, bottom: -6, left: -6, right: -6, pointerEvents: "none" }}
               />
-              <div className="rounded-full flex items-center justify-center text-on-accent font-bold text-xs" style={{ width: 44, height: 44, backgroundColor: "var(--theme-accent)" }}>$44B</div>
+              <div className="rounded-full flex items-center justify-center text-white font-bold text-xs" style={{ width: 44, height: 44, backgroundColor: "var(--theme-accent)" }}>$44B</div>
             </div>
             <span className="text-xs font-semibold mt-1" style={{ color: "var(--theme-accent)" }}>US 5–50</span>
           </div>
@@ -1091,7 +1091,7 @@ const slides = [
         </h2>
         <div className="space-y-4 md:space-y-6">
           <p className="text-lg md:text-2xl text-gray-700">
-            What if your software tools were tailored for your business, at a fraction of the cost?
+            What if your software tools were tailored to your business AND a fraction of the cost?
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             GO4IT is a{" "}
@@ -1172,11 +1172,11 @@ const slides = [
             <p className="text-sm font-semibold mt-2" style={{ color: "#f97316" }}>US 5–50 SaaS</p>
           </div>
           <div className="flex flex-col items-center flex-1 pt-[42px]">
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">75% industry fit</div>
+            <div className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-1">75% industry fit</div>
             <div className="w-full h-0.5 bg-gray-300 relative">
               <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[10px] border-l-gray-300" />
             </div>
-            <div className="mt-2 text-xs text-gray-500 leading-tight text-center">
+            <div className="mt-2 text-sm text-gray-500 leading-tight text-center">
               <span className="text-green-600 font-semibold">Yes:</span> Retail, services, tech<br />
               <span className="text-red-400 font-semibold">No:</span> Healthcare, education
             </div>
@@ -1186,11 +1186,11 @@ const slides = [
             <p className="text-sm font-semibold mt-2" style={{ color: "#e8527a" }}>Industry Fit</p>
           </div>
           <div className="flex flex-col items-center flex-1 pt-[42px]">
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">60% addressable</div>
+            <div className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-1">60% addressable</div>
             <div className="w-full h-0.5 bg-gray-300 relative">
               <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[10px] border-l-gray-300" />
             </div>
-            <div className="mt-2 text-xs text-gray-500 leading-tight text-center">
+            <div className="mt-2 text-sm text-gray-500 leading-tight text-center">
               <span className="text-green-600 font-semibold">Yes:</span> CRM, PM, messaging, HR<br />
               <span className="text-red-400 font-semibold">No:</span> Payments, storage, security
             </div>
@@ -1259,16 +1259,16 @@ const slides = [
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             <span className="font-bold text-theme-primary">$5/app/month</span>{" "}
-            — covers hosting &amp; infrastructure.
+            — 50% margin on hosting infrastructure.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             <span className="font-bold text-theme-secondary">$1/person/app/month</span>{" "}
-            — for each team member using an app.
+            — GO4IT signature pricing.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             A 15-person team with 5 apps pays just{" "}
             <span className="font-bold text-theme-accent">$90/month</span>{" "}
-            — vs. $810/month with traditional SaaS.{" "}
+            vs. $810/month with traditional SaaS.{" "}
             A <span className="font-bold text-theme-accent">9x</span> reduction in cost.
           </p>
         </div>
