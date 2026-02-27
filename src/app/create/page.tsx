@@ -348,7 +348,9 @@ export default function CreatePage() {
                 </p>
                 <div className="mt-3 flex gap-3 justify-center">
                   <button
-                    onClick={() => { setShowAuthModal(true); setAuthModalClosable(true); }}
+                    onClick={() => {
+                      window.location.href = `/auth?callbackUrl=${encodeURIComponent("/create")}`;
+                    }}
                     className="px-5 py-2 rounded-lg bg-white text-purple-700 font-bold text-sm hover:bg-gray-100 transition-colors"
                   >
                     Sign In
