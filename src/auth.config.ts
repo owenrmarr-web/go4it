@@ -14,8 +14,18 @@ export const authConfig = {
       const isOnAccount = nextUrl.pathname.startsWith("/account");
       const isOnAdmin = nextUrl.pathname.startsWith("/admin");
 
+      // Public single-segment routes that are NOT org portals
+      const publicRoutes = [
+        "/create", "/pricing", "/deck", "/bugs", "/contact", "/developer",
+        "/leaderboard", "/forgot-password", "/reset-password", "/verify-email",
+        "/invite", "/join", "/org",
+      ];
+
       // Protect org portal pages — single-segment slug paths like /my-org
-      const isOrgPortal = /^\/[a-z0-9][\w-]*$/i.test(nextUrl.pathname) && nextUrl.pathname !== "/";
+      const isOrgPortal =
+        /^\/[a-z0-9][\w-]*$/i.test(nextUrl.pathname) &&
+        nextUrl.pathname !== "/" &&
+        !publicRoutes.includes(nextUrl.pathname);
 
       if ((isOnAccount || isOnAdmin || isOrgPortal) && !isLoggedIn) return false;
       if (isOnAuth && isLoggedIn) return Response.redirect(new URL("/", nextUrl));
