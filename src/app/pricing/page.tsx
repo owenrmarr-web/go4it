@@ -175,7 +175,7 @@ export default function PricingPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    Deploy &amp; Use
+                    Deploy &amp; Accelerate
                   </h3>
                   <p className="text-gray-600 mt-1">
                     Apps deploy instantly and run through GO4IT in the browser —
@@ -442,6 +442,35 @@ export default function PricingPage() {
           $1/person/app/mo.
         </p>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 bg-white mt-8">
+        <div className="max-w-7xl mx-auto px-4 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div>
+            <span
+              className="text-lg font-extrabold"
+              style={{
+                background: "linear-gradient(to right, #f97316, #ec4899, #9333ea)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >GO4IT</span>
+            <p className="text-xs text-gray-400 mt-1 max-w-xs">
+              AI-powered software tools for efficient businesses.
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              &copy; {new Date().getFullYear()} GO4IT. All rights reserved.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500">
+            <a href="/bugs" className="hover:text-gray-800 transition-colors">Report a Bug</a>
+            <a href="/developer" className="hover:text-gray-800 transition-colors">Developers</a>
+            <a href="/deck" className="hover:text-gray-800 transition-colors">Investor Deck</a>
+            <a href="/leaderboard" className="hover:text-gray-800 transition-colors">Leaderboard</a>
+            <a href="/contact" className="hover:text-gray-800 transition-colors">Contact</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
