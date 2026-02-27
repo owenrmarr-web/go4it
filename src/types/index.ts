@@ -8,6 +8,7 @@ export interface App {
   author: string;
   tags: string;
   isPublic: boolean;
+  isGoSuite: boolean;
   createdAt: string;
   version: string | null;
   creatorUsername: string | null;

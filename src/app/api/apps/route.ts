@@ -45,6 +45,7 @@ export async function GET(request: Request) {
 
   const result = apps.map(({ generatedApp, _count, ...app }) => ({
     ...app,
+    isGoSuite: app.isGoSuite,
     version: generatedApp ? `V${generatedApp.marketplaceVersion}.0` : null,
     creatorUsername: generatedApp?.createdBy?.username || null,
     screenshot: app.screenshot || generatedApp?.screenshot || null,

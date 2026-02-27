@@ -90,7 +90,7 @@ export default function AuthModal({ onClose, onSuccess, closable = true }: AuthM
               required
               minLength={6}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
-              placeholder="Password (6+ characters)"
+              placeholder={mode === "login" ? "Password" : "Password (6+ characters)"}
             />
             <button
               type="submit"
@@ -118,7 +118,7 @@ export default function AuthModal({ onClose, onSuccess, closable = true }: AuthM
             onClick={() => setMode(mode === "login" ? "signup" : "login")}
             className="text-purple-600 font-semibold hover:underline"
           >
-            {mode === "login" ? "Sign up free" : "Sign in"}
+            {mode === "login" ? "Sign up for Free" : "Sign in"}
           </button>
         </p>
       </div>

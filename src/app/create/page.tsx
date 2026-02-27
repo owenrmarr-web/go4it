@@ -361,7 +361,7 @@ export default function CreatePage() {
                     }}
                     className="px-5 py-2 rounded-lg bg-white/20 text-white font-bold text-sm border border-white/40 hover:bg-white/30 transition-colors"
                   >
-                    Sign Up Free
+                    Sign up for Free
                   </button>
                 </div>
               </div>

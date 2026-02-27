@@ -337,8 +337,7 @@ export default function AuthPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Organization Name{" "}
-                  <span className="text-gray-400 font-normal">(optional)</span>
+                  Organization Name
                 </label>
                 <input
                   type="text"
@@ -562,8 +561,8 @@ export default function AuthPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Describe your business{" "}
-                  <span className="text-gray-400 font-normal">(optional)</span>
+                  Describe your Organization{" "}
+                  <span className="text-gray-400 font-normal">(optional, this helps us tailor apps for your business)</span>
                 </label>
                 <textarea
                   name="businessDescription"
@@ -666,7 +665,7 @@ export default function AuthPage() {
             onClick={() => setMode(mode === "login" ? "signup" : "login")}
             className="text-purple-600 font-semibold hover:underline"
           >
-            {mode === "login" ? "Sign up free" : "Sign in"}
+            {mode === "login" ? "Sign up for Free" : "Sign in"}
           </button>
         </p>
       </div>

@@ -148,24 +148,29 @@ export default function AppCard({
         {/* Icon + Category badge */}
         <div className="flex items-start justify-between">
           <span className={app.screenshot ? "text-2xl leading-none" : "text-4xl leading-none"}>{app.icon}</span>
-          <span
-            className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${badgeColor}`}
-          >
-            {app.category}
-          </span>
+          <div className="flex flex-col items-end gap-1">
+            <span
+              className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${badgeColor}`}
+            >
+              {app.category}
+            </span>
+            <div className="flex items-center gap-1">
+              {app.isGoSuite && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-100 text-orange-700">
+                  GO4IT
+                </span>
+              )}
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-700 min-h-[18px]">
+                {app.version || "\u00A0"}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Title + Version */}
-        <div className="mt-3 flex items-center gap-2">
-          <h3 className="font-bold text-gray-900 text-lg leading-tight">
-            {app.title}
-          </h3>
-          {app.version && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-700">
-              {app.version}
-            </span>
-          )}
-        </div>
+        {/* Title */}
+        <h3 className="mt-3 font-bold text-gray-900 text-lg leading-tight">
+          {app.title}
+        </h3>
 
         {/* Creator username */}
         {app.creatorUsername && (
