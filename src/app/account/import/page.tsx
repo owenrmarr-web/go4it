@@ -129,6 +129,7 @@ function ImportWizard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step 2 state
+  const [jobId, setJobId] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [duplicateStrategy, setDuplicateStrategy] = useState("skip");
   const [confirming, setConfirming] = useState(false);
@@ -175,7 +176,7 @@ function ImportWizard() {
       // Upload file
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("org", orgSlug);
+      formData.append("orgSlug", orgSlug);
 
       const uploadRes = await fetch("/api/import/upload", {
         method: "POST",
@@ -186,13 +187,14 @@ function ImportWizard() {
         throw new Error(err.error || "Upload failed");
       }
       const uploadData = await uploadRes.json();
+      setJobId(uploadData.jobId);
 
       // Analyze
       const analyzeRes = await fetch("/api/import/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          importId: uploadData.importId,
+          jobId: uploadData.jobId,
           description,
           org: orgSlug,
         }),
@@ -222,9 +224,8 @@ function ImportWizard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          importId: analysis.importId,
+          jobId,
           duplicateStrategy,
-          org: orgSlug,
         }),
       });
       if (!confirmRes.ok) {
@@ -237,8 +238,7 @@ function ImportWizard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          importId: analysis.importId,
-          org: orgSlug,
+          jobId,
         }),
       });
       if (!executeRes.ok) {
@@ -248,7 +248,7 @@ function ImportWizard() {
       const execData = await executeRes.json();
 
       setJob({
-        id: execData.jobId || analysis.importId,
+        id: jobId!,
         status: "RUNNING",
         importedRows: 0,
         skippedRows: 0,
@@ -297,6 +297,7 @@ function ImportWizard() {
     setStep(0);
     setFile(null);
     setDescription("");
+    setJobId(null);
     setAnalysis(null);
     setDuplicateStrategy("skip");
     setJob(null);
