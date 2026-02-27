@@ -25,7 +25,8 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     username: "",
     email: "",
     password: "",
@@ -130,8 +131,9 @@ export default function AuthPage() {
         ...(name === "country" ? { state: "" } : {}),
       };
       // Auto-suggest username from name if not manually edited
-      if (name === "name" && !usernameManuallyEdited) {
-        updated.username = generateUsernameFromName(value);
+      if ((name === "firstName" || name === "lastName") && !usernameManuallyEdited) {
+        const fullName = `${updated.firstName} ${updated.lastName}`.trim();
+        updated.username = generateUsernameFromName(fullName);
       }
       // Auto-generate portal slug from company name if not manually edited
       if (name === "companyName" && !slugManuallyEdited) {
@@ -205,7 +207,7 @@ export default function AuthPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: formData.name,
+          name: `${formData.firstName} ${formData.lastName}`.trim(),
           username: formData.username,
           email: formData.email,
           password: formData.password,
@@ -249,7 +251,7 @@ export default function AuthPage() {
         <p className="mt-1 text-center text-sm text-gray-500">
           {mode === "login"
             ? "Sign in to continue"
-            : "It\u2019s free \u2014 no credit card required"}
+            : "Get started in minutes \u2014 no credit card required"}
         </p>
 
         {/* Form */}
@@ -259,19 +261,35 @@ export default function AuthPage() {
         >
           {mode === "signup" && (
             <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
-                  placeholder="Your name"
-                />
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                    placeholder="First"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700"
+                    placeholder="Last"
+                  />
+                </div>
               </div>
 
               <div>

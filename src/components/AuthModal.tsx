@@ -68,7 +68,7 @@ export default function AuthModal({ onClose, onSuccess, closable = true }: AuthM
         <p className="mt-1 text-center text-sm text-gray-500">
           {mode === "login"
             ? "Sign in to continue"
-            : "It's free — no credit card required"}
+            : "Get started in minutes — no credit card required"}
         </p>
 
         {mode === "login" ? (
