@@ -2,11 +2,11 @@
 
 ## Company Vision
 
-GO4IT is a free marketplace for AI-generated SaaS applications targeting small and medium businesses (5–50 employees). US small businesses spend ~$1,400/employee/year on SaaS. GO4IT lowers that by an order of magnitude by letting users either pick from a library of existing apps or create their own via AI-powered vibe coding (Claude Code under the hood).
+GO4IT is a free marketplace and hosting platform for AI-generated SaaS applications targeting small businesses (5–50 employees). US small businesses spend ~$1,400/employee/year on SaaS. GO4IT lowers that by an order of magnitude by letting users either pick from a library of existing apps or create their own via AI-powered vibe coding (Claude Code under the hood).
 
 **Slogan:** Free software tools to help small businesses do big things.
 
-**Revenue model:** GO4IT hosts deployed app instances for users on Fly.io, charging a fixed ~20% premium on top of infrastructure costs. Still a 5–10x savings vs. current SaaS spend.
+**Revenue model:** GO4IT hosts deployed app instances for users on Fly.io, charging $5/app/mo and $1/seat/app/mo. Still a 5–10x savings vs. current SaaS spend.
 
 **Domain:** go4it.live (purchased on Squarespace, pointed at Vercel)
 
@@ -16,50 +16,13 @@ GO4IT is a free marketplace for AI-generated SaaS applications targeting small a
 
 ---
 
-## How It Works (Full Product Flow)
+## Product Flow
 
-1. **Browse** — Users land on an app-store grid of SaaS tools (CRM, PM, chat, etc.). Search bar filters by name/category.
-2. **Interact** — Hover an app card to see description + heart (save) / add (deploy) buttons.
-3. **Account** — "My Account" is a single consolidated dashboard: My Apps (deploy/configure/launch), Team Members (invite/roles/remove), and Saved Apps.
-4. **Create** — Users write a plain-English prompt. Claude Code CLI generates the app autonomously. Progress shown via animated step indicator + persistent header chip. User can iterate with follow-up prompts, then publish to GO4IT marketplace.
-5. **Deploy** — Added apps get containerized (Docker) and hosted by GO4IT on Fly.io. Users configure team access, then launch. GO4IT handles all infra — no cloud expertise required.
-
----
-
-## What's Built So Far
-
-- **App store landing page** (`src/app/page.tsx`) — grid of marketplace apps with search/filter
-- **Auth** — NextAuth credentials provider (email + bcrypt password). Protected `/account` route via middleware.
-- **Heart / Add interactions** — POST/DELETE API, persisted in DB, reflected in UI via custom `useInteractions` hook
-- **Consolidated Account page** (`src/app/account/page.tsx`) — single dashboard with three sections: My Apps (full deploy management with configure/launch/visit/remove), Team Members (invite/roles/remove/pending invitations), and Saved Apps (hearted marketplace apps)
-- **1:1 org simplification** — Orgs auto-created on signup when company name provided. Lazy creation from Account Settings. Single org per user simplifies UX for demos. Schema unchanged (supports multiple orgs if needed later).
-- **User profile settings** (`src/app/account/settings/page.tsx`) — logo upload, company info, theme color extraction. Syncs org branding automatically.
-- **Organizations & teams** — invite members via email (Resend), role-based access (OWNER/ADMIN/MEMBER), all managed from Account page
-- **AI app generation** (`src/app/create/page.tsx`) — fully working! Users type a prompt, Claude Code CLI generates a complete app with auth, DB, seed data, and Dockerfile. Progress streamed via SSE.
-- **App iteration** — Users can refine generated apps with follow-up prompts. Uses Claude Code CLI `--continue` flag on existing workspace. Tracks iteration count on GeneratedApp.
-- **App publishing** — Generated apps can be published to the marketplace (public or private). Creates an App record linked to the GeneratedApp.
-- **Global generation progress** (`src/components/GenerationContext.tsx`) — persistent SSE connection + localStorage. Progress chip in Header survives page navigation. Single SSE connection shared across components.
-- **Theme-aware UI** — CSS variables (`--theme-primary`, `--theme-secondary`, `--theme-accent`) extracted from uploaded logos. GO4IT logo, Create button, headings, progress bars, and gradient backgrounds all respect the theme.
-- **App Builder Playbook** (`playbook/CLAUDE.md`) — instructions that ensure generated apps follow GO4IT conventions (Next.js 16, Tailwind CSS 4, Prisma 6 + SQLite, Docker-ready). Includes Tailwind v4 `@theme` restrictions and middleware regex guardrails.
-- **Starter template** (`playbook/template/`) — pre-built boilerplate (package.json, auth, prisma schema, Dockerfile, layout, globals.css) copied into each generated app workspace before Claude Code runs. Saves generation time and ensures consistency.
-- **Auto-deploy preview pipeline** (`builder/src/lib/generator.ts`, `builder/src/lib/fly.ts`) — When an app finishes generating, it automatically deploys to Fly.io as a preview (slim Dockerfile using `.next/standalone`). Fly infra (app + volume + secrets) pre-created in parallel with CLI generation for speed. Includes build validation with auto-fix loop (up to 2 attempts via Claude Code `--continue`), `prisma format` for schema relation fixes, and screenshot capture via Puppeteer. **Status: pipeline code complete but build failures in generated code prevent successful deploys — see roadmap item #1.**
-- **Live preview (legacy)** (`src/lib/previewer.ts`) — local dev preview via `next dev`. Superseded by auto-deploy pipeline but kept as local dev fallback.
-- **Parallel npm install** — `npm install --ignore-scripts` runs in background during Claude Code generation so dependencies are ready when generation completes. Separate `prisma format` + `prisma generate` run after install to handle schema issues.
-- **Fly.io deployment pipeline** (`src/lib/fly.ts`) — fully working! Account page → configure team → Launch → app containerized (Docker), deployed to Fly.io with SQLite volume, team members provisioned. Auto-detects Prisma 6 vs 7 for compatibility fixes. Progress streamed via SSE with DB fallback for HMR.
-- **Admin dashboard** (`src/app/admin/page.tsx`) — user/org/creations management for platform admins (isAdmin flag on User model). Creations tab shows all generated apps with creator, status, iterations, and publish state.
-- **Marketplace cleanup** — seeded placeholder apps removed. Only real generated+published apps appear. Empty state CTA directs users to create.
-- **Usernames** — unique usernames (3-20 chars, lowercase + numbers + underscores). Auto-generated from name on signup, editable in Account Settings. Reserved name list. Username displayed on app cards and creator profiles.
-- **Leaderboard** (`src/app/api/leaderboard/route.ts`) — aggregates creators by total hearts and total deploys. Powers marketplace creator rankings.
-- **Versioning & draft/store preview separation** — Published apps have a stable store preview (`App.previewFlyAppId`) that stays live in the marketplace. Creators iterate privately on drafts (`GeneratedApp.previewFly*`) without affecting the store listing. On publish, draft promotes to store, old store machine destroyed. Draft previews expire after 7 days with warning badges on account page. "Apps I've Created" section on account page shows all created apps with iterate/preview/publish actions.
-- **Investor deck** (`src/app/deck/page.tsx`) — full pitch deck with competitive landscape, pricing model, and product demo slides.
-- **Pricing calculator** (`src/app/pricing/page.tsx`) — interactive cost savings calculator comparing GO4IT vs traditional SaaS (HubSpot, Monday.com, Slack, FreshBooks, Gusto). Per-seat adjustments, Number of Apps input with dynamic "Additional Apps" row using averaged competitor pricing. Monthly/annual savings and cost reduction multiplier displayed inline.
-- **Builder service** (`builder/`) — standalone Fastify API on Fly.io for production app generation, iteration, preview, and deployment. Platform delegates via HTTP when `BUILDER_URL` is set. See "Builder Service" section below.
-- **Team member awareness in generated apps** — Deployed apps receive the full org roster via `GO4IT_TEAM_MEMBERS`, not just assigned members. Each user has an `isAssigned` boolean. Assigned members can log in and use the app fully. Unassigned org members appear in staff lists/dropdowns with a "Not on plan" badge but cannot log in (blocked in auth.config.ts, given random unusable password). When assigned users interact with unassigned members, a "Request Access" flow (via `AccessRequest` model + `/api/access-requests` API) creates a notification for the account owner to add seats. Playbook instructs Claude to use the User table as the staff roster and implement the badge/notification UX. Drives seat expansion revenue.
-- **Forgot password** — Full password reset flow: "Forgot password?" link on login → enter email → branded email via Resend with reset link (1-hour expiry) → new password form → auto-redirect to login with success toast. Anti-enumeration (always returns success). Uses `VerificationToken` model (no schema changes). Files: `src/app/forgot-password/page.tsx`, `src/app/reset-password/page.tsx`, `src/app/api/auth/forgot-password/route.ts`, `src/app/api/auth/reset-password/route.ts`, `src/lib/email.ts` (added `sendPasswordResetEmail`).
-- **Member onboarding flow** — Streamlined signup for invited team members (separate from owner signup). Invite link → `/invite/[token]` smart routing: existing users → "Sign In & Accept" → `/auth?callbackUrl=/invite/{token}`, new users → "Get Started" → `/join/{token}`. Join page: pre-filled name/email, password, profile photo upload OR emoji avatar on preset color palette (10 colors, 20 emojis), live avatar preview. On submit: account created + org membership + invitation accepted in single transaction → auto sign-in → redirect to `/account`. Avatar priority: photo > emoji > initials on profile color background. Account page shows permission-based visibility: Owner sees everything, Admin sees team management + deploy, Member sees apps with Launch/Visit only (no configure/deploy/invite controls). Files: `src/app/join/[token]/page.tsx`, `src/app/api/auth/join/route.ts`, modified `src/app/invite/[token]/page.tsx`, `src/app/api/invite/[token]/route.ts` (added `hasAccount`/`name`), `src/app/api/account/org/route.ts` (all roles, not just OWNER), `src/app/account/page.tsx` (role-based UI). Schema: added `profileColor` and `profileEmoji` to User model. Migration: `prisma/migrate-profile-fields.ts`.
-- **Username required for generation** — Users must have a username before creating apps. Create page shows a username setup modal if missing. Server-side guard in `/api/generate` rejects requests without a username. Member join flow (`/api/auth/join`) now auto-generates a username from the member's name (with collision handling). This ensures creator attribution on published apps.
-- **Publish syncs GeneratedApp title** — When publishing (or re-publishing), `GeneratedApp.title` is updated to match the published `App.title`. This ensures the admin creations tab shows the same name as the marketplace listing. Migration: `prisma/backfill-gen-titles.ts` for existing records.
-- **Prisma schema** — User, Account, Session, VerificationToken, App, UserInteraction, GeneratedApp, AppIteration, Organization, OrganizationMember, Invitation, OrgApp, OrgAppMember models
+1. **Browse** — App-store grid of SaaS tools. Search bar filters by name/category.
+2. **Interact** — Hover cards for description + heart / add buttons.
+3. **Account** — Consolidated dashboard: My Apps, Team Members, Saved Apps.
+4. **Create** — Plain-English prompt → Claude Code CLI generates app → iterate → publish.
+5. **Deploy** — Containerized (Docker) on Fly.io. Configure team access, then launch.
 
 ---
 
@@ -79,7 +42,7 @@ GO4IT is a free marketplace for AI-generated SaaS applications targeting small a
 | Toasts | Sonner |
 | Email | Resend (`noreply@go4it.live`) |
 | Hosting (platform) | Vercel |
-| Hosting (generated apps) | Fly.io (working — flyctl CLI via `src/lib/fly.ts`) |
+| Hosting (generated apps) | Fly.io (flyctl CLI via `src/lib/fly.ts`) |
 
 ---
 
@@ -94,518 +57,85 @@ prisma/
   schema.prisma          — DB models: User, App, GeneratedApp, AppIteration, Organization, OrgApp, etc.
   seed.ts                — Seeds admin user for dev (uses LibSQL adapter)
   migrate-*.ts           — Turso migration scripts (one per schema change)
-  redeploy-apps.ts       — Script to redeploy all RUNNING OrgApps (requires explicit Turso env vars)
-  redeploy-previews.ts   — Script to rebuild Go Suite preview machines from latest template source
+  redeploy-apps.ts       — Script to redeploy all RUNNING OrgApps
+  redeploy-previews.ts   — Script to rebuild Go Suite preview machines
 
 apps/
   .gitkeep               — Generated apps directory (gitignored, stored on disk only)
 
 src/
   auth.ts                — NextAuth instance export
-  auth.config.ts         — NextAuth config: credentials provider, callbacks, pages
+  auth.config.ts         — NextAuth config: credentials provider, callbacks, public route list
   middleware.ts          — Protects /account route (requires session)
 
   app/
     layout.tsx           — Root layout (SessionProvider, ThemeProvider, GenerationProvider, Toaster)
     page.tsx             — Home / marketplace grid
     globals.css          — Tailwind imports, theme CSS variables, gradient utilities
-
     auth/page.tsx        — Login / signup page
-    forgot-password/page.tsx — Request password reset email
-    reset-password/page.tsx  — Set new password (via token link)
-    join/[token]/page.tsx    — Streamlined member onboarding (name, password, avatar)
-    account/page.tsx     — Consolidated dashboard: My Apps, Team Members, Saved Apps (role-based visibility)
-    account/settings/page.tsx — User profile settings (logo, company, theme)
+    account/page.tsx     — Consolidated dashboard (role-based visibility)
     create/page.tsx      — AI app creation (prompt → progress → preview → refine → publish)
-    admin/page.tsx       — Platform admin dashboard (users, orgs, creations)
-    org/[slug]/admin/page.tsx — Organization admin (legacy, still functional)
-    invite/[token]/page.tsx   — Accept invitation
+    admin/page.tsx       — Platform admin dashboard
+    [slug]/page.tsx      — Org portal page
 
     api/
       apps/route.ts              — GET /api/apps (search + category filter)
       interactions/route.ts      — POST/DELETE /api/interactions (heart/add)
-      account/interactions/route.ts — GET user's interactions
-      account/profile/route.ts     — GET/PUT user profile (syncs org branding)
-      account/org/route.ts         — GET user's org + apps + members + invitations
-      auth/[...nextauth]/route.ts  — NextAuth handler
-      auth/signup/route.ts         — POST signup (bcrypt, auto-create org)
-      auth/join/route.ts           — POST member signup (via invite token)
-      auth/forgot-password/route.ts — POST request password reset email
-      auth/reset-password/route.ts  — POST set new password (via reset token)
-      generate/route.ts            — POST start app generation job
-      generate/[id]/stream/route.ts — GET SSE progress stream (DB fallback)
-      generate/[id]/iterate/route.ts — POST start iteration on existing app
-      generate/[id]/publish/route.ts — POST publish generated app to marketplace
-      generate/[id]/preview/route.ts  — POST/GET/DELETE live preview management
-      generate/[id]/status/route.ts  — GET generation status (polling fallback)
-      admin/...                    — Admin API endpoints (users, orgs, generations)
-      organizations/...            — Org CRUD, members, invitations
-      organizations/[slug]/apps/route.ts — GET/POST/DELETE org apps
-      organizations/[slug]/apps/[appId]/members/route.ts — GET/PUT app team access
+      generate/route.ts          — POST start app generation
+      generate/[id]/stream/route.ts — GET SSE progress stream
+      generate/[id]/iterate/route.ts — POST iterate on existing app
+      generate/[id]/publish/route.ts — POST publish to marketplace
       organizations/[slug]/apps/[appId]/deploy/route.ts — POST trigger Fly.io deploy
-      organizations/[slug]/apps/[appId]/deploy/stream/route.ts — GET SSE deploy progress
-      invite/[token]/route.ts      — Accept invitation
 
   components/
     Header.tsx             — Top nav bar (Create, logo, generation chip, My Account)
-    AppCard.tsx            — App card with hover reveal: description, heart, add
-    SearchBar.tsx          — Search input (filters apps client-side)
-    GenerationContext.tsx   — Global generation state: SSE connection, localStorage persistence
-    GenerationProgress.tsx — Animated step indicator (reads from GenerationContext)
-    SessionProvider.tsx    — Wraps app in NextAuth SessionProvider
-    ThemeProvider.tsx      — Dynamic theme colors from logo extraction → CSS variables
-
-  hooks/
-    useInteractions.ts   — Hook: manages heart/add state + API calls
+    AppCard.tsx            — App card with hover reveal
+    GenerationContext.tsx   — Global generation state: SSE, localStorage persistence
+    ThemeProvider.tsx      — Dynamic theme colors → CSS variables
 
   lib/
     prisma.ts            — Prisma singleton (LibSQL adapter)
-    interactions.ts      — Fetch helpers: POST/DELETE interactions
-    generator.ts         — Claude Code CLI spawning, progress parsing, iteration support, parallel npm install
-    previewer.ts         — Live preview: dev server spawning, auth bypass, port allocation
+    generator.ts         — Claude Code CLI spawning, progress parsing
     fly.ts               — Fly.io deployment: Prisma 6/7 auto-detection, flyctl wrapper
-    email.ts             — Resend email client + invite template
-    colorExtractor.ts    — Extract theme colors from uploaded logos
-    slug.ts              — Slug generation for org URLs
-    subdomain.ts         — Subdomain generation and validation
-    team-sync.ts         — Real-time team member sync: direct HTTP to deployed apps + secrets fallback
-    username.ts          — Username validation (reserved names, uniqueness check via Prisma)
-    username-utils.ts    — Pure username utilities (safe for client-side import)
-    constants.ts         — Use case options, country list
-
-  types/
-    index.ts             — TS interfaces: App, InteractionType
+    team-sync.ts         — Real-time team member sync to deployed apps
+    email.ts             — Resend email client + templates
 
 builder/                   — Standalone builder service (deployed to Fly.io)
-  package.json             — fastify, prisma, libsql, tsx
-  Dockerfile               — Node 20 slim + flyctl + playbook
-  fly.toml                 — Fly.io config (shared-cpu-4x, 2GB RAM, 10GB volume)
-  build.sh                 — Copies prisma/, playbook/, prisma.config.ts before Docker build
-  apps/gochat/             — GoChat template source (also Capacitor iOS project)
-    capacitor.config.ts    — Capacitor config (remote URL to deployed preview)
-    ios/                   — Xcode project (generated by `npx cap add ios`)
-    src/lib/push.ts        — APNs push notification utility (apns2 library)
-    src/hooks/usePushNotifications.ts — Client-side Capacitor push registration
-    src/app/api/push/register/route.ts — Device token registration API
-  src/
-    index.ts               — Fastify server with auth middleware
-    routes/
-      generate.ts          — POST /generate (start new generation)
-      iterate.ts           — POST /iterate (iterate on existing app)
-      preview.ts           — POST /preview, DELETE /preview/:id
-      deploy.ts            — POST /deploy (trigger Fly.io deployment)
-      deploy-preview.ts    — POST /deploy-preview (deploy preview machine)
-      redeploy-preview-template.ts — POST /redeploy-preview-template (rebuild preview from template)
-      health.ts            — GET /health
-    lib/
-      generator.ts         — Adapted from src/lib/generator.ts (Turso writes, /data/apps paths)
-      fly.ts               — Deployment orchestration (exports generateFlyToml, generateDeployDockerfile, etc.)
-      prisma.ts            — Prisma client with LibSQL adapter for Turso
+  src/index.ts             — Fastify server with auth middleware
+  src/lib/generator.ts     — Adapted generator (Turso writes, /data/apps paths)
+  src/lib/fly.ts           — Deployment orchestration
 ```
 
 ---
 
-## AI App Generation (how it works)
+## Critical Gotchas
 
-### Initial generation
-1. User types a prompt on `/create` (must be logged in)
-2. `POST /api/generate` creates a `GeneratedApp` record and spawns Claude Code CLI
-3. Starter template (`playbook/template/`) copied into `apps/{generationId}/` as boilerplate
-4. `npm install` started in parallel with Claude Code CLI (saves ~60s)
-5. CLI runs with playbook as `CLAUDE.md`. Flags: `-p`, `--output-format stream-json`, `--verbose`, `--dangerously-skip-permissions`, `--model sonnet`
-6. Progress parsed from stream-json output via `[GO4IT:STAGE:...]` markers defined in the playbook
-7. SSE endpoint (`/api/generate/[id]/stream`) streams progress to the frontend (with DB fallback for HMR)
-8. On completion: metadata extracted, parallel install awaited, incremental `npm install` + `prisma db push` + seed run during "finalizing" stage
-9. **Build validation + auto-fix:** `npm run build` is run to catch TypeScript/build errors. If it fails, the error is extracted and fed back to Claude Code CLI via `--continue` with a fix prompt. Up to 2 auto-fix attempts before giving up. This catches issues like missing type augmentations, undefined properties, import errors, etc.
-10. Generated apps are self-contained: Next.js 16, Tailwind CSS 4, Prisma 6 + SQLite, Dockerfile included
-
-### Iteration / refine
-1. User enters a follow-up prompt on the refine screen
-2. `POST /api/generate/[id]/iterate` creates an `AppIteration` record and spawns CLI with `--continue`
-3. CLI resumes in the same workspace directory, preserving prior context
-4. Same SSE streaming, same progress tracking — `iterationCount` incremented on GeneratedApp
-
-### Live preview
-1. User clicks "Preview" on the create page after generation/iteration completes
-2. `POST /api/generate/[id]/preview` calls `src/lib/previewer.ts` which:
-   - Skips npm install/db setup if already done during generation
-   - Patches `src/auth.ts` to return a fake session when `PREVIEW_MODE=true` (bypasses all auth)
-   - Spawns `npx next dev -p <port>` with `PREVIEW_MODE=true` in env
-   - Waits for server ready, returns URL
-3. App opens in a new browser tab — no sign-in required
-4. `DELETE /api/generate/[id]/preview` kills the process
-5. Ports start at 4001, auto-increment. In-memory only — auto-cleanup on server restart.
-
-### Publishing
-1. User clicks "Publish" after generation/iteration is complete
-2. `POST /api/generate/[id]/publish` creates an `App` record in the marketplace
-3. App appears in the marketplace grid, linked to its GeneratedApp via `generatedAppId`
-
-### Global progress tracking
-- `GenerationContext` manages a single SSE connection per generation
-- State persisted to localStorage — survives page navigation
-- Compact progress chip in Header links back to `/create?gen={id}`
-
-**Environment requirement:** `ANTHROPIC_API_KEY` must be set in `.env` (separate from Claude subscription — needs API credits at console.anthropic.com)
-
-**Known playbook fixes applied:**
-- Tailwind CSS v4 requires `@tailwindcss/postcss` in postcss.config.mjs (not `tailwindcss` directly)
-- `@theme` blocks only allow flat CSS custom properties or `@keyframes` — no nested selectors, `@dark` blocks, or wildcards
-- Next.js 16 middleware `matcher` does not support regex lookaheads (e.g. `(?!auth)`) — use simple path patterns
-- Generated apps use Prisma 6 (not 7) to avoid `url`/`prisma.config.ts`/adapter breaking changes
+- **Turso migrations:** Scripts use `dotenv.config()` which loads local `DATABASE_URL`. You MUST override with explicit Turso env vars or migrations silently run against local SQLite. This caused a production outage. See `docs/deployment.md`.
+- **Tailwind CSS v4:** Requires `@tailwindcss/postcss` in postcss.config.mjs. `@theme` blocks only allow flat CSS custom properties or `@keyframes`.
+- **Next.js 16 middleware:** `matcher` does not support regex lookaheads in generated apps — use simple path patterns.
+- **Generated apps use Prisma 6** (not 7) to avoid breaking changes. `fly.ts` handles Prisma 7 compat at deploy time.
+- **Builder deploys are manual:** Pushing to GitHub only deploys the platform (Vercel). Builder must be redeployed via `flyctl deploy` in `builder/`. See `docs/builder-service.md`.
 
 ---
 
-## Deployment (live as of 2026-02-09)
+## Documentation Index
 
-| What | Where |
-|---|---|
-| Production URL | https://go4it.live |
-| Vercel URL | https://go4it-alpha.vercel.app |
-| Builder service | https://go4it-builder.fly.dev |
-| GitHub repo | https://github.com/owenrmarr-web/go4it |
-| Database | Turso (LibSQL) — `libsql://go4it-owenrmarr.aws-us-west-2.turso.io` |
-| DNS | A record `@` → `216.198.79.1` (Squarespace → Vercel); `*` CNAME → `fly-global.fly.dev` (wildcard subdomains → Fly.io) |
+Read the relevant doc(s) from `docs/` before making changes. Each doc starts with a one-line summary.
 
-### How deploys work
-- Push to `main` on GitHub → Vercel auto-builds and deploys
-- Env vars set in Vercel dashboard: DATABASE_URL, TURSO_AUTH_TOKEN, AUTH_SECRET, RESEND_API_KEY, BUILDER_URL, BUILDER_API_KEY
-- `postinstall` script in package.json runs `prisma generate` on every build
-- Platform API routes (generate, iterate, preview, deploy) delegate to builder service when `BUILDER_URL` is set, with local fallback when unset
-
-### Seeding the DB
-Prisma CLI can't connect to Turso directly (`libsql://` scheme not supported by CLI).
-Use the seed script directly — it uses the LibSQL adapter at runtime:
-```
-npx tsx prisma/seed.ts
-```
-This reads DATABASE_URL + TURSO_AUTH_TOKEN from `.env`.
-
-### Schema migrations to Turso
-Prisma CLI can't run `db push` against Turso. Use custom migration scripts.
-
-**CRITICAL:** Migration scripts use `dotenv.config()` which loads `DATABASE_URL="file:./prisma/dev.db"` from local `.env`. You MUST override with explicit Turso env vars:
-```bash
-DATABASE_URL="libsql://go4it-owenrmarr.aws-us-west-2.turso.io" TURSO_AUTH_TOKEN="..." npx tsx prisma/migrate-whatever.ts
-```
-Without the override, migrations silently run against local SQLite — not production Turso. This caused a production outage (all API routes returning 500 due to missing columns).
-
-For local dev, use: `DATABASE_URL="file:./dev.db" npx prisma db push`
-
-### Known warnings (non-blocking)
-- `middleware.ts` deprecated in Next.js 16 — should become `proxy.ts` eventually
-- `node-domexception` deprecation — transitive dep, harmless
+| Doc | Read when... |
+|-----|-------------|
+| `docs/architecture.md` | Understanding how services connect, debugging cross-service issues, cost model |
+| `docs/deployment.md` | Deploying, DNS/SSL issues, env vars, Turso migrations, Fly.io config, Prisma 7 compat |
+| `docs/app-generation.md` | Modifying app generation, playbook, template, build validation, iteration, preview |
+| `docs/builder-service.md` | Changing builder endpoints, redeploying builder, Docker build issues |
+| `docs/go-suite.md` | Working on Go Suite apps (GoCRM, GoChat, etc.), adding new apps, cross-app queries, GoChat iOS |
+| `docs/auth-and-teams.md` | Auth flows, SSO, invitations, team sync, roles, member onboarding, passwords, usernames |
+| `docs/ui-and-theming.md` | Theme colors, dark mode, CSS variables, avatars, deck, pricing page, org portal |
+| `docs/roadmap.md` | Checking what's planned next, prioritizing work |
+| `docs/completed-work.md` | Looking up how a past feature was implemented, debugging regressions |
 
 ---
 
-## Architecture Decisions (2026-02-07)
+## Prisma Schema (models)
 
-- **Deployed app UX (2026-02-10):** Separate browser tabs per app (not embedded tabs in a unified dashboard). Each deployed app is a full Next.js deployment on its own subdomain — embedding via iframes would introduce CORS/auth/styling complexity for marginal UX gain. Fly.io suspend/resume is ~2-3s, which is acceptable. Future optimization: pre-warm apps by hitting health endpoints when Account page loads (zero architecture changes needed).
-- **Deployment target:** Fly.io (not AWS EC2/LightSail) — scale-to-zero, built-in subdomain routing, simpler ops
-- **AI engine:** Claude Code CLI invoked as subprocess (not Agent SDK or raw API)
-- **App builder playbook:** `playbook/CLAUDE.md` copied into each workspace — ensures consistent tech stack and conventions
-- **Code storage:** Local file system during generation → Cloudflare R2 archival later
-- **Progress UX:** Step-based indicators via SSE (not raw terminal output)
-- **App deployment:** flyctl CLI spawned as subprocess from `src/lib/fly.ts`. Generates fly.toml, Dockerfile.fly, and start.sh per app, then runs `flyctl deploy`. Each deployed app gets a 1GB volume for SQLite persistence.
-- **Deploy-time template upgrade:** `upgradeTemplateInfra(sourceDir)` runs in both `src/lib/fly.ts` and `builder/src/lib/fly.ts` during deploy prep, before Docker build. Patches older apps with latest template infrastructure (schema fields, auth checks, API routes). Idempotent — safe to run on apps that already have the changes. This ensures backward compatibility when template infrastructure evolves (e.g., adding `isAssigned` to User model, `AccessRequest` model, auth blocking). To add future upgrades, extend the function with new patch blocks.
-
----
-
-## App Ecosystem — Go Suite (2026-02-21)
-
-GO4IT's first-party apps follow a modular "Go Suite" strategy. Each app owns a single domain and stays focused. Cross-app data queries (via the `/api/ai-query` endpoint baked into every generated app) connect them into a unified experience for the business owner.
-
-### App Stream
-
-| App | Domain | Owns | Status |
-|-----|--------|------|--------|
-| **GoCRM** | Relationships | Contacts, companies, interaction history (calls/emails/meetings/notes), relationship stages, tags/segmentation, tasks/follow-ups, lightweight deal pipeline | Done |
-| **GoSchedule** | Scheduling | Appointments, availability, bookings, calendar (includes customer-facing booking page) | Done |
-| **GoProject** | Project management | Projects, tasks, milestones, assignments, progress tracking | Done |
-| **GoChat** | Messaging | Team messaging, channels, direct messages | Done |
-| **GoLedger** | Money | Invoices (B2B + B2C), estimates, payments (manual + Stripe), expenses, recurring invoices, financial reports (P&L, AR aging), QBO CSV export, public invoice payment page | Building |
-| **GoSales** | Sales performance | Advanced pipeline, forecasting, rep performance, commissions, quota tracking | Planned |
-
-### Domain Boundaries
-
-- **CRM owns relationships** — who your customers are and every touchpoint with them. It does NOT own financial transactions, appointment scheduling, project management, or sales analytics.
-- **Lightweight deals in CRM** — the CRM includes a simple pipeline (Interested → Quoted → Committed → Won/Lost) to track which contacts have active opportunities and rough values. It does NOT include forecasting, weighted probabilities, or rep leaderboards — that's GoSales.
-- **Schedule owns booking** — GoSchedule owns services, availability, appointments, and the customer-facing booking page. The CRM surfaces appointment data via cross-app queries but doesn't duplicate it.
-- **Project owns work tracking** — GoProject owns projects, tasks, milestones, and assignments. The CRM can surface task counts per contact but doesn't manage projects.
-- **Chat owns messaging** — GoChat owns team channels, direct messages, and the AI coworker. Other apps can surface data into chat via the ai-query endpoint.
-- **Ledger owns money** — GoLedger owns invoices, estimates, payments, expenses, recurring invoices, and financial reports. The CRM surfaces payment history per contact but doesn't manage financials. GoLedger supports Stripe online payments on public invoice pages and QBO CSV export for accountants.
-- **Other apps own their domain** — GoSales owns advanced sales tracking. Each app surfaces its data via cross-app queries but doesn't duplicate it.
-
-### Cross-App Data Flow
-
-Apps in the same org can query each other via the `/api/ai-query` endpoint pattern:
-
-```
-┌─────────────────────────────────────────────────────┐
-│                  GoCRM (contact detail page)         │
-│                                                     │
-│  Native: contact info, activity timeline, deals     │
-│                                                     │
-│  ┌─────────────────────────────────────────────┐    │
-│  │  "Connected Apps" panel (via ai-query API)  │    │
-│  │                                             │    │
-│  │  GoSchedule: upcoming/past appointments     │    │
-│  │  GoInvoice: payment history, balances       │    │
-│  │  GoSales: advanced deal analytics           │    │
-│  └─────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────┘
-```
-
-This is the GO4IT differentiator — instead of buying one bloated platform (HubSpot, Zoho), businesses compose exactly the tools they need, and they talk to each other natively.
-
----
-
-## Fly.io Deployment (2026-02-07)
-
-### How it works
-1. User adds an app to their org from the marketplace (+ Add button on AppCard)
-2. On the Account page (My Apps section), user clicks Configure to set team member access
-3. User clicks "Launch" — triggers `POST /api/organizations/[slug]/apps/[appId]/deploy`
-4. Deploy endpoint calls `src/lib/fly.ts` which:
-   - Generates `fly.toml`, `Dockerfile.fly`, `start.sh` in the app's source directory
-   - Runs `upgradeTemplateInfra()` to patch schema, auth, and API routes for backward compat
-   - Runs `flyctl apps create go4it-{orgSlug}-{shortId}`
-   - Creates a 1GB volume for SQLite data persistence
-   - Sets secrets (AUTH_SECRET, GO4IT_TEAM_MEMBERS with full org roster + assigned flags)
-   - Runs `flyctl deploy` which builds the Docker image and deploys
-5. On container startup, `start.sh` runs:
-   - `prisma db push` to create/update database tables
-   - `provision-users.ts` to create team member accounts
-   - `node server.js` to start the Next.js app
-6. Progress is streamed to the frontend via SSE endpoint
-7. OrgApp record updated with flyAppId, flyUrl, and RUNNING status
-
-### Environment variables needed
-- `FLY_API_TOKEN` — Fly.io API token (get from `flyctl tokens create deploy` or dashboard)
-- `FLYCTL_PATH` — Path to flyctl binary (defaults to `~/.fly/bin/flyctl`)
-- `FLY_REGION` — Fly.io region (defaults to `ord` / Chicago)
-
-### Fly app naming convention
-- Format: `go4it-{orgSlug}-{shortOrgAppId}`
-- Example: `go4it-zenith-space-a1b2c3d4`
-- URL: `https://go4it-zenith-space-a1b2c3d4.fly.dev`
-
-### Custom subdomains (2026-02-08)
-- Wildcard DNS: `*.go4it.live CNAME fly-global.fly.dev` (set in Squarespace)
-- Subdomain format: `{appSlug}-{orgSlug}.go4it.live` (e.g., `crm-zenith.go4it.live`)
-- Auto-generated on deploy, customizable from Account → Configure panel
-- Each deployed app stores its subdomain as `OrgApp.subdomain` (`@unique` constraint)
-- `flyctl certs add {subdomain}.go4it.live --app {flyAppId}` provisions TLS via Let's Encrypt
-- `.fly.dev` URLs continue to work as fallback
-- Subdomain utility: `src/lib/subdomain.ts` (generation + validation with reserved name checks)
-- Subdomain API: `src/app/api/organizations/[slug]/apps/[appId]/subdomain/route.ts` (GET/PUT — also handles cert updates for already-deployed apps)
-
-### Key files
-- `src/lib/fly.ts` — Deployment orchestration (creates app, volume, secrets, deploys, configures subdomain cert)
-- `src/lib/subdomain.ts` — Subdomain generation and validation
-- `src/app/api/organizations/[slug]/apps/[appId]/deploy/route.ts` — Deploy trigger endpoint (auto-generates subdomain)
-- `src/app/api/organizations/[slug]/apps/[appId]/subdomain/route.ts` — Subdomain management (GET/PUT)
-- `src/app/api/organizations/[slug]/apps/[appId]/deploy/stream/route.ts` — SSE progress stream
-- Generated per-deploy: `fly.toml`, `Dockerfile.fly`, `start.sh` (written into app source dir)
-
-### Prisma 7 compatibility (critical for deployed apps)
-Prisma 7 has breaking changes that `fly.ts` handles automatically during deploy prep:
-- **No `url` in schema.prisma** — Prisma 7 rejects `url = env("DATABASE_URL")` in the datasource block. `fly.ts` strips it out.
-- **`prisma.config.ts` at project root** — Prisma 7 CLI loads config via `c12` from `<projectRoot>/prisma.config.ts` (NOT inside `prisma/` dir). `fly.ts` writes this file with `defineConfig({ datasource: { url: process.env.DATABASE_URL } })`.
-- **PrismaClient requires adapter** — Bare `new PrismaClient()` fails in Prisma 7. Must pass `{ adapter }` using `PrismaLibSql`. `fly.ts` rewrites both `src/lib/prisma.ts` and `prisma/provision-users.ts` to use the adapter.
-- **`--skip-generate` removed** — `prisma db push --skip-generate` is no longer valid; start.sh uses `--accept-data-loss` only.
-- **Debian, not Alpine** — `@prisma/adapter-libsql` native bindings (`@libsql/linux-x64-musl`) fail on Alpine (`fcntl64` symbol not found). Docker images use `node:20-slim` (Debian/glibc).
-- **`@ts-nocheck` on prisma.config.ts** — Prevents TypeScript errors during `next build` (prisma config types not in app's tsconfig).
-
-### First successful deployment
-- **Fly app:** `go4it-zenith-space-cmlco6oy` → `https://go4it-zenith-space-cmlco6oy.fly.dev`
-- **Org:** Zenith Space (M&A Deal Tracker app)
-- **Runtime confirmed:** DB synced in 430ms, 5 team members provisioned, Next.js ready in 194ms
-- **Auto-suspend (not stop):** `auto_stop_machines = "suspend"` in fly.toml preserves memory state. Resume takes ~2-3s vs 15-30s for full cold boot with `"stop"`. Same cost — only billed while running.
-- **Fly.io trial limitation:** Machines auto-stop after 5 minutes without credit card at https://fly.io/trial
-- **OpenSSL warning (non-blocking):** Prisma warns about missing OpenSSL on slim image; could add `apt-get install -y openssl` to Dockerfile later
-
-### Testing deployment locally
-```bash
-# 1. Install flyctl
-curl -L https://fly.io/install.sh | sh
-
-# 2. Authenticate
-~/.fly/bin/flyctl auth login
-
-# 3. Ensure FLY_API_TOKEN is set (or rely on flyctl auth)
-# flyctl tokens create deploy → add to .env
-
-# 4. Start dev server, log in, add an app to an org, configure team, click Launch
-```
-
-### Requirements for deployment
-- The marketplace app must have a linked GeneratedApp record with a valid sourceDir
-- Only apps that have been generated (have source code in apps/) can be deployed
-- Seeded marketplace apps without source code will show an error when Launch is clicked
-
----
-
-## Builder Service (2026-02-09)
-
-The builder service is a standalone Fastify API running on Fly.io that handles app generation, iteration, preview, and deployment. The platform (Vercel) delegates to it via HTTP. This was necessary because generation requires a persistent filesystem, Claude Code CLI, and flyctl — none of which exist on Vercel.
-
-### Architecture
-```
-Platform (Vercel)  ──HTTP──>  Builder Service (Fly.io)
-   │                              │
-   │ Reads Turso for              │ Writes progress to
-   │ SSE progress                 │ GeneratedApp table
-   │                              │
-   └──────── Turso DB ────────────┘
-```
-
-The SSE endpoint (`/api/generate/[id]/stream`) already had a DB fallback — when in-memory progress is stale, it reads `GeneratedApp.status` from Turso. The builder writes progress directly to Turso, so existing SSE works with zero changes.
-
-### Endpoints
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/generate` | POST | Start new generation (202, runs in background) |
-| `/iterate` | POST | Iterate on existing app (202, runs in background) |
-| `/preview` | POST | Deploy preview machine (sync, ~60-90s) |
-| `/preview/:id` | DELETE | Destroy preview machine |
-| `/deploy` | POST | Deploy to Fly.io (202, runs in background) |
-| `/health` | GET | Health check |
-
-Auth: `Authorization: Bearer <BUILDER_API_KEY>` on every request.
-
-### Platform integration pattern
-All modified API routes check `process.env.BUILDER_URL`:
-- **If set:** HTTP POST to builder, return response to client
-- **If not set:** Dynamic `import()` of local modules (e.g., `await import("@/lib/generator")`) as fallback for local dev
-
-Modified routes: `/api/generate`, `/api/generate/[id]/iterate`, `/api/generate/[id]/preview`, `/api/organizations/[slug]/apps/[appId]/deploy`
-
-### Environment variables
-
-**Builder (Fly.io secrets):**
-- `ANTHROPIC_API_KEY` — Claude Code CLI
-- `DATABASE_URL` — Turso URL
-- `TURSO_AUTH_TOKEN` — Turso auth
-- `FLY_API_TOKEN` — org-level token for deploying generated apps
-- `BUILDER_API_KEY` — shared secret for platform→builder auth
-
-**Platform (Vercel env vars):**
-- `BUILDER_URL` — `https://go4it-builder.fly.dev`
-- `BUILDER_API_KEY` — same shared secret
-
-### Infrastructure
-- **VM:** shared-cpu-4x, 2048MB RAM (upgraded from 2x/1GB — Claude Code CLI OOM'd on smaller machine)
-- **Volume:** 10GB persistent storage at `/data` (workspaces stored at `/data/apps/{id}/`)
-- **Cost:** ~$5-7/mo compute (scale-to-zero) + $1.50/mo volume
-- **Playbook + template:** baked into Docker image via `build.sh`
-
-### Deploying the builder
-**IMPORTANT:** Pushing to GitHub only auto-deploys the platform (Vercel). The builder must be manually redeployed via flyctl whenever `src/lib/fly.ts` patches change.
-
-```bash
-# 1. Sync Go Suite apps into builder Docker context (if apps/ changed)
-rsync -a --exclude='node_modules' --exclude='.next' --exclude='.prisma' \
-  apps/gochat apps/gocrm apps/goledger apps/goschedule apps/project-management apps/orgs \
-  builder/apps/
-
-# 2. Deploy builder
-cd builder
-~/.fly/bin/flyctl deploy
-```
-
-The builder Dockerfile copies `apps/`, `playbook/`, `prisma/`, and `src/` into the image. `.dockerignore` excludes `node_modules`, `.next`, `.prisma` from the `apps/` copies.
-
-### Docker build notes
-- Prisma 7 requires `prisma.config.ts` which reads `DATABASE_URL` at generate time
-- Dockerfile uses `RUN DATABASE_URL="file:./dummy.db" npx prisma generate` (only schema matters for codegen)
-- `dotenv` package required in builder because `prisma.config.ts` imports it
-
----
-
-## Cost Model (2026-02-07)
-
-| Service | Fixed/Monthly | Per-App Variable | Notes |
-|---|---|---|---|
-| Vercel (Pro) | $20/mo | — | Platform hosting, auto-deploy from GitHub |
-| Turso | Free tier (9GB, 500 DBs) | — | Upgrade at ~$29/mo if needed |
-| Fly.io | — | ~$2.68/mo/app (shared-cpu-1x 256MB + 1GB vol) | Scale-to-zero saves cost; trial needs credit card |
-| Anthropic API | — | ~$0.30–$0.80/generation (sonnet, ~5K tokens) | Only for AI app generation |
-| Resend | Free tier (3K emails/mo) | — | Team invite emails |
-| Squarespace | $20/yr | — | Domain registration (go4it.live) |
-| GitHub | Free | — | Public repo |
-
-**Revenue target:** 20% premium on Fly.io infra cost per deployed app instance.
-
----
-
-## Next Steps (Roadmap — in priority order)
-
-1. ~~Team member sync without redeploy (DONE)~~ — See "Completed" section below.
-2. ~~Persistent app previews in marketplace (DONE)~~ — See "Completed" section below.
-3. ~~Fix Create page UI to show preview URL (FIXED)~~ — See "Completed" section below.
-4. ~~Instant launch via secret flip (FIXED)~~ — See "Completed" section below.
-5. ~~Email verification (DONE)~~ — See "Completed" section below.
-6. ~~GoSchedule — customer-facing version (DONE)~~ — See "Completed" section below.
-7. **Payments integration (Stripe)** — Integrate Stripe for two purposes: (a) **Platform billing** — track per-user Fly.io usage, charge 20% premium on infra costs for deployed apps, (b) **In-app payments** — generated apps (starting with GoSchedule) can collect payments from end customers via Stripe Checkout/Elements. Playbook update to include Stripe payment flow template for public-facing pages. Connect accounts for per-business payouts.
-8. ~~Consumer-facing public pages (B2B2C) (DONE)~~ — See "Completed" section below.
-9. **Builder hardening** — Garbage collection for old workspaces, rate limiting, error logging/monitoring.
-10. **Model selection toggle** — Let users choose Sonnet (fast/cheap) vs Opus (slower/higher quality) on the Create page. Plan written but deferred. See `/Users/owenmarr/.claude/plans/reflective-tumbling-gizmo.md`.
-11. **AI coworker Phase 2 — cross-app data queries** — GoChat (and future apps) expose a standard `/api/ai-query` endpoint. The AI coworker in GoChat can call other GO4IT apps' endpoints to answer business questions ("What were our top deals this month?" → queries CRM app). Apps on the same Fly.io org communicate via internal networking (`.internal` addresses). Requires: standardized query endpoint spec, auth between apps (shared org secret), response schema.
-12. **AI coworker Phase 3 — proactive insights** — AI monitors cross-app data and surfaces insights in GoChat channels without being asked. Examples: "3 invoices are overdue and those customers haven't been contacted in CRM in 2 weeks", "Your top sales lead hasn't responded in 5 days — follow up?". Requires Phase 2 + scheduled polling/webhook system + notification routing logic.
-13. **Fix custom subdomain DNS** — `*.go4it.live` CNAME points to `fly-global.fly.dev` which returns NXDOMAIN. Options: (a) per-app CNAME records via DNS API, or (b) shared reverse-proxy Fly app for wildcard routing. Currently using `.fly.dev` URLs as workaround.
-14. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
-15. ~~Multi-org visibility in account dashboard (DONE)~~ — See "Completed" section below.
-16. ~~Multi-org ownership (DONE)~~ — See "Completed" section below.
-17. **Cross-platform avatar/profile system** — Import user avatars and profile data from the GO4IT platform into all deployed apps. Users already create avatars (photo upload or emoji on color) during signup/onboarding — these should flow into every app for consistent identity. Sync `profileColor`, `profileEmoji`, and `image` from platform User model to deployed apps via `GO4IT_TEAM_MEMBERS` secret or team-sync endpoint. Playbook update to render member avatars (photo/emoji/initials on color background) in generated app UI. Blanket update to all existing Go Suite apps.
-18. ~~GoChat iOS app (Capacitor) (IN PROGRESS)~~ — See "Completed" section below. **Remaining:** Install Xcode, sign up for Apple Developer account ($99/yr), create APNs p8 key, configure Xcode signing + capabilities, build to physical device, test push notifications end-to-end.
-19. **POS integration** — Connect generated apps to point-of-sale systems so businesses can accept payments, sync inventory, and pull real sales data. Priority targets by SMB adoption: (1) **Square** — largest SMB install base, free REST API, no approval needed, OAuth for third-party apps. Key endpoints: Orders, Payments, Inventory, Customers, Catalog. (2) **Shopify POS** — popular with retail businesses that also sell online. GraphQL Admin API + REST. (3) **Clover** — common in restaurants/retail (Fiserv-owned), REST API. (4) **Toast** — restaurant-focused (200K+ locations), requires partner approval. Start with Square: add a "Connect Square" OAuth pattern to the playbook so generated apps can accept payments on public-facing pages (ties into #8 B2B2C) and pull sales data for dashboards/analytics. Playbook needs: OAuth flow template, payment collection on public routes, sales data sync pattern.
-
-### Completed
-- ~~GoChat iOS Capacitor shell + push notification infrastructure (2026-02-24)~~ — Wrapped GoChat in a native iOS app via Capacitor 8. Uses **remote URL approach**: `capacitor.config.ts` sets `server.url` to the deployed GoChat preview (`go4it-preview-cmlspa2m.fly.dev`), so the WKWebView loads the full Next.js app (API routes, SSE, auth all work same-origin). **Server-side push:** `PushDevice` model in Prisma (stores APNs tokens per user), `POST/DELETE /api/push/register` for device token registration, `src/lib/push.ts` utility using `apns2` library (lazy-loaded singleton `ApnsClient`, p8 key auth, auto-cleanup of stale tokens on 410 Gone). Push triggers added to both channel messages (`src/app/api/channels/[id]/messages/route.ts`) and DM messages (`src/app/api/dm/[id]/messages/route.ts`) — only sends to users NOT connected via SSE. **SSE connection tracking:** `src/lib/events.ts` has ref-counted `connectedSSEUsers` Map with `trackSSEConnect`/`trackSSEDisconnect`/`isUserConnectedViaSSE`, wired into `src/app/api/events/route.ts` on stream open/close. **Client-side:** `src/hooks/usePushNotifications.ts` (dynamic import of `@capacitor/core`, guards with `Capacitor.isNativePlatform()`, requests permission, registers APNs token via `/api/push/register`, deep-links on notification tap to `/chat/{channelId}` or `/dm/{dmId}`). Mounted in `ChatLayout.tsx`. **SSE reconnection:** `src/hooks/useSSE.ts` updated to listen for Capacitor `App.addListener('appStateChange')` and reconnect EventSource on resume from background (500ms delay). **Xcode project** generated at `builder/apps/gochat/ios/` with `@capacitor/push-notifications` and `@capacitor/app` plugins. **Dependencies:** `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/push-notifications`, `@capacitor/app`, `apns2`. **Remaining to complete:** (1) Install Xcode (requires macOS update), (2) Apple Developer account signup ($99/yr), (3) Create APNs p8 authentication key in Apple Developer Portal > Keys, (4) Set env vars on preview: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_BASE64` (base64-encode .p8 file), `APNS_BUNDLE_ID=com.go4it.gochat`, (5) Open Xcode: `cd builder/apps/gochat && npx cap open ios`, (6) Configure signing (Team + bundle ID `com.go4it.gochat`), enable Push Notifications + Background Modes capabilities, (7) Build to physical iOS device (push won't work in Simulator), (8) Test end-to-end: SSE, push registration, background push, notification tap deep-link, SSE reconnection on resume. Key files: `builder/apps/gochat/capacitor.config.ts`, `builder/apps/gochat/prisma/schema.prisma` (PushDevice model), `builder/apps/gochat/src/lib/push.ts`, `builder/apps/gochat/src/app/api/push/register/route.ts`, `builder/apps/gochat/src/hooks/usePushNotifications.ts`, `builder/apps/gochat/src/hooks/useSSE.ts`, `builder/apps/gochat/src/lib/events.ts`.
-- ~~Dark mode for all GO4IT apps (2026-02-23)~~ — Added dark mode support to all generated apps via template + `upgradeTemplateInfra` patches 12-17. Implementation: `:root`/`.dark` CSS custom properties with `--g4-*` semantic tokens (surfaces, borders, text, accent, status colors) in `globals.css`, FOUC-preventing inline `<script>` in `layout.tsx` that reads `localStorage('go4it-theme')` or `prefers-color-scheme`, `ThemeToggle.tsx` floating button (fixed bottom-right, sun/moon icons), auth/SSO pages converted to semantic token classes. Template files: `playbook/template/src/app/globals.css`, `layout.tsx`, `auth/page.tsx`, `sso/page.tsx`, new `src/components/ThemeToggle.tsx`. Playbook `CLAUDE.md` updated: TIER 2 Colors section replaced with semantic token table, Component Tokens updated, new pitfall about using semantic tokens. All 5 deployed apps (GoCRM, GoChat, GoProject, GoLedger, RocketBook) successfully redeployed with dark mode. **Patch debugging lessons** (6 commits, 6 builder deploys): (1) `provision-users.ts` type expansion regex was fragile — replaced with wholesale `const members: {...}[]` replacement, (2) `suppressHydrationWarning` must be guarded to prevent duplicate attributes on apps that already have it, (3) ThemeToggle import regex must handle both single and double quotes around `'sonner'` — also guard JSX insertion on successful import, (4) role casing varies (`"member"` vs `"Member"`) — use `(?:member|Member)` regex, (5) GoCRM has extra `assigned?: boolean` field already in member type. Key takeaway: **always test `upgradeTemplateInfra` patches against ALL existing app source code before deploying** — source code varies because Claude generates it. Use the pattern from this session: download blob sources to `/tmp/go4it-debug/`, run all patches in a simulation script.
-- ~~SSO for deployed apps (2026-02-22)~~ — Added SSO endpoint (`/sso` page + `/api/auth/sso` route) to template and `upgradeTemplateInfra` patches 9-11. Platform "Visit" button now passes a signed JWT token to the deployed app's `/sso` endpoint, which validates the signature, auto-signs the user in via NextAuth, and redirects to `/`. Eliminates the need for users to manually sign in to each deployed app. Template files: `playbook/template/src/app/sso/page.tsx`, `playbook/template/src/app/api/auth/sso/route.ts`. Auth config updated to accept SSO callback.
-- ~~Consumer-facing public pages / B2B2C (2026-02-21)~~ — GoSchedule proved the model: public booking page (no auth) for end customers + authenticated business owner dashboard. Public route support, customer-facing UI, data flows back to business dashboard. Template for all future generated apps with customer-facing pages.
-- ~~GoSchedule customer-facing version (2026-02-21)~~ — Polished customer-facing scheduling app as flagship B2B2C demo. Business owner dashboard (services, availability, team calendar) + public booking page (no auth required) for customers to browse slots, book appointments, and pay. Proves the B2B2C model for generated apps.
-- ~~Multi-org account page (2026-02-21)~~ — Tabbed org navigation on account page. Users with 2+ orgs see pill-style tabs with org name + role badge (OWNER/ADMIN/MEMBER). Switching tabs loads that org's apps/members/invitations, applies org theme colors to CSS variables, and updates header. Single-org users see no change. URL state via `?org={slug}` for deep linking + invite redirects. New endpoint `/api/account/orgs` returns lightweight org list. `ActiveOrgContext` + localStorage persistence shares active org across components. `/api/account/org` accepts `?slug=` filter. Header shows active org name (clickable → account page). Credential sync fix: all assigned team members' password hashes synced to deployed apps (not just owner), with `syncUserApps()` triggered on password change/reset. Files: `src/app/api/account/orgs/route.ts`, `src/contexts/ActiveOrgContext.tsx`, modified `src/app/account/page.tsx`, `src/components/Header.tsx`, `src/app/invite/[token]/page.tsx`, `src/app/layout.tsx`, `src/lib/team-sync.ts`, deploy route, password routes.
-- ~~Member onboarding flow (2026-02-21)~~ — Streamlined `/join/[token]` page for invited members. Smart routing on invite page (existing users → sign in, new users → join). Profile avatar system (photo/emoji/initials on preset color). Permission-based account page visibility by role (OWNER/ADMIN/MEMBER). Schema: `profileColor`, `profileEmoji` on User. Migration: `prisma/migrate-profile-fields.ts`.
-- ~~Forgot password (2026-02-21)~~ — Full password reset flow via email. Anti-enumeration, 1-hour token expiry, branded email template. Reuses `VerificationToken` model.
-- ~~UI polish (2026-02-19)~~ — Frosted glass "Interactive Preview" pill button on app cards (replaces play icon), Save/Add to Org buttons moved above description, active nav page highlighting in Header (filled background desktop, bold mobile), toast moved to bottom-left with "My Account" label, pricing calculator expanded with Number of Apps input and dynamic Additional Apps row using averaged competitor pricing.
-- ~~Versioning & draft/store preview separation (2026-02-19)~~ — `App.previewFlyAppId` stores stable store preview. Publish promotes draft to store, destroys old store machine, clears GeneratedApp draft fields. Draft previews expire after 7 days (upgraded from 24h). Cleanup job handles expired drafts on both published and unpublished apps. "Apps I've Created" section on account page. Deploy-draft API for explicit draft preview deployment. Files: schema, publish route, cleanup, generator TTL, deploy-preview route, account page, new APIs.
-- ~~Investor deck (2026-02-19)~~ — Full pitch deck at `/deck` with competitive landscape (GO4IT unique differentiator: pre-made popular apps), pricing model, and product demo slides.
-- ~~Pricing calculator (2026-02-19)~~ — Interactive cost comparison page at `/pricing`. Five competitors with per-seat pricing, employee count input, Number of Apps input (default 5, additional apps use averaged competitor cost), monthly/annual savings callouts, cost reduction multiplier. Desktop and mobile responsive tables.
-- ~~Real-time permission sync (2026-02-21)~~ — Upgraded team-sync from slow path (Fly secrets → restart) to instant direct HTTP. Platform POSTs to deployed app's `/api/team-sync` endpoint with HMAC-SHA256 signed payload (using `authSecret` stored in OrgApp). Deployed app updates `User.isAssigned` in SQLite immediately. Session-level enforcement in `auth.config.ts` re-checks `isAssigned` on every `auth()` call via `jwt` callback — removed users are blocked mid-session. Secrets flow kept as fallback for cold starts. `upgradeTemplateInfra()` patches 5-6 add the team-sync endpoint and session enforcement to existing apps on redeploy.
-- ~~Team member sync without redeploy (2026-02-18)~~ — Created `src/lib/team-sync.ts` with `syncTeamMembersToFly()` — updates `GO4IT_TEAM_MEMBERS` Fly.io secret via builder `/secrets/:flyAppId` endpoint when app members change. Hooked into OrgApp member PUT endpoint (syncs after member list update) and org member DELETE endpoint (cascades removal from all OrgAppMember records and syncs each affected running app). Secret update triggers Fly machine restart → `start.sh` re-provisions users. No full redeploy needed.
-- ~~Persistent app previews in marketplace (2026-02-18)~~ — Published apps now keep their preview machines running indefinitely. Three changes: (1) `cleanupExpiredPreviews()` in builder now filters `appId: null` — skips published apps, (2) publish route clears `previewExpiresAt` so preview never expires, (3) marketplace API returns `previewFlyUrl` and AppCard shows a "Try it" button linking to the preview URL. Files: `builder/src/lib/cleanup.ts`, `src/app/api/generate/[id]/publish/route.ts`, `src/app/api/apps/route.ts`, `src/types/index.ts`, `src/components/AppCard.tsx`.
-- ~~Instant launch via secret flip (2026-02-18)~~ — Two issues fixed in `launchApp()` (both `builder/src/lib/fly.ts` and `src/lib/fly.ts`): (1) Removed redundant `flyctl machines restart` — `flyctl secrets set` (without `--stage`) already triggers an automatic machine restart, so the explicit restart was causing a double-restart race condition. (2) Added health check polling after secret flip — after `flyctl secrets set` returns, the function now polls the app's URL (GET request, 3s interval, 90s timeout, accepts 200/302/307) to confirm the app is actually serving before marking it as RUNNING. Previously it marked RUNNING immediately after the restart command, before `start.sh` had finished provisioning. **Remaining:** end-to-end production testing of the full launch flow.
-- ~~Email verification (2026-02-18)~~ — Full email verification flow on signup: user submits signup form → redirected to `/verify-email?email=...` ("Check your email" page) → Resend sends branded verification email with link → clicking link validates token, sets `emailVerified`, redirects to `/auth?verified=true` with success toast. Unverified users cannot sign in (admin@go4it.live bypassed). Anti-enumeration on resend endpoint. Files: `src/lib/verification.ts` (token helper), `src/app/api/auth/verify/route.ts`, `src/app/api/auth/resend-verification/route.ts`, `src/app/verify-email/page.tsx`, modified `src/auth.ts` (block unverified), `src/app/auth/page.tsx` (redirect + toasts), `src/app/api/auth/signup/route.ts` (wire in token), `src/lib/email.ts` (verification template).
-- ~~Fix Create page preview URL (2026-02-18)~~ — Three root causes fixed: (1) SSE auto-reconnect with exponential backoff — if SSE connection drops mid-generation, client now reconnects (up to 5 retries) and checks status API before reconnecting to catch completed/failed generations, (2) status API verification — when SSE complete event arrives without `previewFlyUrl`, client fetches from status API as fallback, (3) manual preview fallback — when auto-deploy doesn't produce a URL (no org, deploy failed), Create page now shows a "Deploy Preview" button that triggers manual preview flow. Also fixed: builder iteration path now sets `currentStage: "complete"` in final DB update for consistency.
-- ~~Playbook 3-tier rewrite (2026-02-16)~~ — Restructured `playbook/CLAUDE.md` from prescriptive layout rules to 3-tier system: Tier 1 (hard infrastructure rules), Tier 2 (design system tokens), Tier 3 (full creative freedom for layout/nav/UX). Removed sidebar mandate from BUILD REQUIREMENTS. Old playbook saved as `playbook/CLAUDE_old.md`.
-- ~~Seed data fixes (2026-02-16)~~ — Fixed 3 seed issues: (1) duplicate records across iterations — `dev.db` now deleted before each `prisma db push` + seed, (2) preview session FK violation — admin user seeded with `id: "preview"` to match preview auth, (3) seed bleed into production — `launchApp()` now forces `flyctl machines restart` after secret flip.
-- ~~Playbook pitfalls (2026-02-16)~~ — Added: don't redefine Prisma types (causes `Type 'X[]' not assignable to 'X[]'`), no external theme libraries (causes `useTheme must be within ThemeProvider`), generic package.json descriptions.
-- ~~Create page auth flow (2026-02-16)~~ — Users can view/type on Create page without auth. Auth banner shown for unauthenticated users. Sign In stays inline (modal), Sign Up redirects to full `/auth` page with `callbackUrl` to return to Create. Password visibility toggle added to auth page.
-- ~~Stale app cleanup (2026-02-16)~~ — Deleted all old app records from Turso (11 Apps, 25 GeneratedApps, 8 OrgApps) via `prisma/cleanup-apps.ts`. Home page hero changed to "AI-enabled software tools".
-- ~~Auto-deploy pipeline working (2026-02-15)~~ — Builds now pass consistently. Unified preview/production Dockerfile deployed: includes full `node_modules/`, `prisma/`, smart `start.sh` with `PREVIEW_MODE` branching. Fixed `COPY dev.db` path (was at workspace root, actually at `prisma/dev.db`). Preview apps deploy automatically after generation. Pipeline bugs fixed across sessions: premature progress updates, stale state, npm install ordering, build error detection, `.next/standalone` verification.
-- ~~Auto-deploy pipeline fixes (2026-02-14)~~ — Multiple pipeline bugs fixed across 4 commits: (1) premature `updateProgress("complete")` removed — now deferred until after Fly deploy, (2) safety net try/catch on close handler so DB never gets stuck at GENERATING, (3) stale `currentDetail` cleared on stage change, (4) `npm install --ignore-scripts` to prevent `postinstall: prisma generate` failures on invalid schemas + separate `prisma format` + `prisma generate`, (5) stale `.next/lock` removal before `tryBuild`, (6) `⨯` added to build error filter (Next.js error prefix), (7) `.next/standalone` existence check as build success verification, (8) frontend localStorage resume clears terminal states.
-- ~~Fix Resend API key in Vercel (2026-02-14)~~ — Vercel had a different/old API key (`re_6YGLgzj2_...`) than the active one on Resend (`re_FBhdzJce_...`). Updated Vercel env var, redeployed. Invitation emails working.
-- ~~Auth modal for unauthenticated users (2026-02-13)~~ — Heart/add interactions on home page show inline auth modal instead of redirect. Create page persists prompt to localStorage across auth flow. "Signup is free" messaging on auth page.
-- ~~Color picker fix (2026-02-13)~~ — Color pickers on signup/auth page were unusable (`appearance: none` on small elements). Fixed with overlay pattern: visible colored div + invisible `<input type="color">` overlay.
-- ~~Builder preview stability (2026-02-13)~~ — Three root causes fixed: (1) preview now gated on `gen.status === "COMPLETE"`, (2) build validation filters middleware deprecation warnings instead of triggering auto-fix, (3) `npm install` + proper env vars before starting dev server. Builder redeployed.
-- ~~Portal deploying status (2026-02-13)~~ — Portal page (`/{slug}`) now shows DEPLOYING and ADDED apps. Deploying apps show amber "Deploying — usually takes 1-2 minutes" with pulse animation instead of "Coming Soon".
-- ~~Deployed app URLs fixed (2026-02-10)~~ — Custom subdomain DNS broken (`fly-global.fly.dev` NXDOMAIN). Switched all deployed apps to `.fly.dev` URLs. Existing DB records migrated via `prisma/fix-fly-urls.ts`. Cert provisioning skipped until DNS is fixed.
-- ~~Production preview fixed (2026-02-10)~~ — Preview was timing out because builder did a synchronous Fly.io deploy (2-5 min) within Vercel's 60s function limit. Converted to async pattern: builder returns 202, deploys in background, frontend polls GET `/preview/:id/status` every 3s until ready.
-- ~~Password management (2026-02-10)~~ — 6-char minimum enforced on platform signup (server + client) and generated app template. Password change added to Account Settings (current + new + confirm, bcrypt verify). API at `/api/account/password`.
-- ~~Universal admin account (2026-02-10)~~ — Every deployed app auto-provisions `admin@go4it.live` via `provision-users.ts` using the `GO4IT_ADMIN_PASSWORD` env var. Runs regardless of team member config.
-- ~~Builder service for production~~ — Standalone Fastify API on Fly.io (`go4it-builder.fly.dev`). Platform delegates generation, iteration, preview, and deploy via HTTP. Production generation works end-to-end.
-- ~~Usernames & leaderboard~~ — Unique usernames, auto-generated on signup, creator rankings by hearts/deploys.
-- ~~Custom subdomain routing~~ — `*.go4it.live` wildcard DNS + auto-generated subdomains + Fly.io TLS certs. Configurable from Account page. **Note: DNS broken, using .fly.dev fallback (see roadmap item #2).**
-- ~~App iteration~~ — Users can refine generated apps with follow-up prompts (CLI `--continue`)
-- ~~Publish to marketplace~~ — Generated apps can be published (public or private)
-- ~~1:1 org simplification~~ — Auto-create org on signup, consolidated account page
-- ~~Theme-aware UI~~ — CSS variables from logo extraction applied to all branded elements
-- ~~Starter template~~ — Pre-built boilerplate for generated apps (auth, prisma, config, Dockerfile)
-- ~~Live preview~~ — Preview generated apps locally before publishing (auth bypass, parallel install)
-- ~~Marketplace cleanup~~ — Removed seeded placeholder apps, only real generated apps shown
-- ~~Admin creations tab~~ — Admin dashboard shows all generated apps with creator/status/iterations
-- ~~Generation UX improvements~~ — Real-time detail text below stage indicator (shows what Claude is doing, e.g. "Creating src/components/Calendar.tsx"), timing copy updated to "5–10 minutes"
+User, Account, Session, VerificationToken, App, UserInteraction, GeneratedApp, AppIteration, Organization, OrganizationMember, Invitation, OrgApp, OrgAppMember

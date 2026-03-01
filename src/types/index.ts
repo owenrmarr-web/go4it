@@ -15,6 +15,7 @@ export interface App {
   screenshot: string | null;
   heartCount: number;
   previewUrl: string | null;
+  previewRebuilding: boolean;
 }
 
 export type InteractionType = "HEART" | "STAR";

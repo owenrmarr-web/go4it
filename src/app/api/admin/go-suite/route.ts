@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
+import { readFileSync, existsSync } from "fs";
+import path from "path";
+
+function getCurrentInfraVersion(): number {
+  try {
+    const upgradesPath = path.join(process.cwd(), "playbook", "upgrades.json");
+    if (existsSync(upgradesPath)) {
+      const upgrades = JSON.parse(readFileSync(upgradesPath, "utf-8"));
+      return upgrades.currentInfraVersion ?? 0;
+    }
+  } catch { /* fallback */ }
+  return 0;
+}
 
 export async function GET() {
   const session = await auth();
@@ -16,6 +29,8 @@ export async function GET() {
   if (!user?.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const currentInfraVersion = getCurrentInfraVersion();
 
   // Find all apps flagged as Go Suite
   const apps = await prisma.app.findMany({
@@ -33,7 +48,12 @@ export async function GET() {
       },
       orgApps: {
         where: { status: "RUNNING" },
-        select: { id: true },
+        select: {
+          id: true,
+          flyAppId: true,
+          deployedInfraVersion: true,
+          organization: { select: { slug: true } },
+        },
       },
     },
   });
@@ -53,6 +73,13 @@ export async function GET() {
           publishedAt: app.generatedApp.updates[0].publishedAt.toISOString(),
         }
       : null,
+    infraStatus: {
+      latest: currentInfraVersion,
+      behind: app.orgApps.filter(
+        (oa) => (oa.deployedInfraVersion ?? 0) < currentInfraVersion
+      ).length,
+      total: app.orgApps.length,
+    },
   }));
 
   return NextResponse.json(goSuiteApps);

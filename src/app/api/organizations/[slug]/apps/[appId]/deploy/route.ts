@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { generateSubdomain, validateSubdomain } from "@/lib/subdomain";
+import { determineDeployFlags } from "@/lib/deploy-logic";
 
 const BUILDER_URL = process.env.BUILDER_URL;
 const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
@@ -105,23 +106,13 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  // Determine if this is a re-deploy or preview launch
-  let existingFlyAppId =
-    (orgApp.status === "RUNNING" || orgApp.status === "PREVIEW") && orgApp.flyAppId
-      ? orgApp.flyAppId
-      : undefined;
-
-  // Fast-path flag: promote existing preview to production via secret flip
-  let isPreviewLaunch = orgApp.status === "PREVIEW" && !!orgApp.flyAppId;
-
-  // Safety guard: don't flip the store preview machine into an org production instance.
-  // If the OrgApp's flyAppId matches the App's store preview, force a full deploy instead.
+  // Determine deploy path: re-deploy, preview launch, or store preview consumption
+  const { existingFlyAppId, isPreviewLaunch, consumingStorePreview } = determineDeployFlags(
+    orgApp.status,
+    orgApp.flyAppId,
+    orgApp.app.previewFlyAppId
+  );
   const storePreviewId = orgApp.app.previewFlyAppId;
-  if (isPreviewLaunch && existingFlyAppId && storePreviewId && existingFlyAppId === storePreviewId) {
-    console.log(`[Deploy Route] OrgApp flyAppId matches store preview — forcing full deploy`);
-    isPreviewLaunch = false;
-    existingFlyAppId = undefined;
-  }
 
   console.log(`[Deploy Route] orgApp.status=${orgApp.status}, orgApp.flyAppId=${orgApp.flyAppId}, isPreviewLaunch=${isPreviewLaunch}, existingFlyAppId=${existingFlyAppId}`);
 
@@ -197,6 +188,44 @@ export async function POST(request: Request, context: RouteContext) {
         const error = await res.text();
         throw new Error(`Builder service error: ${error}`);
       }
+
+      // If we consumed the store preview, clear preview fields and trigger a rebuild
+      if (consumingStorePreview) {
+        const genId = orgApp.app.generatedApp?.id;
+        console.log(`[Deploy Route] Consumed store preview ${storePreviewId} — triggering rebuild`);
+
+        // Clear App preview fields so marketplace shows "rebuilding" state
+        await prisma.app.update({
+          where: { id: appId },
+          data: {
+            previewFlyAppId: null,
+            previewUrl: null,
+            previewRebuilding: true,
+          },
+        });
+
+        // Clear GeneratedApp preview fields so deploy-preview creates a fresh machine
+        if (genId) {
+          await prisma.generatedApp.update({
+            where: { id: genId },
+            data: {
+              previewFlyAppId: null,
+              previewFlyUrl: null,
+            },
+          });
+
+          // Fire-and-forget: rebuild store preview in background
+          const previewHeaders: Record<string, string> = { "Content-Type": "application/json" };
+          if (BUILDER_API_KEY) previewHeaders["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
+          fetch(`${BUILDER_URL}/deploy-preview`, {
+            method: "POST",
+            headers: previewHeaders,
+            body: JSON.stringify({ generationId: genId, type: "store" }),
+          }).catch((err) => {
+            console.error(`[Deploy Route] Failed to trigger preview rebuild for ${genId}:`, err);
+          });
+        }
+      }
     } catch (err) {
       console.error(`Builder call failed for deploy ${orgApp.id}:`, err);
       return NextResponse.json(
@@ -212,6 +241,23 @@ export async function POST(request: Request, context: RouteContext) {
         launchApp(orgApp.id, existingFlyAppId, teamMembers, subdomain ?? undefined).catch((err) => {
           console.error(`[Launch] Unhandled error for ${orgApp.id}:`, err);
         });
+
+        // If we consumed the store preview locally, clear preview fields
+        if (consumingStorePreview) {
+          const genId = orgApp.app.generatedApp?.id;
+          console.log(`[Deploy Route] Consumed store preview ${storePreviewId} (local) — clearing preview fields`);
+          await prisma.app.update({
+            where: { id: appId },
+            data: { previewFlyAppId: null, previewUrl: null, previewRebuilding: true },
+          });
+          if (genId) {
+            await prisma.generatedApp.update({
+              where: { id: genId },
+              data: { previewFlyAppId: null, previewFlyUrl: null },
+            });
+          }
+          // Note: no builder URL in local dev — preview rebuild must be triggered manually
+        }
       } else {
         // For uploaded apps without sourceDir, download blob to temp directory
         let resolvedSourceDir = sourceDir;

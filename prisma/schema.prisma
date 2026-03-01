@@ -80,8 +80,9 @@ model App {
   isGoSuite        Boolean           @default(false)
   previewUrl       String?
   screenshot       String?
-  previewFlyAppId  String?
-  createdAt        DateTime          @default(now())
+  previewFlyAppId    String?
+  previewRebuilding  Boolean           @default(false)
+  createdAt          DateTime          @default(now())
   interactions     UserInteraction[]
   generatedApp     GeneratedApp?
   orgApps          OrgApp[]
@@ -231,6 +232,7 @@ model OrgApp {
   orgSourceDir               String?      // org's forked source dir (null = using original)
   stripeConnectAccountId     String?      // Stripe Connect Express account for end-customer payments
   authSecret                 String?      // AUTH_SECRET of deployed Fly app (for HMAC-signed team-sync)
+  deployedInfraVersion       Int?         // Infrastructure version (matches playbook/upgrades.json)
 
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   app          App            @relation(fields: [appId], references: [id], onDelete: Cascade)

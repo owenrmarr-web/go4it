@@ -127,7 +127,15 @@ export default function AppCard({
             alt={`${app.title} screenshot`}
             className="w-full h-full object-cover object-top"
           />
-          {app.previewUrl && (
+          {app.previewRebuilding ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+              <div className="px-5 py-2.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 shadow-lg">
+                <span className="text-white text-sm font-semibold tracking-wide animate-pulse">
+                  Preview updating — back shortly
+                </span>
+              </div>
+            </div>
+          ) : app.previewUrl ? (
             <a
               href={app.previewUrl}
               target="_blank"
@@ -141,7 +149,7 @@ export default function AppCard({
                 </div>
               </div>
             </a>
-          )}
+          ) : null}
         </div>
       )}
       <div className="p-5 flex flex-col flex-1">
@@ -191,7 +199,11 @@ export default function AppCard({
           >
             {isHearted ? "♥" : "♡"} {app.heartCount > 0 ? app.heartCount : isHearted ? "Saved" : "Save"}
           </button>
-          {app.previewUrl && !app.screenshot && (
+          {app.previewRebuilding && !app.screenshot ? (
+            <span className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium bg-amber-50 text-amber-600 animate-pulse">
+              Preview updating...
+            </span>
+          ) : app.previewUrl && !app.screenshot ? (
             <a
               href={app.previewUrl}
               target="_blank"
@@ -201,7 +213,7 @@ export default function AppCard({
             >
               Interactive Preview
             </a>
-          )}
+          ) : null}
           <div className="relative flex-1" ref={pickerRef}>
             <button
               onClick={handleAdd}

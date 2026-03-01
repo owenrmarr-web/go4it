@@ -79,6 +79,7 @@ interface GoSuiteApp {
   previewFlyAppId: string | null;
   deployedCount: number;
   lastUpdate: { summary: string; publishedAt: string } | null;
+  infraStatus: { latest: number; behind: number; total: number };
 }
 
 interface AdminMachine {
@@ -1439,6 +1440,15 @@ export default function AdminPage() {
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                       <span>{app.deployedCount} deployed</span>
                       <span>{app.previewFlyAppId ? "Preview live" : "No preview"}</span>
+                      {app.infraStatus.behind > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700">
+                          {app.infraStatus.behind}/{app.infraStatus.total} behind
+                        </span>
+                      ) : app.infraStatus.total > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full font-semibold bg-green-100 text-green-700">
+                          v{app.infraStatus.latest}
+                        </span>
+                      ) : null}
                       {app.lastUpdate && (
                         <span>Updated {new Date(app.lastUpdate.publishedAt).toLocaleDateString()}</span>
                       )}
@@ -1462,6 +1472,7 @@ export default function AdminPage() {
                       <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Version</th>
                       <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Preview</th>
                       <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Deployed</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Infra</th>
                       <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Update</th>
                       <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -1490,6 +1501,19 @@ export default function AdminPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {app.deployedCount} org{app.deployedCount !== 1 ? "s" : ""}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          {app.infraStatus.behind > 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                              {app.infraStatus.behind}/{app.infraStatus.total} behind
+                            </span>
+                          ) : app.infraStatus.total > 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                              v{app.infraStatus.latest}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">&mdash;</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">
                           {app.lastUpdate ? (

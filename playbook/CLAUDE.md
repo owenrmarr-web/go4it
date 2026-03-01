@@ -51,6 +51,7 @@ These files are pre-configured and working. Do not edit, replace, or recreate th
 | `src/app/api/auth/signup/route.ts` | User registration endpoint |
 | `src/app/api/access-requests/route.ts` | Access request API (seat upsell) |
 | `src/app/api/team-sync/route.ts` | Real-time team member sync |
+| `src/app/api/infra-version/route.ts` | Infrastructure version report (platform verification) |
 | `src/types/next-auth.d.ts` | TypeScript augmentations (session `id` + `role`) |
 | `next.config.ts` | `output: "standalone"` — required for Docker |
 | `postcss.config.mjs` | Tailwind CSS v4 PostCSS plugin |

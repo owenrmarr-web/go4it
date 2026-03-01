@@ -65,7 +65,7 @@ async function triggerOrgDeploy(
   // Auto-add all org members as OrgAppMembers
   const allMembers = await prisma.organizationMember.findMany({
     where: { organizationId: orgMember.organization.id },
-    include: { user: { select: { id: true, name: true, email: true, password: true } } },
+    include: { user: { select: { id: true, name: true, email: true, password: true, username: true, image: true, profileColor: true, profileEmoji: true } } },
   });
   for (const m of allMembers) {
     await prisma.orgAppMember.upsert({
@@ -88,6 +88,10 @@ async function triggerOrgDeploy(
       ...(m.user.password && assignedEmails.has(m.user.email!)
         ? { passwordHash: m.user.password }
         : {}),
+      username: m.user.username || null,
+      image: m.user.image || null,
+      profileColor: m.user.profileColor || null,
+      profileEmoji: m.user.profileEmoji || null,
     }));
 
   // Auto-generate subdomain

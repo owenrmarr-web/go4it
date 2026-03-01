@@ -212,6 +212,7 @@ async function runPreviewPipeline(
       data: {
         previewUrl: flyUrl,
         previewFlyAppId: flyAppName,
+        previewRebuilding: false,
         ...(screenshot ? { screenshot } : {}),
       },
     });

@@ -51,6 +51,7 @@ export async function GET(request: Request) {
     screenshot: app.screenshot || generatedApp?.screenshot || null,
     heartCount: _count?.interactions ?? 0,
     previewUrl: app.previewUrl || generatedApp?.previewFlyUrl || null,
+    previewRebuilding: app.previewRebuilding,
   }));
 
   return NextResponse.json(result);

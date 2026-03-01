@@ -55,6 +55,16 @@ export async function POST(request: Request) {
     }
   }
 
+  // Pre-warm the app if it's suspended (Fly.io cold start)
+  try {
+    await fetch(orgApp.flyUrl, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(5_000),
+    });
+  } catch {
+    // App may still be waking — SSO page will load once it's ready
+  }
+
   // Generate HMAC-signed SSO token
   const payload = Buffer.from(
     JSON.stringify({ email: session.user.email, exp: Math.floor(Date.now() / 1000) + 60 })

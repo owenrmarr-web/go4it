@@ -135,7 +135,7 @@ export async function POST(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.BUILDER_SECRET}`,
+        Authorization: `Bearer ${process.env.BUILDER_API_KEY}`,
       },
       body: JSON.stringify({
         generationId: app.generatedApp.id,
