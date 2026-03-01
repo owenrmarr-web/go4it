@@ -70,7 +70,7 @@ These files are pre-configured and working. Do not edit, replace, or recreate th
 7. **No external API services** — No Stripe, SendGrid, Twilio, etc. unless the user explicitly requests it. The app must work fully offline with just SQLite.
 8. **Port 3000** — Next.js default. Do not change.
 9. **Inter font** — Do not change the font. Inter is the GO4IT standard.
-10. **No external theme/dark-mode libraries** — Do not install `next-themes` or similar packages. Dark mode is built into the template via CSS custom properties and the `ThemeToggle` component. Use the semantic token classes (`bg-page`, `text-fg`, `bg-card`, etc.) for all styling — they handle dark mode automatically. Do NOT use `dark:` prefix classes.
+10. **Dark mode is built in — do NOT install theme libraries** — The template already includes full dark mode support: `ThemeToggle` component (in AppShell sidebar), CSS custom properties in `globals.css`, and semantic token classes. Do not install `next-themes` or any other theme package. Just use the semantic token classes (`bg-page`, `text-fg`, `bg-card`, etc.) for all styling — they automatically adapt to light and dark mode. Do NOT use Tailwind `dark:` prefix classes.
 11. **Full CRUD for every entity** — Every data model in the schema must have full create, read, update, and delete operations accessible from the UI. Users should never need to explicitly ask for basic CRUD — infer it from the data model. See TIER 3 for what "complete" means.
 
 ### Schema Rules — `prisma/schema.prisma`

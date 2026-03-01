@@ -119,7 +119,7 @@ export async function POST(request: Request, context: RouteContext) {
   // Fetch ALL org members with password hashes so they can log in to deployed apps
   const allOrgMembers = await prisma.organizationMember.findMany({
     where: { organizationId: organization.id },
-    include: { user: { select: { name: true, email: true, password: true } } },
+    include: { user: { select: { name: true, email: true, password: true, username: true, image: true, profileColor: true, profileEmoji: true } } },
   });
 
   // Build set of assigned emails (those with OrgAppMember records for this app)
@@ -137,6 +137,10 @@ export async function POST(request: Request, context: RouteContext) {
       ...(m.user.password && assignedEmails.has(m.user.email!)
         ? { passwordHash: m.user.password }
         : {}),
+      username: m.user.username || null,
+      image: m.user.image || null,
+      profileColor: m.user.profileColor || null,
+      profileEmoji: m.user.profileEmoji || null,
     }));
 
   // Auto-generate subdomain if not already set
