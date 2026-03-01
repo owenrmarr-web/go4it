@@ -1146,6 +1146,64 @@ const slides = [
       </div>
     ),
   },
+  {
+    id: "under-the-hood",
+    content: (
+      <div className="flex flex-col md:justify-center md:h-full max-w-6xl mx-auto overflow-y-auto">
+        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-7">How We Do It</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
+          {/* Left: Pipeline */}
+          <div>
+            <h3 className="text-lg md:text-xl font-bold gradient-brand-text mb-3 md:mb-4 uppercase tracking-wide">How We Build & Deploy</h3>
+            <div className="space-y-3 md:space-y-3.5">
+              {[
+                { logo: "/logos/github-logo.png", name: "GitHub", desc: "Source control and CI — every generated app is version-controlled from day one." },
+                { logo: "/logos/claude-code-logo.png", name: "Claude", desc: "AI generates production-grade Next.js apps from plain English descriptions." },
+                { logo: "/logos/vercel-logo.png", name: "Vercel", desc: "Hosts the GO4IT platform with global edge delivery and zero-config deploys." },
+                { logo: "/logos/fly-io-logo.png", name: "Fly.io", desc: "Each customer app gets its own isolated machine, close to their users." },
+                { logo: "/logos/turso-logo-dark.svg", name: "Turso", desc: "Cloud-native SQLite database shared across platform and builder services." },
+                { logo: "/logos/Docker_Logo.png", name: "Docker", desc: "Every deployed app is containerized for consistent, reproducible builds." },
+              ].map((t) => (
+                <div key={t.name} className="flex items-start gap-3 md:gap-4">
+                  <div className="w-12 h-12 md:w-16 md:h-16 flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-sm border border-gray-100">
+                    <img src={t.logo} alt={t.name} className="w-9 h-9 md:w-11 md:h-11 object-contain" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm md:text-base">{t.name}</p>
+                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Right: App Tech Stack */}
+          <div>
+            <h3 className="text-lg md:text-xl font-bold gradient-brand-text mb-3 md:mb-4 uppercase tracking-wide">The GO4IT App Stack</h3>
+            <div className="space-y-3 md:space-y-3.5">
+              {[
+                { logo: "/logos/nextjs-logo.svg", name: "Next.js", desc: "Industry-standard React framework — SSR, API routes, and optimized builds out of the box." },
+                { logo: "/logos/TypeScript_Logo.png", name: "TypeScript", desc: "Type-safe code catches bugs at build time, not in production." },
+                { logo: "/logos/prisma-logo.svg", name: "Prisma", desc: "Modern ORM with auto-generated types — safe, fast database access." },
+                { logo: "/logos/SQLite-logo.png", name: "SQLite", desc: "Embedded database per app — no shared infra, zero latency, simple backups." },
+                { logo: "/logos/tailwind-css.svg", name: "Tailwind CSS", desc: "Utility-first styling for consistent, responsive UI across every generated app." },
+                { logo: "/logos/nextAuth_logo.svg", name: "NextAuth", desc: "Battle-tested authentication — SSO, roles, and session management built in." },
+              ].map((t) => (
+                <div key={t.name} className="flex items-start gap-3 md:gap-4">
+                  <div className="w-12 h-12 md:w-16 md:h-16 flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-sm border border-gray-100">
+                    <img src={t.logo} alt={t.name} className="w-9 h-9 md:w-11 md:h-11 object-contain" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm md:text-base">{t.name}</p>
+                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+  },
   { id: "market", content: null },
   {
     id: "sizing",
@@ -1371,7 +1429,7 @@ export default function DeckPage() {
       onTouchEnd={handleTouchEnd}
     >
       {/* Slide */}
-      <div className="h-full px-4 pt-6 pb-20 md:px-16 md:py-12 overflow-y-auto">
+      <div className="h-full px-4 pt-6 pb-24 md:px-16 md:pt-12 md:pb-16 overflow-y-auto">
         {slides[current].id === "strategy"
           ? <ProductStrategySlide />
           : slides[current].id === "market"
