@@ -1,7 +1,8 @@
 import JSZip from "jszip";
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, writeFileSync, readFileSync, readdirSync, statSync } from "fs";
 import path from "path";
 import os from "os";
+import { put } from "@vercel/blob";
 
 /**
  * Downloads a zip from a Vercel Blob URL, extracts it, and returns the
@@ -50,4 +51,60 @@ export async function downloadAndExtractBlob(
 
   // Fall back to the extraction root
   return tmpBase;
+}
+
+/** Directories and files to exclude when zipping source for blob upload. */
+const UPLOAD_EXCLUDES = new Set([
+  "node_modules",
+  ".next",
+  "dev.db",
+  "dev.db-journal",
+  ".env",
+  "Dockerfile.fly",
+  "fly.toml",
+  "start.sh",
+  ".dockerignore",
+]);
+
+function addDirToZip(zip: JSZip, dirPath: string, rootDir: string): void {
+  const entries = readdirSync(dirPath);
+  for (const entry of entries) {
+    if (UPLOAD_EXCLUDES.has(entry)) continue;
+
+    const fullPath = path.join(dirPath, entry);
+    const relativePath = path.relative(rootDir, fullPath);
+    const stat = statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      addDirToZip(zip, fullPath, rootDir);
+    } else {
+      zip.file(relativePath, readFileSync(fullPath));
+    }
+  }
+}
+
+/**
+ * Zips the app source directory and uploads it to Vercel Blob.
+ * Returns the blob URL. Excludes node_modules, .next, dev.db, and generated deploy files.
+ */
+export async function uploadSourceToBlob(
+  sourceDir: string,
+  generationId: string
+): Promise<string> {
+  const zip = new JSZip();
+  addDirToZip(zip, sourceDir, sourceDir);
+
+  const buffer = await zip.generateAsync({
+    type: "nodebuffer",
+    compression: "DEFLATE",
+    compressionOptions: { level: 6 },
+  });
+
+  const blob = await put(
+    `generated-apps/${generationId}/${Date.now()}.zip`,
+    buffer,
+    { access: "public" }
+  );
+
+  return blob.url;
 }

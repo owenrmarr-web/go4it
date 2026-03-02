@@ -1,0 +1,49 @@
+{
+  "currentInfraVersion": 2,
+  "upgrades": [
+    {
+      "version": 2,
+      "name": "Core Infrastructure (Legacy Patches 1-18)",
+      "description": "Auth, SSO, team-sync, dark mode, data-import, profile fields, session enforcement, access requests",
+      "releasedAt": "2026-02-01",
+      "files": {
+        "modified": [
+          "prisma/schema.prisma",
+          "src/auth.config.ts",
+          "src/middleware.ts",
+          "src/app/globals.css",
+          "src/app/layout.tsx",
+          "src/app/auth/page.tsx",
+          "prisma/provision-users.ts",
+          "start.sh"
+        ],
+        "created": [
+          "src/app/sso/page.tsx",
+          "src/app/api/team-sync/route.ts",
+          "src/app/api/access-requests/route.ts",
+          "src/app/api/data-import/route.ts",
+          "src/components/ThemeToggle.tsx",
+          "src/lib/go4it.ts"
+        ]
+      },
+      "verification": {
+        "fileContains": {
+          "src/lib/go4it.ts": ["GO4IT_TEMPLATE_VERSION = 2"],
+          "src/auth.config.ts": ["verifySsoToken", "isBlocked", "isAssigned", "ssoToken"],
+          "src/middleware.ts": ["/sso"],
+          "prisma/schema.prisma": ["isAssigned", "AccessRequest", "profileColor"],
+          "src/app/globals.css": ["--g4-page"]
+        },
+        "fileExists": [
+          "src/app/sso/page.tsx",
+          "src/app/api/team-sync/route.ts",
+          "src/app/api/access-requests/route.ts",
+          "src/app/api/data-import/route.ts",
+          "src/components/ThemeToggle.tsx",
+          "src/lib/go4it.ts"
+        ]
+      },
+      "claudeInstructions": "This is the baseline version. All current GoSuite apps ship with v2 pre-applied via the template. If an app is at v0 or v1, it should be rebuilt from the current template at playbook/template/ rather than patched — the scope of changes is too large for incremental application."
+    }
+  ]
+}

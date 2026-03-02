@@ -1,9 +1,9 @@
 import { FastifyInstance } from "fastify";
 import { execSync } from "child_process";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, rmSync } from "fs";
 import path from "path";
 import { downloadAndExtractBlob } from "../lib/blob.js";
-import { preCreateFlyInfra, deployPreviewApp } from "../lib/fly.js";
+import { preCreateFlyInfra, deployPreviewApp, upgradeTemplateInfra } from "../lib/fly.js";
 import { captureScreenshot } from "../lib/screenshot.js";
 import prisma from "../lib/prisma.js";
 
@@ -163,6 +163,30 @@ async function runPreviewPipeline(
       const stderr = (err as { stderr?: Buffer })?.stderr?.toString()?.slice(0, 500) || "";
       log(`Seed failed: ${stderr || (err as Error).message?.slice(0, 300)}`);
     }
+  }
+
+  // 4b. Apply template infrastructure upgrades (SSO, dark mode, session enforcement, etc.)
+  try {
+    upgradeTemplateInfra(sourceDir);
+    log("Template infrastructure upgraded");
+  } catch (err) {
+    log(`upgradeTemplateInfra failed (non-fatal): ${(err as Error).message?.slice(0, 300)}`);
+  }
+
+  // Re-run prisma generate after schema changes from upgradeTemplateInfra
+  try {
+    execSync("npx prisma generate", { cwd: sourceDir, stdio: "pipe", timeout: 60000, env });
+    log("prisma generate (post-upgrade) OK");
+  } catch (err: unknown) {
+    const stderr = (err as { stderr?: Buffer })?.stderr?.toString()?.slice(0, 500) || "";
+    log(`prisma generate (post-upgrade) failed: ${stderr || (err as Error).message?.slice(0, 300)}`);
+  }
+
+  // Delete .next so the build picks up infra changes
+  const nextDir = path.join(sourceDir, ".next");
+  if (existsSync(nextDir)) {
+    try { rmSync(nextDir, { recursive: true, force: true }); } catch { /* ignore */ }
+    log("Cleared .next for fresh build after infra upgrade");
   }
 
   // 5. Create Fly infrastructure (skip if redeploying to existing app)

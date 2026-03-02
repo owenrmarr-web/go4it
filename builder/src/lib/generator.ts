@@ -13,6 +13,7 @@ import path from "path";
 import prisma from "./prisma.js";
 import { preCreateFlyInfra, deployPreviewApp, destroyApp } from "./fly.js";
 import { captureScreenshot } from "./screenshot.js";
+import { uploadSourceToBlob } from "./blob.js";
 
 export type GenerationStage =
   | "pending"
@@ -297,6 +298,21 @@ function runClaudeCLI(
 
         await updateProgress(generationId, "finalizing");
         await prepareForPreview(generationId, workspaceDir);
+
+        // Upload validated source to blob for durability
+        try {
+          const blobUrl = await uploadSourceToBlob(workspaceDir, generationId);
+          await prisma.generatedApp.update({
+            where: { id: generationId },
+            data: { uploadBlobUrl: blobUrl },
+          });
+          console.log(`[Generator ${generationId}] Source uploaded to blob: ${blobUrl}`);
+        } catch (err) {
+          console.error(
+            `[Generator ${generationId}] Blob upload failed (non-fatal):`,
+            err instanceof Error ? err.message : err
+          );
+        }
 
         // Deploy happens inside onComplete — don't mark complete until after
         await onComplete(appMeta);
@@ -667,6 +683,21 @@ export async function startIteration(
     workspaceDir,
     buildCLIArgs(prompt, true),
     async (appMeta) => {
+      // Upload updated source to blob
+      try {
+        const blobUrl = await uploadSourceToBlob(workspaceDir, generationId);
+        await prisma.generatedApp.update({
+          where: { id: generationId },
+          data: { uploadBlobUrl: blobUrl },
+        });
+        console.log(`[Generator ${generationId}] Iteration source uploaded to blob`);
+      } catch (err) {
+        console.error(
+          `[Generator ${generationId}] Iteration blob upload failed (non-fatal):`,
+          err instanceof Error ? err.message : err
+        );
+      }
+
       // Re-deploy to existing Fly app if one exists
       let previewFlyUrl: string | undefined;
       if (existingFlyAppName) {

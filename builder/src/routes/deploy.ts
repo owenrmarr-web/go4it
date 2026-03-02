@@ -3,7 +3,7 @@ import { fileURLToPath } from "url";
 import { FastifyInstance } from "fastify";
 import { cpSync, existsSync, mkdtempSync } from "fs";
 import { tmpdir } from "os";
-import { deployApp, launchApp } from "../lib/fly.js";
+import { deployApp } from "../lib/fly.js";
 import prisma from "../lib/prisma.js";
 import { downloadAndExtractBlob } from "../lib/blob.js";
 
@@ -20,7 +20,6 @@ export default async function deployRoute(app: FastifyInstance) {
       teamMembers: { name: string; email: string; assigned?: boolean; passwordHash?: string }[];
       subdomain?: string;
       existingFlyAppId?: string;
-      isPreviewLaunch?: boolean;
     };
   }>("/deploy", async (request, reply) => {
     const {
@@ -32,10 +31,9 @@ export default async function deployRoute(app: FastifyInstance) {
       teamMembers,
       subdomain,
       existingFlyAppId,
-      isPreviewLaunch,
     } = request.body;
 
-    console.log(`[Deploy Route] Received: orgAppId=${orgAppId}, isPreviewLaunch=${isPreviewLaunch}, existingFlyAppId=${existingFlyAppId}, templateApp=${templateApp || "none"}`);
+    console.log(`[Deploy Route] Received: orgAppId=${orgAppId}, existingFlyAppId=${existingFlyAppId}, templateApp=${templateApp || "none"}`);
 
     if (!orgAppId || !orgSlug) {
       return reply
@@ -49,21 +47,7 @@ export default async function deployRoute(app: FastifyInstance) {
         .send({ error: "Either generationId, uploadBlobUrl, or templateApp is required" });
     }
 
-    // Fast path: promote existing preview app to production via secret flip
-    if (isPreviewLaunch && existingFlyAppId) {
-      launchApp(
-        orgAppId,
-        existingFlyAppId,
-        teamMembers || [],
-        subdomain
-      ).catch((err) => {
-        console.error(`[Launch] Unhandled error for ${orgAppId}:`, err);
-      });
-
-      return reply.status(202).send({ status: "accepted", orgAppId });
-    }
-
-    // Full deploy path: resolve source directory
+    // Resolve source directory
     let sourceDir: string | undefined;
 
     // Priority 1: templateApp — deploy from local Go Suite source

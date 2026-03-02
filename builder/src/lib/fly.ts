@@ -1762,7 +1762,23 @@ export default defineConfig({
     }
 
     // ---- Upgrade template infrastructure (idempotent) ----
-    upgradeTemplateInfra(sourceDir);
+    try {
+      upgradeTemplateInfra(sourceDir);
+    } catch (err) {
+      console.log(
+        `[Deploy ${orgAppId}] upgradeTemplateInfra failed (non-fatal):`,
+        (err as Error).message?.slice(0, 300)
+      );
+    }
+
+    // Read infra version after upgrade for DB tracking
+    let deployedInfraVersion = 0;
+    const go4itPath = path.join(sourceDir, "src", "lib", "go4it.ts");
+    if (existsSync(go4itPath)) {
+      const go4itContent = readFileSync(go4itPath, "utf-8");
+      const versionMatch = go4itContent.match(/GO4IT_TEMPLATE_VERSION\s*=\s*(\d+)/);
+      if (versionMatch) deployedInfraVersion = parseInt(versionMatch[1], 10);
+    }
 
     // ---- Stage: Creating ----
     updateDeployProgress(orgAppId, isRedeploy ? "building" : "creating");
@@ -1879,6 +1895,7 @@ export default defineConfig({
         deployedAt: new Date(),
         deployedMarketplaceVersion: marketplaceVersion,
         deployedOrgVersion: orgVersion,
+        deployedInfraVersion,
       },
     });
 
@@ -1896,134 +1913,6 @@ export default defineConfig({
         status: "FAILED",
         flyAppId: flyAppName,
       },
-    });
-  }
-}
-
-// ============================================
-// Launch (promote preview → production via secret flip)
-// ============================================
-
-export async function launchApp(
-  orgAppId: string,
-  flyAppName: string,
-  teamMembers: { name: string; email: string; assigned?: boolean; passwordHash?: string }[],
-  subdomain?: string
-): Promise<void> {
-  try {
-    updateDeployProgress(orgAppId, "preparing");
-
-    await prisma.orgApp.update({
-      where: { id: orgAppId },
-      data: { status: "DEPLOYING" },
-    });
-
-    const authSecret = crypto.randomBytes(32).toString("hex");
-
-    // Build secrets — setting without --stage triggers a machine restart
-    const secrets: Record<string, string> = {
-      PREVIEW_MODE: "false",
-      AUTH_SECRET: authSecret,
-    };
-    if (teamMembers.length > 0) {
-      secrets.GO4IT_TEAM_MEMBERS = JSON.stringify(teamMembers);
-    }
-    if (process.env.GO4IT_ADMIN_PASSWORD) {
-      secrets.GO4IT_ADMIN_PASSWORD = process.env.GO4IT_ADMIN_PASSWORD;
-    }
-
-    const secretPairs = Object.entries(secrets).map(
-      ([k, v]) => `${k}=${v}`
-    );
-
-    console.log(`[Launch ${orgAppId}] Setting secrets on ${flyAppName}...`);
-    updateDeployProgress(orgAppId, "configuring");
-
-    // secrets set (without --stage) atomically sets secrets and triggers a
-    // machine restart. start.sh re-runs with PREVIEW_MODE=false which deletes
-    // the seed DB, runs prisma db push, and provisions real team members.
-    const result = await flyctl([
-      "secrets",
-      "set",
-      ...secretPairs,
-      "--app",
-      flyAppName,
-    ]);
-
-    if (result.code !== 0) {
-      throw new Error(
-        `Failed to set secrets: ${result.stderr || result.stdout}`
-      );
-    }
-
-    // Wait for the app to become healthy after restart
-    const flyUrl = `https://${flyAppName}.fly.dev`;
-    updateDeployProgress(orgAppId, "deploying");
-    console.log(`[Launch ${orgAppId}] Waiting for app to become healthy...`);
-
-    const HEALTH_TIMEOUT = 90_000;
-    const HEALTH_INTERVAL = 3_000;
-    const healthStart = Date.now();
-    let healthy = false;
-
-    while (Date.now() - healthStart < HEALTH_TIMEOUT) {
-      await new Promise((r) => setTimeout(r, HEALTH_INTERVAL));
-      try {
-        const res = await fetch(flyUrl, {
-          method: "GET",
-          signal: AbortSignal.timeout(5_000),
-        });
-        if (res.ok || res.status === 302 || res.status === 307) {
-          healthy = true;
-          console.log(`[Launch ${orgAppId}] App is healthy (${res.status})`);
-          break;
-        }
-        console.log(`[Launch ${orgAppId}] Health check: ${res.status}`);
-      } catch {
-        // App not ready yet — keep polling
-      }
-    }
-
-    if (!healthy) {
-      console.warn(`[Launch ${orgAppId}] Health check timed out — marking as running anyway`);
-    }
-
-    updateDeployProgress(orgAppId, "running", { flyUrl });
-
-    await prisma.orgApp.update({
-      where: { id: orgAppId },
-      data: {
-        status: "RUNNING",
-        flyUrl,
-        authSecret,
-        subdomain: subdomain || undefined,
-        deployedAt: new Date(),
-      },
-    });
-
-    // Clear previewExpiresAt so cleanup doesn't destroy this production app
-    const orgApp = await prisma.orgApp.findUnique({
-      where: { id: orgAppId },
-      include: { app: { include: { generatedApp: true } } },
-    });
-    if (orgApp?.app?.generatedApp) {
-      await prisma.generatedApp.update({
-        where: { id: orgApp.app.generatedApp.id },
-        data: { previewExpiresAt: null },
-      });
-    }
-
-    console.log(`[Launch ${orgAppId}] Live at ${flyUrl}`);
-  } catch (err) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Unknown launch error";
-    console.error(`[Launch ${orgAppId}] Failed:`, errorMsg);
-
-    updateDeployProgress(orgAppId, "failed", { error: errorMsg });
-
-    await prisma.orgApp.update({
-      where: { id: orgAppId },
-      data: { status: "FAILED" },
     });
   }
 }

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { generateSubdomain, validateSubdomain } from "@/lib/subdomain";
-import { determineDeployFlags } from "@/lib/deploy-logic";
 
 const BUILDER_URL = process.env.BUILDER_URL;
 const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
@@ -106,15 +105,10 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  // Determine deploy path: re-deploy, preview launch, or store preview consumption
-  const { existingFlyAppId, isPreviewLaunch, consumingStorePreview } = determineDeployFlags(
-    orgApp.status,
-    orgApp.flyAppId,
-    orgApp.app.previewFlyAppId
-  );
-  const storePreviewId = orgApp.app.previewFlyAppId;
+  // Redeploy to existing Fly app if one exists, otherwise create new
+  const existingFlyAppId = orgApp.flyAppId || undefined;
 
-  console.log(`[Deploy Route] orgApp.status=${orgApp.status}, orgApp.flyAppId=${orgApp.flyAppId}, isPreviewLaunch=${isPreviewLaunch}, existingFlyAppId=${existingFlyAppId}`);
+  console.log(`[Deploy Route] orgApp.status=${orgApp.status}, existingFlyAppId=${existingFlyAppId}`);
 
   // Fetch ALL org members with password hashes so they can log in to deployed apps
   const allOrgMembers = await prisma.organizationMember.findMany({
@@ -184,51 +178,12 @@ export async function POST(request: Request, context: RouteContext) {
           teamMembers,
           subdomain: subdomain ?? undefined,
           existingFlyAppId,
-          isPreviewLaunch,
         }),
       });
 
       if (!res.ok) {
         const error = await res.text();
         throw new Error(`Builder service error: ${error}`);
-      }
-
-      // If we consumed the store preview, clear preview fields and trigger a rebuild
-      if (consumingStorePreview) {
-        const genId = orgApp.app.generatedApp?.id;
-        console.log(`[Deploy Route] Consumed store preview ${storePreviewId} — triggering rebuild`);
-
-        // Clear App preview fields so marketplace shows "rebuilding" state
-        await prisma.app.update({
-          where: { id: appId },
-          data: {
-            previewFlyAppId: null,
-            previewUrl: null,
-            previewRebuilding: true,
-          },
-        });
-
-        // Clear GeneratedApp preview fields so deploy-preview creates a fresh machine
-        if (genId) {
-          await prisma.generatedApp.update({
-            where: { id: genId },
-            data: {
-              previewFlyAppId: null,
-              previewFlyUrl: null,
-            },
-          });
-
-          // Fire-and-forget: rebuild store preview in background
-          const previewHeaders: Record<string, string> = { "Content-Type": "application/json" };
-          if (BUILDER_API_KEY) previewHeaders["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
-          fetch(`${BUILDER_URL}/deploy-preview`, {
-            method: "POST",
-            headers: previewHeaders,
-            body: JSON.stringify({ generationId: genId, type: "store" }),
-          }).catch((err) => {
-            console.error(`[Deploy Route] Failed to trigger preview rebuild for ${genId}:`, err);
-          });
-        }
       }
     } catch (err) {
       console.error(`Builder call failed for deploy ${orgApp.id}:`, err);
@@ -238,78 +193,52 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
   } else {
-    // Local dev fallback
+    // Local dev fallback — full deploy only
     try {
-      if (isPreviewLaunch && existingFlyAppId) {
-        const { launchApp } = await import("@/lib/fly");
-        launchApp(orgApp.id, existingFlyAppId, teamMembers, subdomain ?? undefined).catch((err) => {
-          console.error(`[Launch] Unhandled error for ${orgApp.id}:`, err);
-        });
+      let resolvedSourceDir = sourceDir;
+      if (!resolvedSourceDir && uploadBlobUrl) {
+        const os = await import("os");
+        const path = await import("path");
+        const fs = await import("fs");
+        const JSZip = (await import("jszip")).default;
 
-        // If we consumed the store preview locally, clear preview fields
-        if (consumingStorePreview) {
-          const genId = orgApp.app.generatedApp?.id;
-          console.log(`[Deploy Route] Consumed store preview ${storePreviewId} (local) — clearing preview fields`);
-          await prisma.app.update({
-            where: { id: appId },
-            data: { previewFlyAppId: null, previewUrl: null, previewRebuilding: true },
-          });
-          if (genId) {
-            await prisma.generatedApp.update({
-              where: { id: genId },
-              data: { previewFlyAppId: null, previewFlyUrl: null },
-            });
+        const res = await fetch(uploadBlobUrl);
+        if (!res.ok) throw new Error(`Failed to download blob: ${res.statusText}`);
+        const buffer = await res.arrayBuffer();
+        const zip = await JSZip.loadAsync(buffer);
+
+        const tmpBase = path.join(os.tmpdir(), `go4it-deploy-${orgApp.id}`);
+        fs.mkdirSync(tmpBase, { recursive: true });
+
+        for (const [relativePath, file] of Object.entries(zip.files)) {
+          if (file.dir) {
+            fs.mkdirSync(path.join(tmpBase, relativePath), { recursive: true });
+            continue;
           }
-          // Note: no builder URL in local dev — preview rebuild must be triggered manually
-        }
-      } else {
-        // For uploaded apps without sourceDir, download blob to temp directory
-        let resolvedSourceDir = sourceDir;
-        if (!resolvedSourceDir && uploadBlobUrl) {
-          const os = await import("os");
-          const path = await import("path");
-          const fs = await import("fs");
-          const JSZip = (await import("jszip")).default;
-
-          const res = await fetch(uploadBlobUrl);
-          if (!res.ok) throw new Error(`Failed to download blob: ${res.statusText}`);
-          const buffer = await res.arrayBuffer();
-          const zip = await JSZip.loadAsync(buffer);
-
-          const tmpBase = path.join(os.tmpdir(), `go4it-deploy-${orgApp.id}`);
-          fs.mkdirSync(tmpBase, { recursive: true });
-
-          for (const [relativePath, file] of Object.entries(zip.files)) {
-            if (file.dir) {
-              fs.mkdirSync(path.join(tmpBase, relativePath), { recursive: true });
-              continue;
-            }
-            const content = await file.async("nodebuffer");
-            const filePath = path.join(tmpBase, relativePath);
-            fs.mkdirSync(path.dirname(filePath), { recursive: true });
-            fs.writeFileSync(filePath, content);
-          }
-
-          // Find package.json (root or one level deep)
-          const fileNames = Object.keys(zip.files);
-          const nested = fileNames.find((e) => /^[^/]+\/package\.json$/.test(e));
-          resolvedSourceDir = nested
-            ? path.join(tmpBase, nested.split("/")[0])
-            : tmpBase;
+          const content = await file.async("nodebuffer");
+          const filePath = path.join(tmpBase, relativePath);
+          fs.mkdirSync(path.dirname(filePath), { recursive: true });
+          fs.writeFileSync(filePath, content);
         }
 
-        if (!resolvedSourceDir) {
-          return NextResponse.json(
-            { error: "No source code available for deployment" },
-            { status: 400 }
-          );
-        }
-
-        const { deployApp } = await import("@/lib/fly");
-        deployApp(orgApp.id, slug, resolvedSourceDir, teamMembers, subdomain ?? undefined, existingFlyAppId).catch((err) => {
-          console.error(`[Deploy] Unhandled error for ${orgApp.id}:`, err);
-        });
+        const fileNames = Object.keys(zip.files);
+        const nested = fileNames.find((e) => /^[^/]+\/package\.json$/.test(e));
+        resolvedSourceDir = nested
+          ? path.join(tmpBase, nested.split("/")[0])
+          : tmpBase;
       }
+
+      if (!resolvedSourceDir) {
+        return NextResponse.json(
+          { error: "No source code available for deployment" },
+          { status: 400 }
+        );
+      }
+
+      const { deployApp } = await import("@/lib/fly");
+      deployApp(orgApp.id, slug, resolvedSourceDir, teamMembers, subdomain ?? undefined, existingFlyAppId).catch((err) => {
+        console.error(`[Deploy] Unhandled error for ${orgApp.id}:`, err);
+      });
     } catch {
       return NextResponse.json(
         { error: "Builder service not configured and local deployment unavailable" },

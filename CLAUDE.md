@@ -30,19 +30,12 @@ GO4IT is a free marketplace and hosting platform for AI-generated SaaS applicati
 
 | Layer | Tool |
 |---|---|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS 4 |
+| Framework | Next.js 16 (App Router), TypeScript, Tailwind CSS 4 |
 | Auth | NextAuth v5 beta (credentials provider) |
 | ORM | Prisma 7 (platform) / Prisma 6 (generated apps) |
-| DB adapter | LibSQL via `@prisma/adapter-libsql` |
-| DB (dev) | SQLite file (`dev.db`) |
-| DB (prod) | Turso (cloud LibSQL) |
+| DB | Turso (cloud LibSQL) in prod, SQLite (`dev.db`) in dev, adapter: `@prisma/adapter-libsql` |
 | AI generation | Claude Code CLI (`npx @anthropic-ai/claude-code`) |
-| Toasts | Sonner |
-| Email | Resend (`noreply@go4it.live`) |
-| Hosting (platform) | Vercel |
-| Hosting (generated apps) | Fly.io (flyctl CLI via `src/lib/fly.ts`) |
+| Hosting | Vercel (platform), Fly.io (generated apps via `src/lib/fly.ts`) |
 
 ---
 
@@ -56,12 +49,11 @@ playbook/
 prisma/
   schema.prisma          — DB models: User, App, GeneratedApp, AppIteration, Organization, OrgApp, etc.
   seed.ts                — Seeds admin user for dev (uses LibSQL adapter)
-  migrate-*.ts           — Turso migration scripts (one per schema change)
-  redeploy-apps.ts       — Script to redeploy all RUNNING OrgApps
-  redeploy-previews.ts   — Script to rebuild Go Suite preview machines
+  scripts/               — Organized by type: migrate/, backfill/, cleanup/, fix/, query/, redeploy/, seed/, misc/
 
 apps/
   .gitkeep               — Generated apps directory (gitignored, stored on disk only)
+  <id>/CLAUDE.md          — Per-app context (generated apps have their own CLAUDE.md)
 
 src/
   auth.ts                — NextAuth instance export
@@ -118,6 +110,43 @@ builder/                   — Standalone builder service (deployed to Fly.io)
 
 ---
 
+## Environment Variables
+
+### Required (platform)
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | Turso/LibSQL connection string |
+| `TURSO_AUTH_TOKEN` | Turso cloud auth token |
+| `AUTH_SECRET` | NextAuth JWT signing secret |
+| `NEXTAUTH_URL` | Base URL for auth callbacks |
+| `ANTHROPIC_API_KEY` | Claude API key for app generation |
+| `RESEND_API_KEY` | Resend email service key |
+| `BUILDER_URL` | URL of the builder Fly.io service |
+| `BUILDER_API_KEY` | Auth key for builder service |
+| `GO4IT_ADMIN_PASSWORD` | Admin user password (bcrypt hashed) |
+| `GO4IT_ORG_SECRET` | Org secret for app verification |
+
+### Required (Fly.io deploys)
+
+| Variable | Purpose |
+|---|---|
+| `FLYCTL_PATH` | Path to flyctl binary |
+| `FLY_APP_NAME` | App name on Fly.io |
+| `FLY_REGION` | Deploy region (default: `ord`) |
+| `GO4IT_TEAM_MEMBERS` | JSON list of team members for provisioning |
+
+---
+
+## Current Focus (pre-launch)
+
+Two priorities before going to market:
+
+1. **Stripe billing** — Only hard blocker before taking real payments. Wire up subscription management ($5/app/mo + $1/seat/app/mo) end-to-end.
+2. **Marketplace depth** — Perfect ONE reference GO4IT app (e.g., GoCRM) to nail the playbook, template, tech stack, and auth story. That becomes the gold-standard foundation. Then use it to efficiently build 14+ more apps across categories so the marketplace feels real to a small business owner walking in cold.
+
+---
+
 ## Documentation Index
 
 Read the relevant doc(s) from `docs/` before making changes. Each doc starts with a one-line summary.
@@ -125,6 +154,7 @@ Read the relevant doc(s) from `docs/` before making changes. Each doc starts wit
 | Doc | Read when... |
 |-----|-------------|
 | `docs/architecture.md` | Understanding how services connect, debugging cross-service issues, cost model |
+| `docs/deploy-pipeline.md` | App deploy pipeline: source lifecycle, blob storage, preview vs production, infra versioning, redeploy scripts |
 | `docs/deployment.md` | Deploying, DNS/SSL issues, env vars, Turso migrations, Fly.io config, Prisma 7 compat |
 | `docs/app-generation.md` | Modifying app generation, playbook, template, build validation, iteration, preview |
 | `docs/builder-service.md` | Changing builder endpoints, redeploying builder, Docker build issues |
@@ -133,9 +163,12 @@ Read the relevant doc(s) from `docs/` before making changes. Each doc starts wit
 | `docs/ui-and-theming.md` | Theme colors, dark mode, CSS variables, avatars, deck, pricing page, org portal |
 | `docs/roadmap.md` | Checking what's planned next, prioritizing work |
 | `docs/completed-work.md` | Looking up how a past feature was implemented, debugging regressions |
+| `playbook/CLAUDE.md` | Modifying the app builder playbook: protected files, design system, component library, seed data rules |
 
 ---
 
 ## Prisma Schema (models)
 
-User, Account, Session, VerificationToken, App, UserInteraction, GeneratedApp, AppIteration, Organization, OrganizationMember, Invitation, OrgApp, OrgAppMember
+- **Auth:** User, Account, Session, VerificationToken
+- **Marketplace:** App, UserInteraction, GeneratedApp, AppIteration
+- **Organizations:** Organization, OrganizationMember, Invitation, OrgApp, OrgAppMember

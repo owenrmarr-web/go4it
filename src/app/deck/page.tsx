@@ -1100,6 +1100,94 @@ const slides = [
       </div>
     ),
   },
+  { id: "market", content: null },
+  {
+    id: "sizing",
+    content: (
+      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
+        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
+          Our Addressable Market
+        </h2>
+
+        {/* Desktop: horizontal flow */}
+        <div className="hidden md:flex items-start gap-3">
+          <div className="flex flex-col items-center">
+            <div className="rounded-2xl flex items-center justify-center text-white font-bold text-2xl" style={{ width: 130, height: 130, backgroundColor: "#f97316" }}>$44B</div>
+            <p className="text-sm font-semibold mt-2" style={{ color: "#f97316" }}>US 5–50 SaaS</p>
+          </div>
+          <div className="flex flex-col items-center flex-1 pt-[42px]">
+            <div className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-1">75% industry fit</div>
+            <div className="w-full h-0.5 bg-gray-300 relative">
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[10px] border-l-gray-300" />
+            </div>
+            <div className="mt-2 text-sm text-gray-500 leading-tight text-center">
+              <span className="text-green-600 font-semibold">Yes:</span> Retail, services, tech<br />
+              <span className="text-red-400 font-semibold">No:</span> Healthcare, education
+            </div>
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="rounded-2xl flex items-center justify-center text-white font-bold text-2xl" style={{ width: 130, height: 130, backgroundColor: "#e8527a" }}>$33B</div>
+            <p className="text-sm font-semibold mt-2" style={{ color: "#e8527a" }}>Industry Fit</p>
+          </div>
+          <div className="flex flex-col items-center flex-1 pt-[42px]">
+            <div className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-1">60% addressable</div>
+            <div className="w-full h-0.5 bg-gray-300 relative">
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[10px] border-l-gray-300" />
+            </div>
+            <div className="mt-2 text-sm text-gray-500 leading-tight text-center">
+              <span className="text-green-600 font-semibold">Yes:</span> CRM, PM, messaging, HR<br />
+              <span className="text-red-400 font-semibold">No:</span> Payments, storage, security
+            </div>
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg" style={{ width: 130, height: 130, background: "linear-gradient(135deg, #f97316, #ec4899, #9333ea)" }}>$20B</div>
+            <p className="text-sm font-bold mt-2 gradient-brand-text">GO4IT SAM</p>
+          </div>
+        </div>
+
+        {/* Mobile: vertical flow */}
+        <div className="flex md:hidden flex-col items-center gap-1">
+          {[
+            { value: "$44B", label: "US 5–50 SaaS", color: "#f97316", filter: null },
+            { value: "$33B", label: "Industry Fit", color: "#e8527a", filter: { pct: "75%", name: "industry fit", yes: "Retail, services, tech", no: "Healthcare, education" } },
+            { value: "$20B", label: "GO4IT SAM", color: null, gradient: true, filter: { pct: "60%", name: "addressable", yes: "CRM, PM, messaging, HR", no: "Payments, storage, security" } },
+          ].map((b, i) => (
+            <div key={i} className="flex flex-col items-center">
+              {b.filter && (
+                <div className="flex flex-col items-center mb-1">
+                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{b.filter.pct} {b.filter.name}</div>
+                  <div className="h-5 w-0.5 bg-gray-300 relative">
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[8px] border-t-gray-300" />
+                  </div>
+                  <div className="text-[10px] text-gray-500 leading-tight text-center">
+                    <span className="text-green-600 font-semibold">Yes:</span> {b.filter.yes}{" · "}
+                    <span className="text-red-400 font-semibold">No:</span> {b.filter.no}
+                  </div>
+                </div>
+              )}
+              <div
+                className={`rounded-2xl flex items-center justify-center text-white font-bold text-lg ${b.gradient ? "shadow-lg" : ""}`}
+                style={{ width: 80, height: 80, ...(b.gradient ? { background: "linear-gradient(135deg, #f97316, #ec4899, #9333ea)" } : { backgroundColor: b.color! }) }}
+              >
+                {b.value}
+              </div>
+              <p className={`text-xs font-semibold mt-1 ${b.gradient ? "gradient-brand-text font-bold" : ""}`} style={b.color ? { color: b.color } : undefined}>
+                {b.label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-lg md:text-2xl font-semibold text-gray-700 mt-6 md:mt-10 text-center">
+          GO4IT is positioned to disrupt a{" "}
+          <span className="font-bold gradient-brand-text">$20 Billion ARR</span> market.
+        </p>
+        <p className="text-sm md:text-lg text-gray-400 mt-2 text-center">
+          Across 1,270,000 SaaS-using small businesses in the US.
+        </p>
+      </div>
+    ),
+  },
   {
     id: "how",
     content: (
@@ -1201,94 +1289,6 @@ const slides = [
             </div>
           </div>
         </div>
-      </div>
-    ),
-  },
-  { id: "market", content: null },
-  {
-    id: "sizing",
-    content: (
-      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
-        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
-          Our Addressable Market
-        </h2>
-
-        {/* Desktop: horizontal flow */}
-        <div className="hidden md:flex items-start gap-3">
-          <div className="flex flex-col items-center">
-            <div className="rounded-2xl flex items-center justify-center text-white font-bold text-2xl" style={{ width: 130, height: 130, backgroundColor: "#f97316" }}>$44B</div>
-            <p className="text-sm font-semibold mt-2" style={{ color: "#f97316" }}>US 5–50 SaaS</p>
-          </div>
-          <div className="flex flex-col items-center flex-1 pt-[42px]">
-            <div className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-1">75% industry fit</div>
-            <div className="w-full h-0.5 bg-gray-300 relative">
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[10px] border-l-gray-300" />
-            </div>
-            <div className="mt-2 text-sm text-gray-500 leading-tight text-center">
-              <span className="text-green-600 font-semibold">Yes:</span> Retail, services, tech<br />
-              <span className="text-red-400 font-semibold">No:</span> Healthcare, education
-            </div>
-          </div>
-          <div className="flex flex-col items-center">
-            <div className="rounded-2xl flex items-center justify-center text-white font-bold text-2xl" style={{ width: 130, height: 130, backgroundColor: "#e8527a" }}>$33B</div>
-            <p className="text-sm font-semibold mt-2" style={{ color: "#e8527a" }}>Industry Fit</p>
-          </div>
-          <div className="flex flex-col items-center flex-1 pt-[42px]">
-            <div className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-1">60% addressable</div>
-            <div className="w-full h-0.5 bg-gray-300 relative">
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[10px] border-l-gray-300" />
-            </div>
-            <div className="mt-2 text-sm text-gray-500 leading-tight text-center">
-              <span className="text-green-600 font-semibold">Yes:</span> CRM, PM, messaging, HR<br />
-              <span className="text-red-400 font-semibold">No:</span> Payments, storage, security
-            </div>
-          </div>
-          <div className="flex flex-col items-center">
-            <div className="rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg" style={{ width: 130, height: 130, background: "linear-gradient(135deg, #f97316, #ec4899, #9333ea)" }}>$20B</div>
-            <p className="text-sm font-bold mt-2 gradient-brand-text">GO4IT SAM</p>
-          </div>
-        </div>
-
-        {/* Mobile: vertical flow */}
-        <div className="flex md:hidden flex-col items-center gap-1">
-          {[
-            { value: "$44B", label: "US 5–50 SaaS", color: "#f97316", filter: null },
-            { value: "$33B", label: "Industry Fit", color: "#e8527a", filter: { pct: "75%", name: "industry fit", yes: "Retail, services, tech", no: "Healthcare, education" } },
-            { value: "$20B", label: "GO4IT SAM", color: null, gradient: true, filter: { pct: "60%", name: "addressable", yes: "CRM, PM, messaging, HR", no: "Payments, storage, security" } },
-          ].map((b, i) => (
-            <div key={i} className="flex flex-col items-center">
-              {b.filter && (
-                <div className="flex flex-col items-center mb-1">
-                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{b.filter.pct} {b.filter.name}</div>
-                  <div className="h-5 w-0.5 bg-gray-300 relative">
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[8px] border-t-gray-300" />
-                  </div>
-                  <div className="text-[10px] text-gray-500 leading-tight text-center">
-                    <span className="text-green-600 font-semibold">Yes:</span> {b.filter.yes}{" · "}
-                    <span className="text-red-400 font-semibold">No:</span> {b.filter.no}
-                  </div>
-                </div>
-              )}
-              <div
-                className={`rounded-2xl flex items-center justify-center text-white font-bold text-lg ${b.gradient ? "shadow-lg" : ""}`}
-                style={{ width: 80, height: 80, ...(b.gradient ? { background: "linear-gradient(135deg, #f97316, #ec4899, #9333ea)" } : { backgroundColor: b.color! }) }}
-              >
-                {b.value}
-              </div>
-              <p className={`text-xs font-semibold mt-1 ${b.gradient ? "gradient-brand-text font-bold" : ""}`} style={b.color ? { color: b.color } : undefined}>
-                {b.label}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-lg md:text-2xl font-semibold text-gray-700 mt-6 md:mt-10 text-center">
-          GO4IT is positioned to disrupt a{" "}
-          <span className="font-bold gradient-brand-text">$20 Billion ARR</span> market.
-        </p>
-        <p className="text-sm md:text-lg text-gray-400 mt-2 text-center">
-          Across 1,270,000 SaaS-using small businesses in the US.
-        </p>
       </div>
     ),
   },
