@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import Image from "next/image";
 
 /* Hide native number input spinners */
 const hideSpinners = `
@@ -1261,12 +1260,9 @@ const slides = [
           {/* Left: App screenshot */}
           <div className="flex justify-center">
             <div className="rounded-xl shadow-lg border border-gray-200 overflow-hidden bg-white">
-              <Image
+              <img
                 src="/deck/app-screenshot.png"
                 alt="GO4IT app in action"
-                width={800}
-                height={500}
-                priority
                 className="w-full h-auto"
               />
             </div>
@@ -1285,7 +1281,7 @@ const slides = [
               ].map((t) => (
                 <div key={t.name} className="flex items-start gap-3 md:gap-4">
                   <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-sm border border-gray-100">
-                    <Image src={t.logo} alt={t.name} width={36} height={36} priority className="w-7 h-7 md:w-9 md:h-9 object-contain" />
+                    <img src={t.logo} alt={t.name} className="w-7 h-7 md:w-9 md:h-9 object-contain" />
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 text-sm md:text-base">{t.name}</p>
@@ -1329,12 +1325,9 @@ const slides = [
                 {s.step}
               </div>
               <div className="w-full aspect-video flex items-end justify-center mb-4">
-                <Image
+                <img
                   src={`/deck/step-${s.step}.png`}
                   alt={s.title}
-                  width={600}
-                  height={338}
-                  priority
                   className="max-w-full max-h-full rounded-lg shadow-md"
                 />
               </div>
@@ -1461,6 +1454,19 @@ export default function DeckPage() {
   }, [goNext, goPrev]);
 
   return (
+    <>
+    <head>
+      <link rel="preload" as="image" href="/deck/app-screenshot.png" />
+      <link rel="preload" as="image" href="/deck/step-1.png" />
+      <link rel="preload" as="image" href="/deck/step-2.png" />
+      <link rel="preload" as="image" href="/deck/step-3.png" />
+      <link rel="preload" as="image" href="/logos/claude-code-logo.png" />
+      <link rel="preload" as="image" href="/logos/nextjs-logo.svg" />
+      <link rel="preload" as="image" href="/logos/prisma-logo.svg" />
+      <link rel="preload" as="image" href="/logos/fly-io-logo.png" />
+      <link rel="preload" as="image" href="/logos/vercel-logo.png" />
+      <link rel="preload" as="image" href="/logos/github-logo.png" />
+    </head>
     <div
       className="h-screen w-screen overflow-hidden bg-white select-none"
       style={{
@@ -1536,5 +1542,6 @@ export default function DeckPage() {
         {current + 1} / {slides.length}
       </div>
     </div>
+    </>
   );
 }
