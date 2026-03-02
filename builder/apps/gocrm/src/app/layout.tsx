@@ -19,15 +19,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('gocrm-theme');if(t==='light'){document.documentElement.classList.remove('dark')}}catch(e){}})();`,
+            __html: `(function(){var t=localStorage.getItem('go4it-theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}})()`,
           }}
         />
       </head>
-      <body className={`${inter.className} bg-surface-inset min-h-screen`}>
+      <body className={`${inter.className} bg-page text-fg min-h-screen`}>
         <SessionProvider>
           <ThemeProvider>
             <div className="flex min-h-screen">

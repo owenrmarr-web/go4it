@@ -16,7 +16,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("theme") as Theme | null;
+    const saved = localStorage.getItem("go4it-theme") as Theme | null;
     const initial = saved === "dark" ? "dark" : "light";
     setTheme(initial);
     if (initial === "dark") {
@@ -30,7 +30,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {
       const next = prev === "light" ? "dark" : "light";
-      localStorage.setItem("theme", next);
+      localStorage.setItem("go4it-theme", next);
       if (next === "dark") {
         document.documentElement.classList.add("dark");
       } else {

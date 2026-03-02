@@ -4,6 +4,34 @@ import prisma from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
 
+// GET /api/profile — return current user profile fields
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      profileColor: true,
+      profileEmoji: true,
+      avatarUrl: true,
+      avatarColor: true,
+    },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  return NextResponse.json(user);
+}
+
 // PUT /api/profile — update profile (avatar image or color)
 export async function PUT(request: Request) {
   const session = await auth();

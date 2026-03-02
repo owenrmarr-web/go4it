@@ -7,8 +7,8 @@ export function middleware(req: NextRequest) {
 
   const path = req.nextUrl.pathname;
 
-  // Skip auth pages and API routes (APIs self-protect via session checks)
-  if (path.startsWith("/auth") || path.startsWith("/api")) {
+  // Skip auth pages, API routes, and SSO landing page
+  if (path.startsWith("/auth") || path.startsWith("/api") || path === "/sso") {
     return NextResponse.next();
   }
 

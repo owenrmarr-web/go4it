@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
-import { chatEvents, type ChatEvent, trackSSEConnect, trackSSEDisconnect } from "@/lib/events";
+import { chatEvents, type ChatEvent } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +58,6 @@ export async function GET(request: Request) {
       };
 
       chatEvents.on("event", handler);
-      trackSSEConnect(userId);
 
       // Keepalive every 30s
       keepalive = setInterval(() => {
@@ -74,7 +73,6 @@ export async function GET(request: Request) {
       request.signal.addEventListener("abort", () => {
         closed = true;
         chatEvents.off("event", handler);
-        trackSSEDisconnect(userId);
         clearInterval(keepalive);
         try {
           controller.close();
@@ -85,7 +83,6 @@ export async function GET(request: Request) {
     },
     cancel() {
       closed = true;
-      trackSSEDisconnect(userId);
       clearInterval(keepalive);
     },
   });

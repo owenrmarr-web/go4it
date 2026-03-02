@@ -106,7 +106,7 @@ builder/                   — Standalone builder service (deployed to Fly.io)
 - **Tailwind CSS v4:** Requires `@tailwindcss/postcss` in postcss.config.mjs. `@theme` blocks only allow flat CSS custom properties or `@keyframes`.
 - **Next.js 16 middleware:** `matcher` does not support regex lookaheads in generated apps — use simple path patterns.
 - **Generated apps use Prisma 6** (not 7) to avoid breaking changes. `fly.ts` handles Prisma 7 compat at deploy time.
-- **Builder deploys are manual:** Pushing to GitHub only deploys the platform (Vercel). Builder must be redeployed via `flyctl deploy` in `builder/`. See `docs/builder-service.md`.
+- **Builder deploys are automated:** Pushing to `main` deploys both the platform (Vercel) and the builder (GitHub Actions → Fly.io) when relevant files change. See `.github/workflows/deploy-builder.yml`.
 
 ---
 

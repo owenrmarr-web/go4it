@@ -7,8 +7,8 @@ export function middleware(req: NextRequest) {
 
   const path = req.nextUrl.pathname;
 
-  // Public routes: auth pages, API routes, and customer booking pages
-  if (path.startsWith("/auth") || path.startsWith("/api") || path.startsWith("/book")) {
+  // Public routes: auth pages, API routes, SSO landing, and customer booking pages
+  if (path.startsWith("/auth") || path.startsWith("/api") || path === "/sso" || path.startsWith("/book")) {
     const response = NextResponse.next();
 
     // Allow iframe embedding for booking pages

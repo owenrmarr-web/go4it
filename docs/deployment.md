@@ -103,14 +103,8 @@ For local dev: `DATABASE_URL="file:./dev.db" npx prisma db push`
 ### Flow
 
 1. User adds app to org from marketplace → Account page → Configure team → Launch
-2. `POST /api/organizations/[slug]/apps/[appId]/deploy` triggers deploy
-3. `src/lib/fly.ts` orchestrates:
-   - Generates `fly.toml`, `Dockerfile.fly`, `start.sh`
-   - Runs `upgradeTemplateInfra()` for backward compat patches
-   - `flyctl apps create go4it-{orgSlug}-{shortId}`
-   - Creates 1GB volume for SQLite
-   - Sets secrets (`AUTH_SECRET`, `GO4IT_TEAM_MEMBERS`)
-   - `flyctl deploy` builds Docker image and deploys
+2. `POST /api/organizations/[slug]/apps/[appId]/deploy` delegates to builder service
+3. Builder resolves source (Vercel Blob or local template), runs `upgradeTemplateInfra()`, then `deployApp()` — see `docs/deploy-pipeline.md` for full details
 4. On container startup, `start.sh` runs:
    - `prisma db push` → create/update tables
    - `provision-users.ts` → create team member accounts
@@ -165,23 +159,8 @@ For local dev: `DATABASE_URL="file:./dev.db" npx prisma db push`
 
 ### Requirements
 
-- Marketplace app must have a linked GeneratedApp with valid `sourceDir`
-- Only apps with generated source code (in `apps/`) can be deployed
-
-### Instant Deploy (Store Preview Conversion)
-
-When deploying a marketplace app to an org, if the OrgApp already points to the store preview machine:
-
-1. **Fast path** — flip secrets on preview machine → becomes org production app (~15-30s)
-2. Clear `App.previewFlyAppId`, `App.previewUrl`, set `App.previewRebuilding = true`
-3. Clear `GeneratedApp.previewFlyAppId` and `previewFlyUrl` so deploy-preview can create fresh
-4. Fire-and-forget POST to builder `/deploy-preview` to rebuild store preview
-5. Marketplace shows "Preview updating — back shortly" until new preview is ready (~1-2 min)
-6. Builder completes → updates App preview fields, sets `previewRebuilding = false`
-
-Edge cases:
-- **Two users deploy same app simultaneously** — first gets fast path, second gets full deploy (App.previewFlyAppId already null)
-- **Preview rebuild fails** — `previewRebuilding` stays true; app works but no interactive preview until re-publish
+- Marketplace app must have a linked GeneratedApp with source in Vercel Blob (`uploadBlobUrl`) or a Go Suite template (`templateApp`)
+- All deploys go through `deployApp()` with a full Docker rebuild — there is no instant deploy / preview promotion. See `docs/deploy-pipeline.md` for details.
 
 ### Testing locally
 

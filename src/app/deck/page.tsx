@@ -49,9 +49,9 @@ function MarketSlide({ active }: { active: boolean }) {
   useEffect(() => {
     if (active) {
       const boxTimer = setTimeout(() => setShowHighlight(true), 1000);
-      // Box fades 2s (done at 3s), 1s pause → line 1 at 4s, fades 2s (done at 6s) → line 2 at 6s
-      const tag1Timer = setTimeout(() => setShowTagline1(true), 4000);
-      const tag2Timer = setTimeout(() => setShowTagline2(true), 6000);
+      // Box fades 2s (done at 3s), 0.5s pause → line 1 at 3.5s, fades 2s (done at 5.5s) → line 2 at 5.5s
+      const tag1Timer = setTimeout(() => setShowTagline1(true), 3500);
+      const tag2Timer = setTimeout(() => setShowTagline2(true), 5500);
       return () => { clearTimeout(boxTimer); clearTimeout(tag1Timer); clearTimeout(tag2Timer); };
     }
     setShowHighlight(false);
@@ -1058,7 +1058,7 @@ const slides = [
             <span className="font-bold text-theme-accent">
               ~$1,400/employee/year
             </span>{" "}
-            on SaaS software.
+            on SaaS.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             For a 20-person company, that&apos;s{" "}
@@ -1075,7 +1075,7 @@ const slides = [
   {
     id: "solution",
     content: (
-      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
+      <div className="flex flex-col justify-center h-full max-w-[67rem] mx-auto">
         <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
           The Solution
         </h2>
@@ -1091,10 +1091,18 @@ const slides = [
             for human-ideated, AI-generated SaaS applications.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
+            We use leading{" "}
+            <span className="font-bold gradient-brand-text">AI code generation</span>{" "}
+            with a{" "}
+            <span className="font-bold gradient-brand-text">standardized app framework</span>{" "}
+            to deliver
+            custom, production-grade applications — without the traditional SaaS engineering overhead.
+          </p>
+          <p className="text-lg md:text-2xl text-gray-700">
             Pick from a library of ready-made tools — or describe what you need
             in plain English
             <br />
-            and AI builds it for you. Everything you need, nothing you don&apos;t.
+            and our AI builds it for you. Everything you need, nothing you don&apos;t.
           </p>
         </div>
       </div>
@@ -1122,8 +1130,9 @@ const slides = [
             </div>
             <div className="mt-2 text-sm text-gray-500 leading-tight text-center">
               <span className="text-green-600 font-semibold">Yes:</span> Retail, services, tech<br />
-              <span className="text-red-400 font-semibold">No:</span> Healthcare, education
+              <span className="text-red-400 font-semibold">No:</span> Healthcare, government
             </div>
+            <p className="mt-1.5 text-sm text-gray-400 italic leading-tight text-center">Focus on industries where teams adapt quickly — avoid sectors with burdensome compliance and vendor lock-in.</p>
           </div>
           <div className="flex flex-col items-center">
             <div className="rounded-2xl flex items-center justify-center text-white font-bold text-2xl" style={{ width: 130, height: 130, backgroundColor: "#e8527a" }}>$33B</div>
@@ -1138,6 +1147,7 @@ const slides = [
               <span className="text-green-600 font-semibold">Yes:</span> CRM, PM, messaging, HR<br />
               <span className="text-red-400 font-semibold">No:</span> Payments, storage, security
             </div>
+            <p className="mt-1.5 text-sm text-gray-400 italic leading-tight text-center">Focus on the tools teams use daily — avoid sectors with entrenched infrastructure.</p>
           </div>
           <div className="flex flex-col items-center">
             <div className="rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg" style={{ width: 130, height: 130, background: "linear-gradient(135deg, #f97316, #ec4899, #9333ea)" }}>$20B</div>
@@ -1149,8 +1159,8 @@ const slides = [
         <div className="flex md:hidden flex-col items-center gap-1">
           {[
             { value: "$44B", label: "US 5–50 SaaS", color: "#f97316", filter: null },
-            { value: "$33B", label: "Industry Fit", color: "#e8527a", filter: { pct: "75%", name: "industry fit", yes: "Retail, services, tech", no: "Healthcare, education" } },
-            { value: "$20B", label: "GO4IT SAM", color: null, gradient: true, filter: { pct: "60%", name: "addressable", yes: "CRM, PM, messaging, HR", no: "Payments, storage, security" } },
+            { value: "$33B", label: "Industry Fit", color: "#e8527a", filter: { pct: "75%", name: "industry fit", yes: "Retail, services, tech", no: "Healthcare, government", strategy: "Focus on industries where teams adapt quickly — avoid sectors with burdensome compliance and vendor lock-in." } },
+            { value: "$20B", label: "GO4IT SAM", color: null, gradient: true, filter: { pct: "60%", name: "addressable", yes: "CRM, PM, messaging, HR", no: "Payments, storage, security", strategy: "Focus on the tools teams use daily — avoid sectors with entrenched infrastructure." } },
           ].map((b, i) => (
             <div key={i} className="flex flex-col items-center">
               {b.filter && (
@@ -1163,6 +1173,9 @@ const slides = [
                     <span className="text-green-600 font-semibold">Yes:</span> {b.filter.yes}{" · "}
                     <span className="text-red-400 font-semibold">No:</span> {b.filter.no}
                   </div>
+                  {b.filter.strategy && (
+                    <p className="mt-1 text-[10px] text-gray-400 italic leading-tight text-center max-w-[220px]">{b.filter.strategy}</p>
+                  )}
                 </div>
               )}
               <div
@@ -1189,11 +1202,105 @@ const slides = [
     ),
   },
   {
+    id: "why-now",
+    content: (
+      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
+        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">Why Now</h2>
+        <div className="space-y-5 md:space-y-7">
+          <div>
+            <p className="text-lg md:text-2xl text-gray-700">
+              AI is{" "}
+              <span className="font-bold gradient-brand-text">inherently deflationary</span>{" "}
+              for software.
+            </p>
+            <p className="text-base md:text-xl text-gray-500 mt-1">
+              What used to take a team of engineers a week now takes one person a few hours.
+            </p>
+          </div>
+          <div>
+            <p className="text-lg md:text-2xl text-gray-700">
+              The entire GO4IT platform —{" "}
+              <span className="font-bold text-theme-primary">every line of code</span>{" "}
+              — was built by a single human using Claude Code.
+            </p>
+            <p className="text-base md:text-xl text-gray-500 mt-1">
+              Zero engineering overhead — one human with AI.
+            </p>
+          </div>
+          <div>
+            <p className="text-lg md:text-2xl text-gray-700">
+              Traditional SaaS vendors spend{" "}
+              <span className="font-bold text-theme-accent">70-80% of their revenue</span>{" "}
+              on labor. Their pricing reflects headcount, not value.
+            </p>
+            <p className="text-base md:text-xl text-gray-500 mt-1">
+              When AI eliminates that overhead, the cost structure collapses — and so should the price.
+            </p>
+          </div>
+          <div className="border-t border-gray-200 pt-5 md:pt-7">
+            <p className="text-lg md:text-2xl text-gray-700">
+              GO4IT is built for what&apos;s next:{" "}
+              <span className="font-bold gradient-brand-text">AI agents as coworkers</span>.
+            </p>
+            <p className="text-base md:text-xl text-gray-500 mt-1">
+              Every app is structured for agent integration from day one — when businesses
+              start deploying AI teammates, GO4IT is the platform they&apos;ll run on.
+            </p>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "under-the-hood",
+    content: (
+      <div className="flex flex-col md:justify-center md:h-full max-w-6xl mx-auto overflow-y-auto">
+        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-7">The App Stack</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center">
+          {/* Left: App screenshot */}
+          <div className="flex justify-center">
+            <div className="rounded-xl shadow-lg border border-gray-200 overflow-hidden bg-white">
+              <img
+                src="/deck/app-screenshot.png"
+                alt="GO4IT app in action"
+                className="w-full h-auto"
+              />
+            </div>
+          </div>
+          {/* Right: Tech Stack */}
+          <div>
+            <h3 className="text-lg md:text-xl font-bold gradient-brand-text mb-3 md:mb-4 uppercase tracking-wide">The Stack</h3>
+            <div className="space-y-3 md:space-y-3.5">
+              {[
+                { logo: "/logos/claude-code-logo.png", name: "Claude Code", desc: "Proprietary playbook instruction set guides Claude to reliably produce custom, production-grade apps — our secret sauce." },
+                { logo: "/logos/nextjs-logo.svg", name: "Next.js + TypeScript", desc: "Industry-standard React framework with type-safe code." },
+                { logo: "/logos/prisma-logo.svg", name: "Prisma + SQLite", desc: "Embedded database per app — data accessible across each org by humans and agents." },
+                { logo: "/logos/fly-io-logo.png", name: "Fly.io + Docker", desc: "Each app gets its own containerized machine, with global edge deployment and on-demand scaling." },
+                { logo: "/logos/vercel-logo.png", name: "Vercel", desc: "GO4IT platform with global edge delivery." },
+                { logo: "/logos/github-logo.png", name: "GitHub + CI/CD", desc: "Version-controlled source with automated deploy pipeline." },
+              ].map((t) => (
+                <div key={t.name} className="flex items-start gap-3 md:gap-4">
+                  <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-sm border border-gray-100">
+                    <img src={t.logo} alt={t.name} className="w-7 h-7 md:w-9 md:h-9 object-contain" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm md:text-base">{t.name}</p>
+                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
     id: "how",
     content: (
       <div className="flex flex-col md:justify-center md:h-full max-w-5xl mx-auto">
         <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
-          How It Works
+          Customer Experience
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
           {[
@@ -1230,64 +1337,6 @@ const slides = [
               <p className="text-lg text-gray-600">{s.desc}</p>
             </div>
           ))}
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: "under-the-hood",
-    content: (
-      <div className="flex flex-col md:justify-center md:h-full max-w-6xl mx-auto overflow-y-auto">
-        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-7">How We Do It</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
-          {/* Left: Pipeline */}
-          <div>
-            <h3 className="text-lg md:text-xl font-bold gradient-brand-text mb-3 md:mb-4 uppercase tracking-wide">How We Build & Deploy</h3>
-            <div className="space-y-3 md:space-y-3.5">
-              {[
-                { logo: "/logos/github-logo.png", name: "GitHub", desc: "Source control and CI — every generated app is version-controlled from day one." },
-                { logo: "/logos/claude-code-logo.png", name: "Claude", desc: "AI generates production-grade Next.js apps from plain English descriptions." },
-                { logo: "/logos/vercel-logo.png", name: "Vercel", desc: "Hosts the GO4IT platform with global edge delivery and zero-config deploys." },
-                { logo: "/logos/fly-io-logo.png", name: "Fly.io", desc: "Each customer app gets its own isolated machine, close to their users." },
-                { logo: "/logos/turso-logo-dark.svg", name: "Turso", desc: "Cloud-native SQLite database shared across platform and builder services." },
-                { logo: "/logos/Docker_Logo.png", name: "Docker", desc: "Every deployed app is containerized for consistent, reproducible builds." },
-              ].map((t) => (
-                <div key={t.name} className="flex items-start gap-3 md:gap-4">
-                  <div className="w-12 h-12 md:w-16 md:h-16 flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-sm border border-gray-100">
-                    <img src={t.logo} alt={t.name} className="w-9 h-9 md:w-11 md:h-11 object-contain" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 text-sm md:text-base">{t.name}</p>
-                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          {/* Right: App Tech Stack */}
-          <div>
-            <h3 className="text-lg md:text-xl font-bold gradient-brand-text mb-3 md:mb-4 uppercase tracking-wide">The GO4IT App Stack</h3>
-            <div className="space-y-3 md:space-y-3.5">
-              {[
-                { logo: "/logos/nextjs-logo.svg", name: "Next.js", desc: "Industry-standard React framework — SSR, API routes, and optimized builds out of the box." },
-                { logo: "/logos/TypeScript_Logo.png", name: "TypeScript", desc: "Type-safe code catches bugs at build time, not in production." },
-                { logo: "/logos/prisma-logo.svg", name: "Prisma", desc: "Modern ORM with auto-generated types — safe, fast database access." },
-                { logo: "/logos/SQLite-logo.png", name: "SQLite", desc: "Embedded database per app — no shared infra, zero latency, simple backups." },
-                { logo: "/logos/tailwind-css.svg", name: "Tailwind CSS", desc: "Utility-first styling for consistent, responsive UI across every generated app." },
-                { logo: "/logos/nextAuth_logo.svg", name: "NextAuth", desc: "Battle-tested authentication — SSO, roles, and session management built in." },
-              ].map((t) => (
-                <div key={t.name} className="flex items-start gap-3 md:gap-4">
-                  <div className="w-12 h-12 md:w-16 md:h-16 flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-sm border border-gray-100">
-                    <img src={t.logo} alt={t.name} className="w-9 h-9 md:w-11 md:h-11 object-contain" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 text-sm md:text-base">{t.name}</p>
-                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     ),

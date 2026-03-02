@@ -22,11 +22,11 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('goledger-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})()`,
+            __html: `(function(){var t=localStorage.getItem('go4it-theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}})()`,
           }}
         />
       </head>
-      <body className={`${inter.className} bg-gray-50 dark:bg-gray-900 min-h-screen`}>
+      <body className={`${inter.className} bg-page text-fg min-h-screen`}>
         <SessionProvider>
           <ThemeProvider>
             {children}

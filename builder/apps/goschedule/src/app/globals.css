@@ -1,100 +1,100 @@
 @import "tailwindcss";
 
-/* ─── Semantic color tokens (light) ─── */
+/* --- Semantic color tokens (light) --- */
 :root {
-  --gs-page: #f9fafb;
-  --gs-card: #ffffff;
-  --gs-elevated: #f3f4f6;
-  --gs-input: #ffffff;
-  --gs-skeleton: #e5e7eb;
-  --gs-hover: #f9fafb;
-  --gs-edge: #f3f4f6;
-  --gs-edge-strong: #e5e7eb;
-  --gs-divider: #f9fafb;
-  --gs-fg: #111827;
-  --gs-fg-secondary: #4b5563;
-  --gs-fg-muted: #6b7280;
-  --gs-fg-dim: #9ca3af;
-  --gs-accent: #9333ea;
-  --gs-accent-soft: #faf5ff;
-  --gs-accent-fg: #7e22ce;
-  --gs-backdrop: rgba(0, 0, 0, 0.5);
+  --g4-page: #f9fafb;
+  --g4-card: #ffffff;
+  --g4-elevated: #f3f4f6;
+  --g4-input: #ffffff;
+  --g4-skeleton: #e5e7eb;
+  --g4-hover: #f9fafb;
+  --g4-edge: #f3f4f6;
+  --g4-edge-strong: #e5e7eb;
+  --g4-divider: #f9fafb;
+  --g4-fg: #111827;
+  --g4-fg-secondary: #4b5563;
+  --g4-fg-muted: #6b7280;
+  --g4-fg-dim: #9ca3af;
+  --g4-accent: #9333ea;
+  --g4-accent-soft: #faf5ff;
+  --g4-accent-fg: #7e22ce;
+  --g4-backdrop: rgba(0, 0, 0, 0.5);
 
-  --gs-blue: #eff6ff;
-  --gs-blue-fg: #1d4ed8;
-  --gs-green: #f0fdf4;
-  --gs-green-fg: #15803d;
-  --gs-red: #fef2f2;
-  --gs-red-fg: #b91c1c;
-  --gs-amber: #fffbeb;
-  --gs-amber-fg: #b45309;
+  --g4-blue: #eff6ff;
+  --g4-blue-fg: #1d4ed8;
+  --g4-green: #f0fdf4;
+  --g4-green-fg: #15803d;
+  --g4-red: #fef2f2;
+  --g4-red-fg: #b91c1c;
+  --g4-amber: #fffbeb;
+  --g4-amber-fg: #b45309;
 }
 
-/* ─── Dark theme ─── */
+/* --- Dark theme --- */
 .dark {
-  --gs-page: #0f172a;
-  --gs-card: #1e293b;
-  --gs-elevated: #334155;
-  --gs-input: #1e293b;
-  --gs-skeleton: #334155;
-  --gs-hover: rgba(255, 255, 255, 0.05);
-  --gs-edge: #334155;
-  --gs-edge-strong: #475569;
-  --gs-divider: #1e293b;
-  --gs-fg: #f1f5f9;
-  --gs-fg-secondary: #cbd5e1;
-  --gs-fg-muted: #94a3b8;
-  --gs-fg-dim: #64748b;
-  --gs-accent: #a855f7;
-  --gs-accent-soft: rgba(168, 85, 247, 0.15);
-  --gs-accent-fg: #c084fc;
-  --gs-backdrop: rgba(0, 0, 0, 0.7);
+  --g4-page: #0f172a;
+  --g4-card: #1e293b;
+  --g4-elevated: #334155;
+  --g4-input: #1e293b;
+  --g4-skeleton: #334155;
+  --g4-hover: rgba(255, 255, 255, 0.05);
+  --g4-edge: #334155;
+  --g4-edge-strong: #475569;
+  --g4-divider: #1e293b;
+  --g4-fg: #f1f5f9;
+  --g4-fg-secondary: #cbd5e1;
+  --g4-fg-muted: #94a3b8;
+  --g4-fg-dim: #64748b;
+  --g4-accent: #a855f7;
+  --g4-accent-soft: rgba(168, 85, 247, 0.15);
+  --g4-accent-fg: #c084fc;
+  --g4-backdrop: rgba(0, 0, 0, 0.7);
 
-  --gs-blue: rgba(59, 130, 246, 0.15);
-  --gs-blue-fg: #93c5fd;
-  --gs-green: rgba(34, 197, 94, 0.15);
-  --gs-green-fg: #86efac;
-  --gs-red: rgba(239, 68, 68, 0.15);
-  --gs-red-fg: #fca5a5;
-  --gs-amber: rgba(245, 158, 11, 0.15);
-  --gs-amber-fg: #fcd34d;
+  --g4-blue: rgba(59, 130, 246, 0.15);
+  --g4-blue-fg: #93c5fd;
+  --g4-green: rgba(34, 197, 94, 0.15);
+  --g4-green-fg: #86efac;
+  --g4-red: rgba(239, 68, 68, 0.15);
+  --g4-red-fg: #fca5a5;
+  --g4-amber: rgba(245, 158, 11, 0.15);
+  --g4-amber-fg: #fcd34d;
 
   color-scheme: dark;
 }
 
-/* ─── Register tokens as Tailwind utilities ─── */
+/* --- Register tokens as Tailwind utilities --- */
 @theme inline {
   --font-sans: var(--font-inter);
 
-  --color-page: var(--gs-page);
-  --color-card: var(--gs-card);
-  --color-elevated: var(--gs-elevated);
-  --color-input-bg: var(--gs-input);
-  --color-skeleton: var(--gs-skeleton);
-  --color-hover: var(--gs-hover);
-  --color-edge: var(--gs-edge);
-  --color-edge-strong: var(--gs-edge-strong);
-  --color-divider: var(--gs-divider);
-  --color-fg: var(--gs-fg);
-  --color-fg-secondary: var(--gs-fg-secondary);
-  --color-fg-muted: var(--gs-fg-muted);
-  --color-fg-dim: var(--gs-fg-dim);
-  --color-accent: var(--gs-accent);
-  --color-accent-soft: var(--gs-accent-soft);
-  --color-accent-fg: var(--gs-accent-fg);
-  --color-backdrop: var(--gs-backdrop);
+  --color-page: var(--g4-page);
+  --color-card: var(--g4-card);
+  --color-elevated: var(--g4-elevated);
+  --color-input-bg: var(--g4-input);
+  --color-skeleton: var(--g4-skeleton);
+  --color-hover: var(--g4-hover);
+  --color-edge: var(--g4-edge);
+  --color-edge-strong: var(--g4-edge-strong);
+  --color-divider: var(--g4-divider);
+  --color-fg: var(--g4-fg);
+  --color-fg-secondary: var(--g4-fg-secondary);
+  --color-fg-muted: var(--g4-fg-muted);
+  --color-fg-dim: var(--g4-fg-dim);
+  --color-accent: var(--g4-accent);
+  --color-accent-soft: var(--g4-accent-soft);
+  --color-accent-fg: var(--g4-accent-fg);
+  --color-backdrop: var(--g4-backdrop);
 
-  --color-status-blue: var(--gs-blue);
-  --color-status-blue-fg: var(--gs-blue-fg);
-  --color-status-green: var(--gs-green);
-  --color-status-green-fg: var(--gs-green-fg);
-  --color-status-red: var(--gs-red);
-  --color-status-red-fg: var(--gs-red-fg);
-  --color-status-amber: var(--gs-amber);
-  --color-status-amber-fg: var(--gs-amber-fg);
+  --color-status-blue: var(--g4-blue);
+  --color-status-blue-fg: var(--g4-blue-fg);
+  --color-status-green: var(--g4-green);
+  --color-status-green-fg: var(--g4-green-fg);
+  --color-status-red: var(--g4-red);
+  --color-status-red-fg: var(--g4-red-fg);
+  --color-status-amber: var(--g4-amber);
+  --color-status-amber-fg: var(--g4-amber-fg);
 }
 
-/* ─── Keyframes ─── */
+/* --- Keyframes --- */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -111,7 +111,16 @@
   }
 }
 
-/* ─── Brand gradient ─── */
+@keyframes slide-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.2s ease-out;
+}
+
+/* --- Brand gradient --- */
 .gradient-brand {
   background: linear-gradient(to right, #f97316, #ec4899, #9333ea);
 }

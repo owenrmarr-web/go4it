@@ -17,7 +17,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    const stored = localStorage.getItem("gochat-theme") as Theme | null;
+    const stored = localStorage.getItem("go4it-theme") as Theme | null;
     if (stored === "dark") {
       setTheme("dark");
       document.documentElement.classList.add("dark");
@@ -27,7 +27,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {
       const next = prev === "light" ? "dark" : "light";
-      localStorage.setItem("gochat-theme", next);
+      localStorage.setItem("go4it-theme", next);
       if (next === "dark") {
         document.documentElement.classList.add("dark");
       } else {
