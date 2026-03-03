@@ -109,19 +109,19 @@ async function runRedeployPipeline(
 
   let dockerfile = generateDeployDockerfile(isPrisma7);
 
-  // For new previews: patch start.sh to run seed on first boot (when volume is empty)
-  // This avoids Docker BuildKit cache issues with COPY --from=builder for generated files
+  // For new previews: patch start.sh to run seed on first boot
+  // Uses a .seeded sentinel file since prisma db push already creates the DB before this runs
   const seedPath = path.join(tmpDir, "prisma", "seed.ts");
   if (options.seedData && existsSync(seedPath)) {
     log("Patching start.sh for first-boot seed...");
     const startScript = readFileSync(path.join(tmpDir, "start.sh"), "utf-8");
     const patchedStart = startScript.replace(
       'echo "Starting application..."',
-      `# Seed database on first boot (no existing volume data)
-if [ ! -f /data/app.db ]; then
-  echo "First boot — seeding database..."
-  DATABASE_URL="file:/data/app.db" npx prisma db push --accept-data-loss 2>&1 || true
-  DATABASE_URL="file:/data/app.db" npx tsx prisma/seed.ts 2>&1 || echo "Warning: seed failed"
+      `# Seed sample data on first boot
+if [ ! -f /data/.seeded ]; then
+  echo "First boot — seeding sample data..."
+  npx tsx prisma/seed.ts 2>&1 || echo "Warning: seed failed"
+  touch /data/.seeded
   echo "Seed complete."
 fi
 
