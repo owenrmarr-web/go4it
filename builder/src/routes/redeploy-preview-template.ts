@@ -109,25 +109,23 @@ async function runRedeployPipeline(
 
   let dockerfile = generateDeployDockerfile(isPrisma7);
 
-  // For new previews: inject seed step into Dockerfile so the volume gets sample data
+  // For new previews: patch start.sh to run seed on first boot (when volume is empty)
+  // This avoids Docker BuildKit cache issues with COPY --from=builder for generated files
   const seedPath = path.join(tmpDir, "prisma", "seed.ts");
   if (options.seedData && existsSync(seedPath)) {
-    log("Injecting seed step into Dockerfile...");
-    // Run seed after db push (creates build.db with sample data)
-    dockerfile = dockerfile.replace(
-      "RUN npm run build",
-      "RUN npx tsx prisma/seed.ts 2>&1 || echo 'Warning: seed failed'\nRUN npm run build"
-    );
-    // Copy seeded DB into runner stage so start.sh can copy it to the volume
-    dockerfile = dockerfile.replace(
-      "COPY --from=builder /app/prisma ./prisma",
-      "COPY --from=builder /app/prisma ./prisma\nCOPY --from=builder /app/build.db ./dev.db"
-    );
-    // Patch start.sh to copy seed DB to volume on first run
+    log("Patching start.sh for first-boot seed...");
     const startScript = readFileSync(path.join(tmpDir, "start.sh"), "utf-8");
     const patchedStart = startScript.replace(
       'echo "Starting application..."',
-      '# Copy seed data to volume on first run\nif [ ! -f /data/app.db ] && [ -f /app/dev.db ]; then\n  echo "Seeding database from dev.db..."\n  cp /app/dev.db /data/app.db\nfi\n\necho "Starting application..."'
+      `# Seed database on first boot (no existing volume data)
+if [ ! -f /data/app.db ]; then
+  echo "First boot — seeding database..."
+  DATABASE_URL="file:/data/app.db" npx prisma db push --accept-data-loss 2>&1 || true
+  DATABASE_URL="file:/data/app.db" npx tsx prisma/seed.ts 2>&1 || echo "Warning: seed failed"
+  echo "Seed complete."
+fi
+
+echo "Starting application..."`
     );
     writeFileSync(path.join(tmpDir, "start.sh"), patchedStart);
   } else if (existsSync(seedPath)) {
