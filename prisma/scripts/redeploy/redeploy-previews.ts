@@ -16,6 +16,7 @@ if (!BUILDER_API_KEY) {
 }
 
 import { createClient } from "@libsql/client";
+import { getGoSuiteTemplateMap } from "./gosuite-map";
 
 const client = createClient({
   url: process.env.DATABASE_URL!,
@@ -23,12 +24,7 @@ const client = createClient({
 });
 
 // Go Suite apps: maps app title → template directory name under builder/apps/
-const GO_SUITE_TEMPLATE_MAP: Record<string, string> = {
-  GoCRM: "gocrm",
-  GoChat: "gochat",
-  GoProject: "project-management",
-  GoLedger: "goledger",
-};
+const GO_SUITE_TEMPLATE_MAP = getGoSuiteTemplateMap();
 
 async function main() {
   // Find Go Suite GeneratedApps with preview machines
