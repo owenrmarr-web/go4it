@@ -1,0 +1,7 @@
+{
+  "name": "GoInventory",
+  "description": "Product inventory tracking with stock levels, suppliers, and purchase orders for small businesses.",
+  "category": "Inventory / Supply Chain",
+  "icon": "📦",
+  "tags": ["inventory", "products", "stock", "suppliers", "purchase-orders", "small-business"]
+}

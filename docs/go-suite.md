@@ -4,26 +4,69 @@ GO4IT's first-party app ecosystem. Each app owns a single domain and stays focus
 
 ---
 
-## App Stream
+## App Lineup (12 apps)
 
-| App | Domain | Owns | Status |
-|-----|--------|------|--------|
-| **GoCRM** | Relationships | Contacts, companies, interaction history, relationship stages, tags, tasks/follow-ups, lightweight deal pipeline | Done |
-| **GoSchedule** | Scheduling | Appointments, availability, bookings, calendar (includes customer-facing booking page) | Done |
-| **GoProject** | Project management | Projects, tasks, milestones, assignments, progress tracking | Done |
-| **GoChat** | Messaging | Team messaging, channels, direct messages, AI coworker | Done |
-| **GoLedger** | Money | Invoices (B2B + B2C), estimates, payments (manual + Stripe), expenses, recurring invoices, financial reports (P&L, AR aging), QBO CSV export, public invoice payment page | Building |
-| **GoSales** | Sales performance | Advanced pipeline, forecasting, rep performance, commissions, quota tracking | Planned |
+| # | App | Category | Icon | Key Features | Status |
+|---|-----|----------|------|-------------|--------|
+| 1 | GoCRM | CRM / Sales | 🤝 | Contacts, companies, deals, pipeline, activity tracking | Exists |
+| 2 | GoProject | Project Management | 📋 | Projects, tasks, milestones, assignments, progress tracking | Exists |
+| 3 | GoSchedule | Scheduling | 📅 | Appointments, bookings, availability, customer booking page | Exists |
+| 4 | GoInventory | Inventory | 📦 | Products, stock levels, suppliers, purchase orders | Spec |
+| 5 | GoInvoice | Finance | 💰 | Invoices, estimates, payments, AR/AP, reports, cross-app rollup | Spec (evolves from GoLedger) |
+| 6 | GoSupport | Helpdesk | 🎧 | Tickets, customer-facing KB, SLAs, satisfaction tracking | Planned |
+| 7 | GoHR | People / HR | 👥 | Directory, time-off, onboarding, docs, timekeeping, pay tracking | Spec |
+| 8 | GoChat | Chat | 💬 | Channels, DMs, file sharing, AI coworker | Exists |
+| 9 | GoMailer | Marketing | 📧 | Email campaigns, newsletters, contact lists, templates | Planned |
+| 10 | GoDocs | Documents | 📄 | Contracts, proposals, document storage, version tracking | Planned |
+| 11 | GoForms | Forms | 📝 | Custom forms, surveys, checklists, submission tracking | Planned |
+| 12 | GoWiki | Knowledge Base | 📚 | Internal SOPs, training docs, team wiki, search | Planned |
 
-## Domain Boundaries
+**Status key:** Exists = built in `builder/apps/`, Spec = spec written in `playbook/specs/`, Planned = spec not yet written.
 
-- **CRM owns relationships** — who your customers are and every touchpoint. Does NOT own financials, scheduling, project management, or sales analytics.
-- **Lightweight deals in CRM** — simple pipeline (Interested → Quoted → Committed → Won/Lost) for tracking active opportunities. No forecasting, weighted probabilities, or rep leaderboards — that's GoSales.
-- **Schedule owns booking** — services, availability, appointments, customer-facing booking page. CRM surfaces appointment data via cross-app queries but doesn't duplicate.
-- **Project owns work tracking** — projects, tasks, milestones, assignments. CRM can surface task counts per contact.
-- **Chat owns messaging** — team channels, DMs, AI coworker. Other apps surface data via ai-query endpoint.
-- **Ledger owns money** — invoices, estimates, payments, expenses, recurring invoices, financial reports. CRM surfaces payment history per contact. Supports Stripe online payments + QBO CSV export.
-- **GoSales owns sales analytics** — advanced pipeline, forecasting, rep performance.
+All apps will be (re)generated from structured spec files using the playbook. Existing apps will be regenerated from scratch.
+
+---
+
+## Feature Boundaries
+
+Each app owns its domain. This table prevents overlap during generation.
+
+| App | Owns | Does NOT own |
+|-----|------|-------------|
+| GoCRM | Contacts, companies, deals, sales pipeline, activity log | Scheduling (GoSchedule), invoicing (GoInvoice), project tasks (GoProject) |
+| GoProject | Projects, tasks, milestones, assignments, workload | CRM deals (GoCRM), timekeeping/hours (GoHR), messaging (GoChat) |
+| GoSchedule | Appointments, provider availability, customer booking page | Employee time-off (GoHR), project deadlines (GoProject) |
+| GoInventory | Products, categories, stock levels, suppliers, purchase orders, stock movements | Customer invoicing (GoInvoice), expense tracking (GoInvoice) |
+| GoInvoice | Invoices, estimates, payments, expenses, AR/AP, financial reports, cross-app finance rollup | Inventory stock (GoInventory), employee pay (GoHR), deal tracking (GoCRM) |
+| GoSupport | Tickets, knowledge base articles, SLAs, CSAT | Internal messaging (GoChat), internal wiki (GoWiki) |
+| GoHR | Employee profiles (User extensions), departments, time-off, onboarding, documents, timekeeping, pay stubs | Actual payroll processing (external), customer contacts (GoCRM), internal chat (GoChat) |
+| GoChat | Channels, DMs, threads, file sharing, AI coworker | Email campaigns (GoMailer), support tickets (GoSupport) |
+| GoMailer | Email campaigns, newsletters, contact lists, templates, send history | Customer contacts/deals (GoCRM), internal messaging (GoChat) |
+| GoDocs | Contracts, proposals, document storage, folders, version tracking | Internal SOPs/wiki (GoWiki), employee HR docs (GoHR) |
+| GoForms | Form builder, surveys, checklists, submission tracking, response analytics | Support tickets (GoSupport), employee onboarding forms (GoHR) |
+| GoWiki | Internal SOPs, training docs, team wiki, categories, search | Customer-facing KB (GoSupport), contracts/proposals (GoDocs) |
+
+**Playbook constraint:** GoHR uses the User table directly for employee profiles (no separate Employee model). `isAssigned: true` = active team member.
+
+---
+
+## Generation Workflow
+
+Each app is generated from two inputs:
+1. `playbook/CLAUDE.md` — the playbook (how to build: styling, components, CRUD patterns, protected files)
+2. `playbook/specs/{appname}.md` — the spec (what to build: entities, features, nav, seed data)
+
+Spec format documented in `playbook/gosuite-prompt-template.md`.
+
+Steps:
+1. Copy `playbook/template/` to temp workspace
+2. Place spec file as `SPEC.md` in workspace
+3. Run Claude Code CLI — picks up `playbook/CLAUDE.md` + `SPEC.md`
+4. Validate: `npm install && npx prisma generate && npm run build`
+5. Copy result to `builder/apps/{name}/`
+6. Run `publish-gosuite.ts` to register in marketplace
+
+---
 
 ## Cross-App Data Flow
 
@@ -39,13 +82,15 @@ Apps in the same org query each other via `/api/ai-query` endpoint:
 │  │  "Connected Apps" panel (via ai-query API)  │    │
 │  │                                             │    │
 │  │  GoSchedule: upcoming/past appointments     │    │
-│  │  GoLedger: payment history, balances        │    │
-│  │  GoSales: advanced deal analytics           │    │
+│  │  GoInvoice: payment history, balances       │    │
+│  │  GoInventory: order history                 │    │
 │  └─────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────┘
 ```
 
 This is the GO4IT differentiator — businesses compose exactly the tools they need, and they talk to each other natively.
+
+---
 
 ## GoChat iOS (Capacitor)
 

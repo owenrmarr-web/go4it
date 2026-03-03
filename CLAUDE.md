@@ -142,8 +142,31 @@ builder/                   — Standalone builder service (deployed to Fly.io)
 
 Two priorities before going to market:
 
-1. **Stripe billing** — Only hard blocker before taking real payments. Wire up subscription management ($5/app/mo + $1/seat/app/mo) end-to-end.
-2. **Marketplace depth** — Perfect ONE reference GO4IT app (e.g., GoCRM) to nail the playbook, template, tech stack, and auth story. That becomes the gold-standard foundation. Then use it to efficiently build 14+ more apps across categories so the marketplace feels real to a small business owner walking in cold.
+1. **Stripe billing** — MVP is live. Checkout, webhooks, subscription sync, and invoices all working in test mode. Remaining work:
+   - Subscription enforcement (block/warn apps when payment fails or subscription is canceled)
+   - Payment failure notifications (email/in-app)
+   - Trial period logic
+   - Switch from test mode to live Stripe keys when ready
+2. **Marketplace depth** — Build 12 Go Suite apps so the marketplace feels real. Structured spec files (`playbook/specs/`) define each app; the playbook handles how, the spec handles what. Generate via Claude Code CLI.
+
+### Go Suite Lineup (12 apps)
+
+| App | Category | Icon | Key Features |
+|-----|----------|------|-------------|
+| GoCRM | CRM / Sales | 🤝 | Contacts, companies, deals, pipeline, activity tracking |
+| GoProject | Project Management | 📋 | Projects, tasks, milestones, assignments, progress |
+| GoSchedule | Scheduling | 📅 | Appointments, bookings, availability, customer booking page |
+| GoInventory | Inventory | 📦 | Products, stock levels, suppliers, purchase orders |
+| GoInvoice | Finance | 💰 | Invoices, estimates, payments, AR/AP, reports, cross-app rollup |
+| GoSupport | Helpdesk | 🎧 | Tickets, customer-facing KB, SLAs, satisfaction tracking |
+| GoHR | People / HR | 👥 | Directory, time-off, onboarding, docs, timekeeping, pay tracking |
+| GoChat | Chat | 💬 | Channels, DMs, file sharing, AI coworker |
+| GoMailer | Marketing | 📧 | Email campaigns, newsletters, contact lists, templates |
+| GoDocs | Documents | 📄 | Contracts, proposals, document storage, version tracking |
+| GoForms | Forms | 📝 | Custom forms, surveys, checklists, submission tracking |
+| GoWiki | Knowledge Base | 📚 | Internal SOPs, training docs, team wiki, search |
+
+   Feature boundaries documented in `docs/go-suite.md`. GoInvoice evolves from GoLedger.
 
 ---
 
