@@ -390,7 +390,17 @@ function AccountPage() {
           throw new Error(data.error || "Failed to add app");
         }
 
-        toast.success("Deploying — fully live in 1-2 minutes");
+        // Explicitly trigger deploy (same as "Launch" button)
+        const deployRes = await fetch(
+          `/api/organizations/${orgSlug}/apps/${appId}/deploy`,
+          { method: "POST" }
+        );
+
+        if (deployRes.ok) {
+          toast.success("Deploying — fully live in 1-2 minutes");
+        } else {
+          toast.success("App added — click Launch to deploy");
+        }
         fetchOrgData();
       } catch (err) {
         const message =

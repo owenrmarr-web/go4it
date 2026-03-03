@@ -46,6 +46,7 @@ export default function Home() {
   const handleAddToOrg = useCallback(
     async (orgSlug: string, appId: string, memberConfig?: MemberConfig[]) => {
       try {
+        // Step 1: Add app to org (creates OrgApp + assigns members)
         const res = await fetch(`/api/organizations/${orgSlug}/apps`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -73,15 +74,31 @@ export default function Home() {
           )
         );
 
-        toast.success(
-          `Deploying ${result.app?.title || "App"} to ${orgName} — fully live in 1-2 minutes`,
-          {
+        // Step 2: Explicitly trigger deploy (same as "Launch" button in My Account)
+        const deployRes = await fetch(
+          `/api/organizations/${orgSlug}/apps/${appId}/deploy`,
+          { method: "POST" }
+        );
+
+        if (deployRes.ok) {
+          toast.success(
+            `Deploying ${result.app?.title || "App"} to ${orgName} — fully live in 1-2 minutes`,
+            {
+              action: {
+                label: "My Account",
+                onClick: () => (window.location.href = "/account"),
+              },
+            }
+          );
+        } else {
+          // App was added but deploy failed — user can retry from My Account
+          toast.success(`${result.app?.title || "App"} added to ${orgName}`, {
             action: {
-              label: "My Account",
+              label: "Launch from My Account",
               onClick: () => (window.location.href = "/account"),
             },
-          }
-        );
+          });
+        }
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to add app";
