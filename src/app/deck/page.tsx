@@ -1361,11 +1361,11 @@ const slides = [
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             <span className="font-bold text-theme-primary">$5/app/month</span>{" "}
-            — 50% margin on hosting infrastructure.
+            — 50% margin on hosting costs.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             <span className="font-bold text-theme-secondary">$1/person/app/month</span>{" "}
-            — GO4IT signature pricing.
+            — GO4IT signature pricing. 100% margin.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             A 15-person team with 5 apps pays just{" "}
