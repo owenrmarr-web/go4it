@@ -209,6 +209,12 @@ COPY prisma ./prisma${prismaConfigCopy}
 RUN npm ci --legacy-peer-deps
 
 COPY . .
+# Docker may drop directories with brackets (e.g. [...nextauth]) from the build context.
+# Recreate the NextAuth catch-all route if missing so next build includes it.
+RUN if [ ! -d "src/app/api/auth/[...nextauth]" ]; then \\
+  mkdir -p "src/app/api/auth/[...nextauth]" && \\
+  printf 'import { handlers } from "@/auth";\\nexport const { GET, POST } = handlers;\\n' > "src/app/api/auth/[...nextauth]/route.ts"; \\
+fi
 # Provide a dummy DATABASE_URL at build time so Next.js can collect page data
 ENV DATABASE_URL="file:./build.db"
 RUN npx prisma db push --accept-data-loss 2>&1 || true
