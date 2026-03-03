@@ -1,0 +1,303 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --- Auth models (do not remove) ---
+
+model User {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  password       String
+  name           String?
+  username       String?
+  title          String?
+  image          String?
+  profileColor   String?
+  profileEmoji   String?
+  avatarUrl      String?
+  avatarColor    String?
+  role           String           @default("member") // "admin" or "member"
+  isAssigned     Boolean          @default(true) // false = org member not on this app's plan
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  accounts       Account[]
+  sessions       Session[]
+  accessRequests AccessRequest[]
+
+  // GoLedger relations
+  clients           Client[]
+  invoices          Invoice[]
+  estimates         Estimate[]
+  expenses          Expense[]
+  payments          Payment[]
+  categories        Category[]
+  recurringInvoices RecurringInvoice[]
+  businessSettings  BusinessSettings[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model AccessRequest {
+  id            String   @id @default(cuid())
+  requestedBy   String
+  requestedFor  String   // email of unassigned org member
+  status        String   @default("pending") // pending, approved, dismissed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [requestedBy], references: [id])
+}
+
+// === Add app-specific models below this line ===
+
+model BusinessSettings {
+  id                   String   @id @default("singleton")
+  businessName         String   @default("My Business")
+  logoUrl              String?
+  address              String?
+  city                 String?
+  state                String?
+  zip                  String?
+  phone                String?
+  email                String?
+  website              String?
+  taxRate              Float    @default(0)
+  defaultPaymentTerms  String   @default("NET_30")
+  invoicePrefix        String   @default("INV")
+  estimatePrefix       String   @default("EST")
+  nextInvoiceNumber    Int      @default(1001)
+  nextEstimateNumber   Int      @default(1)
+  paymentInstructions  String?
+  currency             String   @default("USD")
+  stripeSecretKey      String?
+  stripePublishableKey String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id])
+}
+
+model Client {
+  id           String    @id @default(cuid())
+  name         String
+  email        String?
+  phone        String?
+  type         String    @default("BUSINESS") // BUSINESS or INDIVIDUAL
+  role         String    @default("CUSTOMER") // CUSTOMER, VENDOR, or BOTH
+  contactName  String?
+  address      String?
+  city         String?
+  state        String?
+  zip          String?
+  paymentTerms String?   // DUE_ON_RECEIPT, NET_15, NET_30, NET_60
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  invoices     Invoice[]
+  estimates    Estimate[]
+  expenses     Expense[]
+  payments     Payment[]
+  recurringInvoices RecurringInvoice[]
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   // INCOME or EXPENSE
+  color     String?  @default("#9333ea")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  invoices  Invoice[]
+  estimates Estimate[]
+  expenses  Expense[]
+  recurringInvoices RecurringInvoice[]
+
+  @@unique([name, type, userId])
+}
+
+model Invoice {
+  id                 String    @id @default(cuid())
+  invoiceNumber      String    @unique
+  clientId           String
+  client             Client    @relation(fields: [clientId], references: [id])
+  status             String    @default("DRAFT") // DRAFT, SENT, VIEWED, PARTIAL, PAID, OVERDUE, VOID
+  issueDate          DateTime  @default(now())
+  dueDate            DateTime
+  subtotal           Float     @default(0)
+  discountType       String?   // PERCENTAGE or FLAT
+  discountValue      Float     @default(0)
+  discountAmount     Float     @default(0)
+  taxRate            Float     @default(0)
+  taxAmount          Float     @default(0)
+  total              Float     @default(0)
+  amountPaid         Float     @default(0)
+  notes              String?
+  memo               String?
+  poNumber           String?
+  paymentTerms       String
+  viewToken          String    @unique @default(cuid())
+  sentAt             DateTime?
+  paidAt             DateTime?
+  categoryId         String?
+  category           Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  recurringInvoiceId String?
+  recurringInvoice   RecurringInvoice? @relation(fields: [recurringInvoiceId], references: [id], onDelete: SetNull)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  userId             String
+  user               User      @relation(fields: [userId], references: [id])
+  lineItems          InvoiceLineItem[]
+  payments           Payment[]
+}
+
+model InvoiceLineItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float
+  amount      Float
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Estimate {
+  id                 String    @id @default(cuid())
+  estimateNumber     String    @unique
+  clientId           String
+  client             Client    @relation(fields: [clientId], references: [id])
+  status             String    @default("DRAFT") // DRAFT, SENT, ACCEPTED, DECLINED, CONVERTED
+  issueDate          DateTime  @default(now())
+  expiresAt          DateTime?
+  subtotal           Float     @default(0)
+  discountType       String?   // PERCENTAGE or FLAT
+  discountValue      Float     @default(0)
+  discountAmount     Float     @default(0)
+  taxRate            Float     @default(0)
+  taxAmount          Float     @default(0)
+  total              Float     @default(0)
+  notes              String?
+  memo               String?
+  viewToken          String    @unique @default(cuid())
+  convertedInvoiceId String?
+  categoryId         String?
+  category           Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  userId             String
+  user               User      @relation(fields: [userId], references: [id])
+  lineItems          EstimateLineItem[]
+}
+
+model EstimateLineItem {
+  id          String   @id @default(cuid())
+  estimateId  String
+  estimate    Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float
+  amount      Float
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  invoiceId       String
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id])
+  amount          Float
+  method          String   // CASH, CHECK, ACH, CREDIT_CARD, ZELLE, VENMO, STRIPE, OTHER
+  reference       String?
+  stripePaymentId String?
+  date            DateTime @default(now())
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+model Expense {
+  id             String    @id @default(cuid())
+  description    String
+  amount         Float
+  date           DateTime  @default(now())
+  categoryId     String?
+  category       Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  clientId       String?
+  client         Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  vendor         String?
+  method         String?
+  reference      String?
+  notes          String?
+  isBillable     Boolean   @default(false)
+  isReimbursable Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+}
+
+model RecurringInvoice {
+  id         String    @id @default(cuid())
+  clientId   String
+  client     Client    @relation(fields: [clientId], references: [id])
+  frequency  String    // WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY
+  nextDate   DateTime
+  endDate    DateTime?
+  isActive   Boolean   @default(true)
+  templateData String  // JSON: line items, memo, notes, paymentTerms, taxRate
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  invoices   Invoice[]
+}

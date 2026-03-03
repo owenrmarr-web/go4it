@@ -1,7 +1,7 @@
 # Copied by build.sh before Docker build — don't commit duplicates
-prisma/
-playbook/
-prisma.config.ts
+/prisma/
+/playbook/
+/prisma.config.ts
 
 # Build output
 dist/
