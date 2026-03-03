@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface OrgMember {
   id: string;
@@ -95,7 +96,7 @@ export default function DeployConfigModal({
     onConfirm(memberConfig);
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       onClick={onClose}
@@ -222,6 +223,7 @@ export default function DeployConfigModal({
           </button>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
