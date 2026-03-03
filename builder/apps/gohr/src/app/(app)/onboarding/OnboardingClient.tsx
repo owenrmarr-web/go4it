@@ -381,7 +381,7 @@ export default function OnboardingClient({
   /* ---------- Render ---------- */
 
   return (
-    <div className="p-6 space-y-10">
+    <div className="space-y-10">
       {/* ===== CHECKLIST TEMPLATES SECTION ===== */}
       <section>
         <PageHeader

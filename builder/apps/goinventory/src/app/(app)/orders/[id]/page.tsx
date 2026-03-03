@@ -138,15 +138,15 @@ export default function OrderDetailPage({
   };
 
   if (loading) {
-    return <div className="p-6"><p className="text-fg-muted">Loading...</p></div>;
+    return <div className=""><p className="text-fg-muted">Loading...</p></div>;
   }
 
   if (!order) {
-    return <div className="p-6"><p className="text-fg-muted">Order not found</p></div>;
+    return <div className=""><p className="text-fg-muted">Order not found</p></div>;
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title={order.orderNumber}
         action={

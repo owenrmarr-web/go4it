@@ -74,7 +74,7 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="">
       <PageHeader
         title="Purchase Orders"
         action={

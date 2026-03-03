@@ -100,7 +100,7 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="">
       <PageHeader title="Categories" action={<Button onClick={openCreate}>Add Category</Button>} />
 
       <SearchInput value={search} onChange={setSearch} placeholder="Search categories..." className="mb-6 max-w-sm" />

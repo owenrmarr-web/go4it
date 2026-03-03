@@ -157,7 +157,7 @@ export default function ProductsPage() {
   const statuses = ["", "ACTIVE", "INACTIVE"];
 
   return (
-    <div className="p-6">
+    <div className="">
       <PageHeader title="Products" action={<Button onClick={openCreate}>Add Product</Button>} />
 
       <div className="flex flex-col sm:flex-row gap-3 mb-4">

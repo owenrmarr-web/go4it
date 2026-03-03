@@ -468,7 +468,7 @@ export default function TimekeepingClient({
   const pendingCount = timeEntries.filter((e) => e.status === "PENDING").length;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Timekeeping"
         action={

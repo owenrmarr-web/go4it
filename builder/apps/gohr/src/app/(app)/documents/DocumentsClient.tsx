@@ -383,7 +383,7 @@ export default function DocumentsClient({ documents, profiles }: DocumentsClient
   // --- Render ---
 
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Documents"
         action={

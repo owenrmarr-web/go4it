@@ -269,7 +269,7 @@ export default function TimeOffClient({ requests, profiles }: TimeOffClientProps
     "w-full rounded-lg border border-edge-strong bg-input-bg px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent";
 
   return (
-    <div className="p-6">
+    <div>
       <PageHeader
         title="Time Off"
         subtitle="Manage employee time off requests"

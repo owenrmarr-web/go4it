@@ -40,7 +40,7 @@ export default async function SupplierDetailPage({
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title={supplier.name}
         subtitle={supplier.contactName || undefined}

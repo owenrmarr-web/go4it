@@ -44,11 +44,11 @@ export default function SettingsPage() {
   };
 
   if (loading) {
-    return <div className="p-6"><p className="text-fg-muted">Loading...</p></div>;
+    return <div className=""><p className="text-fg-muted">Loading...</p></div>;
   }
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="max-w-2xl">
       <PageHeader title="Settings" />
 
       <div className="bg-card rounded-xl border border-edge p-5 space-y-6">

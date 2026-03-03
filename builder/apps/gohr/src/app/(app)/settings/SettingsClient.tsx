@@ -50,7 +50,7 @@ export default function SettingsClient() {
 
   if (!settings) {
     return (
-      <div className="p-6">
+      <div>
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-elevated rounded w-48" />
           <div className="h-64 bg-elevated rounded-xl" />
@@ -60,7 +60,7 @@ export default function SettingsClient() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Settings"
         action={

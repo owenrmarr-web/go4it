@@ -125,7 +125,7 @@ export default function NewOrderPage() {
   };
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="max-w-4xl">
       <PageHeader
         title="New Purchase Order"
         action={<Button variant="secondary" onClick={() => router.push("/orders")}>Cancel</Button>}

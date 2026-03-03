@@ -116,7 +116,7 @@ export default function SuppliersPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="">
       <PageHeader title="Suppliers" action={<Button onClick={openCreate}>Add Supplier</Button>} />
 
       <SearchInput value={search} onChange={setSearch} placeholder="Search by name or contact..." className="mb-6 max-w-sm" />

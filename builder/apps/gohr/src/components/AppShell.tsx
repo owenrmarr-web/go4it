@@ -58,14 +58,14 @@ export default function AppShell({
             key={item.href}
             href={item.href}
             onClick={() => setDrawerOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-w-0 ${
               isActive(item.href)
                 ? "bg-accent-soft text-accent-fg"
                 : "text-fg-secondary hover:bg-hover hover:text-fg"
             }`}
           >
-            {item.icon}
-            <span>{item.label}</span>
+            <span className="flex-shrink-0">{item.icon}</span>
+            <span className="truncate">{item.label}</span>
             {item.badge !== undefined && item.badge > 0 && (
               <span className="ml-auto bg-accent text-white text-xs rounded-full min-w-[20px] text-center px-1.5 py-0.5">
                 {item.badge}
@@ -123,7 +123,7 @@ export default function AppShell({
   return (
     <div className="flex h-screen">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-64 flex-col bg-card border-r border-edge flex-shrink-0">
+      <aside className="hidden md:flex w-52 flex-col bg-card border-r border-edge flex-shrink-0">
         {sidebarContent}
       </aside>
 
@@ -134,7 +134,7 @@ export default function AppShell({
             className="fixed inset-0 bg-backdrop"
             onClick={() => setDrawerOpen(false)}
           />
-          <aside className="fixed inset-y-0 left-0 w-64 bg-card shadow-xl z-50 animate-slide-in">
+          <aside className="fixed inset-y-0 left-0 w-52 bg-card shadow-xl z-50 animate-slide-in">
             {sidebarContent}
           </aside>
         </div>
@@ -170,7 +170,7 @@ export default function AppShell({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
   );

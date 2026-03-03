@@ -117,7 +117,7 @@ export default function MovementsPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="">
       <PageHeader title="Stock Movements" action={<Button onClick={openCreate}>Record Adjustment</Button>} />
 
       <div className="flex gap-2 mb-4 overflow-x-auto">
