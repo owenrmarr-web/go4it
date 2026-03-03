@@ -257,22 +257,20 @@ export async function DELETE(request: Request, context: RouteContext) {
     select: { flyAppId: true },
   });
 
-  // Destroy the Fly machine if it exists
+  // Destroy the Fly machine if it exists (fire-and-forget, don't block removal)
   if (orgApp?.flyAppId) {
     const BUILDER_URL = process.env.BUILDER_URL;
     const BUILDER_API_KEY = process.env.BUILDER_API_KEY;
     if (BUILDER_URL) {
-      try {
-        const headers: Record<string, string> = {};
-        if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
-        await fetch(`${BUILDER_URL}/machines/${orgApp.flyAppId}`, {
-          method: "DELETE",
-          headers,
-        });
-      } catch (err) {
+      const headers: Record<string, string> = {};
+      if (BUILDER_API_KEY) headers["Authorization"] = `Bearer ${BUILDER_API_KEY}`;
+      fetch(`${BUILDER_URL}/machines/${orgApp.flyAppId}`, {
+        method: "DELETE",
+        headers,
+        signal: AbortSignal.timeout(10000),
+      }).catch((err) => {
         console.error("Failed to destroy Fly machine:", err);
-        // Continue with DB cleanup even if Fly destroy fails
-      }
+      });
     }
   }
 
