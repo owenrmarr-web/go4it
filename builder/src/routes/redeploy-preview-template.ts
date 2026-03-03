@@ -66,7 +66,8 @@ export default async function redeployPreviewTemplateRoute(app: FastifyInstance)
 async function runRedeployPipeline(
   templateApp: string,
   templateDir: string,
-  flyAppName: string
+  flyAppName: string,
+  options: { seedData?: boolean } = {}
 ): Promise<void> {
   const log = (msg: string) => console.log(`[RedeployPreviewTemplate ${flyAppName}] ${msg}`);
 
@@ -105,19 +106,42 @@ async function runRedeployPipeline(
   // 4. Write deploy files
   writeFileSync(path.join(tmpDir, "fly.toml"), generateFlyToml(flyAppName));
   writeFileSync(path.join(tmpDir, "start.sh"), generateStartScript());
-  writeFileSync(path.join(tmpDir, "Dockerfile.fly"), generateDeployDockerfile(isPrisma7));
+
+  let dockerfile = generateDeployDockerfile(isPrisma7);
+
+  // For new previews: inject seed step into Dockerfile so the volume gets sample data
+  const seedPath = path.join(tmpDir, "prisma", "seed.ts");
+  if (options.seedData && existsSync(seedPath)) {
+    log("Injecting seed step into Dockerfile...");
+    // Run seed after db push (creates build.db with sample data)
+    dockerfile = dockerfile.replace(
+      "RUN npm run build",
+      "RUN npx tsx prisma/seed.ts 2>&1 || echo 'Warning: seed failed'\nRUN npm run build"
+    );
+    // Copy seeded DB into runner stage so start.sh can copy it to the volume
+    dockerfile = dockerfile.replace(
+      "COPY --from=builder /app/prisma ./prisma",
+      "COPY --from=builder /app/prisma ./prisma\nCOPY --from=builder /app/build.db ./dev.db"
+    );
+    // Patch start.sh to copy seed DB to volume on first run
+    const startScript = readFileSync(path.join(tmpDir, "start.sh"), "utf-8");
+    const patchedStart = startScript.replace(
+      'echo "Starting application..."',
+      '# Copy seed data to volume on first run\nif [ ! -f /data/app.db ] && [ -f /app/dev.db ]; then\n  echo "Seeding database from dev.db..."\n  cp /app/dev.db /data/app.db\nfi\n\necho "Starting application..."'
+    );
+    writeFileSync(path.join(tmpDir, "start.sh"), patchedStart);
+  } else if (existsSync(seedPath)) {
+    // Remove seed.ts for redeploys — preview already has seed data in its volume
+    unlinkSync(seedPath);
+  }
+
+  writeFileSync(path.join(tmpDir, "Dockerfile.fly"), dockerfile);
   writeFileSync(path.join(tmpDir, ".dockerignore"), generateDockerignore());
 
   // Ensure public/ exists
   const publicDir = path.join(tmpDir, "public");
   if (!existsSync(publicDir)) {
     mkdirSync(publicDir, { recursive: true });
-  }
-
-  // Remove seed.ts (not needed at runtime — preview already has seed data in its volume)
-  const seedPath = path.join(tmpDir, "prisma", "seed.ts");
-  if (existsSync(seedPath)) {
-    unlinkSync(seedPath);
   }
 
   // 5. Upgrade template infrastructure (idempotent patches)
@@ -153,8 +177,8 @@ async function runNewPreviewPipeline(
   const flyAppName = await preCreateFlyInfra(generationId, "preview");
   log(`Fly app created: ${flyAppName}`);
 
-  // 2. Run the standard redeploy pipeline (copy, build, deploy)
-  await runRedeployPipeline(templateApp, templateDir, flyAppName);
+  // 2. Run the standard redeploy pipeline (copy, build, deploy) — with seed data for new previews
+  await runRedeployPipeline(templateApp, templateDir, flyAppName, { seedData: true });
 
   // 3. Capture screenshot
   const flyUrl = `https://${flyAppName}.fly.dev`;
