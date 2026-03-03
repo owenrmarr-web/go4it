@@ -101,7 +101,7 @@ export default function DeployConfigModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative"
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col p-8 relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
@@ -126,7 +126,7 @@ export default function DeployConfigModal({
         </button>
 
         {/* Header */}
-        <h2 className="text-lg font-bold text-gray-900">Configure Access</h2>
+        <h2 className="text-xl font-bold text-gray-900">Configure Access</h2>
         <p className="mt-1 text-sm text-gray-500">
           Select team members who will have access to {appTitle}.
         </p>
@@ -145,30 +145,41 @@ export default function DeployConfigModal({
 
         {/* Member list */}
         {!loading && !error && (
-          <div className="mt-4 max-h-64 overflow-y-auto space-y-1">
+          <div className="mt-5 flex-1 overflow-y-auto min-h-0 space-y-1 border border-gray-100 rounded-xl p-3">
+            {/* Column headers */}
+            <div className="flex items-center gap-4 px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+              <span className="w-5" />
+              <span className="w-10" />
+              <span className="flex-1">Team Member</span>
+              <span className="w-28 text-right">App Role</span>
+            </div>
             {members.map((member) => {
               const userId = member.user.id;
               const isSelected = selected.has(userId);
               return (
                 <div
                   key={userId}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50"
+                  className={`flex items-center gap-4 px-3 py-3 rounded-xl transition-colors cursor-pointer ${
+                    isSelected ? "bg-purple-50/60 hover:bg-purple-50" : "hover:bg-gray-50 opacity-60"
+                  }`}
+                  onClick={() => toggleMember(userId)}
                 >
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleMember(userId)}
-                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-400 cursor-pointer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-400 cursor-pointer"
                   />
                   {/* Avatar */}
                   {member.user.image ? (
                     <img
                       src={member.user.image}
                       alt={member.user.name}
-                      className="w-8 h-8 rounded-full object-cover"
+                      className="w-10 h-10 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold">
+                    <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold">
                       {getInitials(member.user.name)}
                     </div>
                   )}
@@ -187,8 +198,9 @@ export default function DeployConfigModal({
                   <select
                     value={roles[userId] || "MEMBER"}
                     onChange={(e) => setMemberRole(userId, e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
                     disabled={!isSelected}
-                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:opacity-40 disabled:cursor-not-allowed bg-white"
+                    className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:opacity-40 disabled:cursor-not-allowed bg-white w-28"
                   >
                     <option value="MEMBER">Member</option>
                     <option value="ADMIN">Admin</option>
@@ -204,7 +216,7 @@ export default function DeployConfigModal({
           <button
             onClick={handleConfirm}
             disabled={selected.size === 0}
-            className="mt-5 w-full gradient-brand py-2.5 rounded-lg font-bold text-base hover:opacity-90 transition-opacity disabled:opacity-60"
+            className="mt-6 w-full gradient-brand py-3 rounded-xl font-bold text-lg hover:opacity-90 transition-opacity disabled:opacity-60"
           >
             Deploy to {orgName}
           </button>
