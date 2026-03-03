@@ -1081,7 +1081,7 @@ const slides = [
         </h2>
         <div className="space-y-4 md:space-y-6">
           <p className="text-lg md:text-2xl text-gray-700">
-            What if your software tools were tailored to your business AND a fraction of the cost?
+            What if software tools were tailored for each individual business... and offered at a fraction of the cost?
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             GO4IT is a{" "}
@@ -1116,12 +1116,16 @@ const slides = [
         <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
           Our Addressable Market
         </h2>
+        <p className="text-base md:text-xl text-gray-500 -mt-3 md:-mt-6 mb-6 md:mb-10">
+          5–50 person companies are ripe for disruption — large enough to need SaaS tools, nimble enough to adopt new toolsets without overhauling massive IT infrastructure.
+        </p>
 
         {/* Desktop: horizontal flow */}
         <div className="hidden md:flex items-start gap-3">
           <div className="flex flex-col items-center">
             <div className="rounded-2xl flex items-center justify-center text-white font-bold text-2xl" style={{ width: 130, height: 130, backgroundColor: "#f97316" }}>$44B</div>
             <p className="text-sm font-semibold mt-2" style={{ color: "#f97316" }}>US 5–50 SaaS</p>
+            <p className="text-xs text-gray-400">Annual Spend</p>
           </div>
           <div className="flex flex-col items-center flex-1 pt-[42px]">
             <div className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-1">75% industry fit</div>
@@ -1158,7 +1162,7 @@ const slides = [
         {/* Mobile: vertical flow */}
         <div className="flex md:hidden flex-col items-center gap-1">
           {[
-            { value: "$44B", label: "US 5–50 SaaS", color: "#f97316", filter: null },
+            { value: "$44B", label: "US 5–50 SaaS", sublabel: "Annual Spend", color: "#f97316", filter: null },
             { value: "$33B", label: "Industry Fit", color: "#e8527a", filter: { pct: "75%", name: "industry fit", yes: "Retail, services, tech", no: "Healthcare, government", strategy: "Focus on industries where teams adapt quickly — avoid sectors with burdensome compliance and vendor lock-in." } },
             { value: "$20B", label: "GO4IT SAM", color: null, gradient: true, filter: { pct: "60%", name: "addressable", yes: "CRM, PM, messaging, HR", no: "Payments, storage, security", strategy: "Focus on the tools teams use daily — avoid sectors with entrenched infrastructure." } },
           ].map((b, i) => (
@@ -1187,6 +1191,7 @@ const slides = [
               <p className={`text-xs font-semibold mt-1 ${b.gradient ? "gradient-brand-text font-bold" : ""}`} style={b.color ? { color: b.color } : undefined}>
                 {b.label}
               </p>
+              {b.sublabel && <p className="text-[9px] text-gray-400">{b.sublabel}</p>}
             </div>
           ))}
         </div>
@@ -1352,7 +1357,7 @@ const slides = [
           <p className="text-lg md:text-2xl text-gray-700">
             Apps are{" "}
             <span className="font-bold gradient-brand-text">free to create</span>
-            .
+            . The best user creations rise to the top — supplemented by GO4IT&apos;s suite of pre-made apps for popular use cases.
           </p>
           <p className="text-lg md:text-2xl text-gray-700">
             <span className="font-bold text-theme-primary">$5/app/month</span>{" "}
