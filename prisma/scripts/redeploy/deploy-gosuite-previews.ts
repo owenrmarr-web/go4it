@@ -2,10 +2,8 @@ import "dotenv/config";
 
 /**
  * Deploy preview machines for Go Suite apps that don't have one yet.
- * Calls the builder's /deploy-preview endpoint for each.
- *
- * Before calling the builder, updates GeneratedApp.sourceDir to the correct
- * absolute path on the builder machine (/app/apps/{dirName}/).
+ * Calls the builder's /redeploy-preview-template endpoint with generationId
+ * to create Fly infrastructure and deploy from the template source.
  *
  * Usage:
  *   DATABASE_URL="libsql://..." TURSO_AUTH_TOKEN="..." BUILDER_API_KEY="..." npx tsx prisma/scripts/redeploy/deploy-gosuite-previews.ts
@@ -39,7 +37,6 @@ async function main() {
     SELECT
       ga.id as generationId,
       ga.previewFlyAppId,
-      ga.sourceDir,
       a.title as appTitle,
       a.id as appId
     FROM GeneratedApp ga
@@ -75,24 +72,15 @@ async function main() {
       continue;
     }
 
-    // Update sourceDir to the absolute path on the builder machine
-    const builderSourceDir = `/app/apps/${dirName}`;
-    await client.execute({
-      sql: `UPDATE GeneratedApp SET sourceDir = ? WHERE id = ?`,
-      args: [builderSourceDir, generationId],
-    });
-    console.log(`${title}: sourceDir → ${builderSourceDir}`);
-
-    // Call builder to deploy preview
-    console.log(`${title}: triggering preview deployment...`);
+    console.log(`${title}: triggering preview deployment (template: ${dirName})...`);
     try {
-      const res = await fetch(`${BUILDER_URL}/deploy-preview`, {
+      const res = await fetch(`${BUILDER_URL}/redeploy-preview-template`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${BUILDER_API_KEY}`,
         },
-        body: JSON.stringify({ generationId }),
+        body: JSON.stringify({ templateApp: dirName, generationId }),
       });
 
       if (res.ok) {

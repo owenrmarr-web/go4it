@@ -11,26 +11,35 @@ import {
   generateStartScript,
   generateDockerignore,
   upgradeTemplateInfra,
+  preCreateFlyInfra,
 } from "../lib/fly.js";
+import { captureScreenshot } from "../lib/screenshot.js";
+import prisma from "../lib/prisma.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Redeploy a preview Fly machine from a Go Suite template source.
- * This rebuilds the preview app with the latest template code (dark mode fixes, new endpoints, etc.)
- * without any OrgApp involvement.
+ * Deploy or redeploy a preview Fly machine from a Go Suite template source.
+ *
+ * - Redeploy existing: { templateApp, flyAppName }
+ * - Create new preview: { templateApp, generationId } — creates Fly app, deploys, updates DB
  */
 export default async function redeployPreviewTemplateRoute(app: FastifyInstance) {
   app.post<{
     Body: {
       templateApp: string;
-      flyAppName: string;
+      flyAppName?: string;
+      generationId?: string;
     };
   }>("/redeploy-preview-template", async (request, reply) => {
-    const { templateApp, flyAppName } = request.body;
+    const { templateApp, flyAppName, generationId } = request.body;
 
-    if (!templateApp || !flyAppName) {
-      return reply.status(400).send({ error: "templateApp and flyAppName are required" });
+    if (!templateApp) {
+      return reply.status(400).send({ error: "templateApp is required" });
+    }
+
+    if (!flyAppName && !generationId) {
+      return reply.status(400).send({ error: "Either flyAppName or generationId is required" });
     }
 
     const templateDir = path.resolve(__dirname, "../../apps", templateApp);
@@ -38,12 +47,19 @@ export default async function redeployPreviewTemplateRoute(app: FastifyInstance)
       return reply.status(404).send({ error: `Template "${templateApp}" not found` });
     }
 
-    // Fire and forget
-    runRedeployPipeline(templateApp, templateDir, flyAppName).catch((err) => {
-      console.error(`[RedeployPreviewTemplate ${flyAppName}] Unhandled error:`, err);
-    });
-
-    return reply.status(202).send({ status: "accepted", flyAppName, templateApp });
+    if (flyAppName) {
+      // Redeploy to existing Fly app
+      runRedeployPipeline(templateApp, templateDir, flyAppName).catch((err) => {
+        console.error(`[RedeployPreviewTemplate ${flyAppName}] Unhandled error:`, err);
+      });
+      return reply.status(202).send({ status: "accepted", flyAppName, templateApp });
+    } else {
+      // Create new preview from template
+      runNewPreviewPipeline(templateApp, templateDir, generationId!).catch((err) => {
+        console.error(`[NewPreviewTemplate ${generationId}] Unhandled error:`, err);
+      });
+      return reply.status(202).send({ status: "accepted", generationId, templateApp });
+    }
   });
 }
 
@@ -123,4 +139,63 @@ async function runRedeployPipeline(
   }
 
   log(`Live at https://${flyAppName}.fly.dev`);
+}
+
+async function runNewPreviewPipeline(
+  templateApp: string,
+  templateDir: string,
+  generationId: string
+): Promise<void> {
+  const log = (msg: string) => console.log(`[NewPreviewTemplate ${generationId}] ${msg}`);
+
+  // 1. Create Fly infrastructure
+  log("Creating Fly infrastructure...");
+  const flyAppName = await preCreateFlyInfra(generationId, "preview");
+  log(`Fly app created: ${flyAppName}`);
+
+  // 2. Run the standard redeploy pipeline (copy, build, deploy)
+  await runRedeployPipeline(templateApp, templateDir, flyAppName);
+
+  // 3. Capture screenshot
+  const flyUrl = `https://${flyAppName}.fly.dev`;
+  let screenshot: string | null = null;
+  try {
+    log("Capturing screenshot...");
+    await new Promise((r) => setTimeout(r, 5000));
+    screenshot = await captureScreenshot(flyUrl);
+    log("Screenshot captured");
+  } catch (err) {
+    log(`Screenshot failed (non-fatal): ${(err as Error).message?.slice(0, 100)}`);
+  }
+
+  // 4. Update GeneratedApp with preview info
+  const gen = await prisma.generatedApp.findUnique({
+    where: { id: generationId },
+    select: { appId: true },
+  });
+
+  await prisma.generatedApp.update({
+    where: { id: generationId },
+    data: {
+      previewFlyAppId: flyAppName,
+      previewFlyUrl: flyUrl,
+      ...(screenshot ? { screenshot } : {}),
+    },
+  });
+
+  // 5. Update App record with preview URL and screenshot
+  if (gen?.appId) {
+    await prisma.app.update({
+      where: { id: gen.appId },
+      data: {
+        previewUrl: flyUrl,
+        previewFlyAppId: flyAppName,
+        previewRebuilding: false,
+        ...(screenshot ? { screenshot } : {}),
+      },
+    });
+    log(`App record ${gen.appId} updated`);
+  }
+
+  log("New preview pipeline complete!");
 }
