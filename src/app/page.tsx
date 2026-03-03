@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import Header from "@/components/Header";
 import SearchBar from "@/components/SearchBar";
 import AppCard, { type UserOrg } from "@/components/AppCard";
+import type { MemberConfig } from "@/components/DeployConfigModal";
 import AuthModal from "@/components/AuthModal";
 import { useInteractions } from "@/hooks/useInteractions";
 import type { App } from "@/types";
@@ -43,12 +44,15 @@ export default function Home() {
   }, [session]);
 
   const handleAddToOrg = useCallback(
-    async (orgSlug: string, appId: string) => {
+    async (orgSlug: string, appId: string, memberConfig?: MemberConfig[]) => {
       try {
         const res = await fetch(`/api/organizations/${orgSlug}/apps`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appId }),
+          body: JSON.stringify({
+            appId,
+            ...(memberConfig ? { members: memberConfig } : {}),
+          }),
         });
 
         if (!res.ok) {
@@ -69,12 +73,15 @@ export default function Home() {
           )
         );
 
-        toast.success(`${result.app?.title || "App"} added to ${orgName}`, {
-          action: {
-            label: "My Account",
-            onClick: () => (window.location.href = "/account"),
-          },
-        });
+        toast.success(
+          `Deploying ${result.app?.title || "App"} to ${orgName} — fully live in 1-2 minutes`,
+          {
+            action: {
+              label: "My Account",
+              onClick: () => (window.location.href = "/account"),
+            },
+          }
+        );
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to add app";

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import AppCard, { type UserOrg } from "@/components/AppCard";
+import type { MemberConfig } from "@/components/DeployConfigModal";
 import { useInteractions } from "@/hooks/useInteractions";
 import type { App } from "@/types";
 import { extractColorsFromImage } from "@/lib/colorExtractor";
@@ -373,12 +374,15 @@ function AccountPage() {
   // ─── App management handlers ────────────────────────────
 
   const handleAddToOrg = useCallback(
-    async (orgSlug: string, appId: string) => {
+    async (orgSlug: string, appId: string, memberConfig?: MemberConfig[]) => {
       try {
         const res = await fetch(`/api/organizations/${orgSlug}/apps`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appId }),
+          body: JSON.stringify({
+            appId,
+            ...(memberConfig ? { members: memberConfig } : {}),
+          }),
         });
 
         if (!res.ok) {
@@ -386,7 +390,7 @@ function AccountPage() {
           throw new Error(data.error || "Failed to add app");
         }
 
-        toast.success("App added!");
+        toast.success("Deploying — fully live in 1-2 minutes");
         fetchOrgData();
       } catch (err) {
         const message =

@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import type { App } from "@/types";
+import DeployConfigModal, { type MemberConfig } from "./DeployConfigModal";
 
 export interface UserOrg {
   id: string;
@@ -17,7 +18,7 @@ interface AppCardProps {
   isHearted: boolean;
   onToggleHeart: () => void;
   orgs: UserOrg[];
-  onAddToOrg: (orgSlug: string, appId: string) => void;
+  onAddToOrg: (orgSlug: string, appId: string, memberConfig?: MemberConfig[]) => void;
   onAuthRequired?: () => void;
 }
 
@@ -48,6 +49,7 @@ export default function AppCard({
 }: AppCardProps) {
   const { data: session } = useSession();
   const [showOrgPicker, setShowOrgPicker] = useState(false);
+  const [deployModalOrg, setDeployModalOrg] = useState<UserOrg | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -96,7 +98,7 @@ export default function AppCard({
         toast(`${app.title} is already in ${org.name}`);
         return;
       }
-      onAddToOrg(org.slug, app.id);
+      setDeployModalOrg(org);
       return;
     }
 
@@ -110,7 +112,7 @@ export default function AppCard({
       toast(`${app.title} is already in ${org.name}`);
       return;
     }
-    onAddToOrg(org.slug, app.id);
+    setDeployModalOrg(org);
   };
 
   const isAddedToAny = orgs.some((org) => org.appIds.includes(app.id));
@@ -267,6 +269,19 @@ export default function AppCard({
           {app.description}
         </p>
       </div>
+
+      {deployModalOrg && (
+        <DeployConfigModal
+          orgSlug={deployModalOrg.slug}
+          orgName={deployModalOrg.name}
+          appTitle={app.title}
+          onConfirm={(memberConfig) => {
+            onAddToOrg(deployModalOrg.slug, app.id, memberConfig);
+            setDeployModalOrg(null);
+          }}
+          onClose={() => setDeployModalOrg(null)}
+        />
+      )}
     </div>
   );
 }

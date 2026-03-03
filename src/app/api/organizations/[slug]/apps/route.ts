@@ -74,7 +74,7 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const { appId } = await request.json();
+  const { appId, members: memberConfig } = await request.json();
   if (!appId) {
     return NextResponse.json({ error: "appId is required" }, { status: 400 });
   }
@@ -128,15 +128,25 @@ export async function POST(request: Request, context: RouteContext) {
         },
       });
 
-      // Auto-add all org members as OrgAppMembers
+      // Determine which members to assign
+      const memberConfigMap = memberConfig && Array.isArray(memberConfig)
+        ? new Map(memberConfig.map((m: { userId: string; role?: string }) => [m.userId, m.role || "MEMBER"]))
+        : null;
+      const assignedUserIds = memberConfigMap
+        ? new Set(memberConfigMap.keys())
+        : new Set(allMembers.map((m) => m.userId));
+
+      // Create OrgAppMember records for selected members
       await Promise.all(
-        allMembers.map((m) =>
-          prisma.orgAppMember.upsert({
-            where: { orgAppId_userId: { orgAppId: orgApp.id, userId: m.userId } },
-            create: { orgAppId: orgApp.id, userId: m.userId },
-            update: {},
-          })
-        )
+        allMembers
+          .filter((m) => assignedUserIds.has(m.userId))
+          .map((m) =>
+            prisma.orgAppMember.upsert({
+              where: { orgAppId_userId: { orgAppId: orgApp.id, userId: m.userId } },
+              create: { orgAppId: orgApp.id, userId: m.userId },
+              update: {},
+            })
+          )
       );
 
       // Check if app has source and trigger deploy
@@ -163,7 +173,8 @@ export async function POST(request: Request, context: RouteContext) {
           .map((m) => ({
             name: m.user.name || m.user.email!,
             email: m.user.email!,
-            assigned: true,
+            assigned: assignedUserIds.has(m.userId),
+            appRole: memberConfigMap?.get(m.userId) || "MEMBER",
             username: m.user.username || null,
             title: m.title || null,
             image: m.user.image || null,
