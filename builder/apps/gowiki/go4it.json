@@ -1,0 +1,7 @@
+{
+  "name": "GoWiki",
+  "description": "Internal knowledge base with spaces, pages, and version history for team documentation and SOPs.",
+  "category": "Knowledge Base",
+  "icon": "📚",
+  "tags": ["wiki", "knowledge-base", "documentation", "sops", "team-wiki", "small-business"]
+}

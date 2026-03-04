@@ -1,0 +1,208 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --- Auth models (do not remove) ---
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  password       String
+  name           String?
+  username       String?
+  title          String?
+  image          String? // Profile image from platform (base64)
+  profileColor   String? // Hex color for avatar bg (e.g. "#9333EA")
+  profileEmoji   String? // Emoji avatar (e.g. "🚀")
+  role           String          @default("member") // "admin" or "member"
+  isAssigned     Boolean         @default(true) // false = org member not on this app's plan
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  accounts       Account[]
+  sessions       Session[]
+  accessRequests AccessRequest[]
+  clients        Client[]
+  invoices       Invoice[]
+  invoiceItems   InvoiceItem[]
+  estimates      Estimate[]
+  estimateItems  EstimateItem[]
+  payments       Payment[]
+  expenses       Expense[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model AccessRequest {
+  id           String   @id @default(cuid())
+  requestedBy  String
+  requestedFor String // email of unassigned org member
+  status       String   @default("pending") // pending, approved, dismissed
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [requestedBy], references: [id])
+}
+
+// === Add app-specific models below this line ===
+
+model Client {
+  id        String     @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
+  notes     String?
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  invoices  Invoice[]
+  estimates Estimate[]
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String
+  clientId      String
+  client        Client        @relation(fields: [clientId], references: [id])
+  status        String        @default("DRAFT")
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime
+  paidDate      DateTime?
+  subtotal      Float         @default(0)
+  taxRate       Float         @default(0)
+  taxAmount     Float         @default(0)
+  total         Float         @default(0)
+  amountPaid    Float         @default(0)
+  notes         String?
+  terms         String?
+  estimateId    String?
+  estimate      Estimate?     @relation(fields: [estimateId], references: [id])
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  items         InvoiceItem[]
+  payments      Payment[]
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float
+  amount      Float
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Estimate {
+  id             String         @id @default(cuid())
+  estimateNumber String
+  clientId       String
+  client         Client         @relation(fields: [clientId], references: [id])
+  status         String         @default("DRAFT")
+  issueDate      DateTime       @default(now())
+  expiresAt      DateTime?
+  subtotal       Float          @default(0)
+  taxRate        Float          @default(0)
+  taxAmount      Float          @default(0)
+  total          Float          @default(0)
+  notes          String?
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  items          EstimateItem[]
+  invoices       Invoice[]
+}
+
+model EstimateItem {
+  id          String   @id @default(cuid())
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float
+  amount      Float
+  estimateId  String
+  estimate    Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  amount      Float
+  paymentDate DateTime @default(now())
+  method      String   @default("OTHER")
+  reference   String?
+  notes       String?
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Expense {
+  id             String   @id @default(cuid())
+  description    String
+  amount         Float
+  date           DateTime @default(now())
+  category       String   @default("GENERAL")
+  vendor         String?
+  reference      String?
+  notes          String?
+  isReimbursable Boolean  @default(false)
+  isReimbursed   Boolean  @default(false)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

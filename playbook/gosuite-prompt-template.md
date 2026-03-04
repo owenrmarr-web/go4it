@@ -1,155 +1,138 @@
-# Go Suite App Spec Template
+# Go Suite App Spec Format
 
-Every Go Suite app is generated from a spec file following this format. The spec is placed as `SPEC.md` in the workspace alongside `playbook/CLAUDE.md` (the system prompt).
+Every Go Suite app spec follows the structure below. Place completed specs in `playbook/specs/{appname}.md`.
 
-The playbook handles **how** to build (styling, components, CRUD patterns, protected files). The spec handles **what** to build (domain model, features, boundaries).
+The spec is fed to Claude Code CLI alongside `playbook/CLAUDE.md` (the system prompt). The playbook handles **how** to build (styling, components, CRUD patterns, protected files). The spec handles **what** to build (domain model, features, boundaries).
 
 ---
 
-## Required Sections
+## Template
 
-### 1. Identity
+````markdown
+# {AppName} — App Spec
 
-```
-App Name: GoExample
-Emoji: 📦
-Category: Inventory / Supply Chain
-Tagline: Product inventory tracking with stock levels, suppliers, and purchase orders
-Tags: inventory, products, stock, suppliers, purchase-orders, small-business
-```
-
-Used to populate `go4it.json`, `package.json`, favicon, and `AppShell` config.
-
-### 2. Domain Boundaries
-
-What this app owns and explicitly does NOT own. Prevents feature creep and overlap with other Go Suite apps.
+## 1. Identity
 
 ```
-OWNS: Products, categories, stock levels, suppliers, purchase orders, stock movements
-DOES NOT OWN: Customer invoicing (GoInvoice), expense tracking (GoInvoice), deal tracking (GoCRM)
+App Name: {AppName}
+Emoji: {single emoji}
+Category: {category from 12-app lineup}
+Tagline: {one-sentence description, generic — no company names}
+Tags: {comma-separated lowercase tags for marketplace search}
 ```
 
-### 3. Entities
-
-Prisma models with field tables. Every model must follow playbook schema rules (id, createdAt, updatedAt, userId + User relation).
-
-Format per entity:
+## 2. Domain Boundaries
 
 ```
-#### ModelName
+OWNS: {what this app is responsible for — its core entities and workflows}
+DOES NOT OWN: {what belongs to other Go Suite apps — reference the app name in parens}
+```
+
+## 3. Entities
+
+NOTE: Every model inherits `id String @id @default(cuid())`, `createdAt DateTime @default(now())`, `updatedAt DateTime @updatedAt`, and `userId String` + `user User @relation(...)` from the playbook. These are omitted from field tables below.
+
+#### {ModelName}
+
+{Optional prose description if the model has special behavior (e.g., one-to-one with User, immutable audit log).}
 
 | Field | Type | Notes |
 |-------|------|-------|
-| name | String | Required |
-| status | String | @default("ACTIVE"), values: ACTIVE, INACTIVE |
-| categoryId | String? | FK → Category |
-| ... | ... | ... |
+| {field} | {Prisma type} | {constraints, default, values for enums, FK references} |
 
-Relations: Category (many-to-one), StockMovement (one-to-many)
+Relations: {list related models and cardinality}
+
+{Repeat for each model.}
+
+#### User relation fields to add
+
+```
+{fieldName}  {ModelName}[]
+{fieldName}  {ModelName}?   // if one-to-one
+{fieldName}  {ModelName}[]  @relation("NamedRelation")  // if multiple relations to User
 ```
 
-### 4. Navigation
-
-Exact nav items array for `src/app/(app)/layout.tsx`:
+## 4. Navigation
 
 ```
 navItems:
-  - Dashboard    /           HomeIcon
-  - Products     /products   LayersIcon
-  - Categories   /categories TagIcon
-  - Suppliers    /suppliers  BuildingIcon
-  - Orders       /orders     ReceiptIcon
-  - Movements    /movements  ListIcon
-  - Settings     /settings   CogIcon
+  - {Label}    {href}    {IconName from Icons.tsx}
 ```
 
-Must use icons from the template's `Icons.tsx` (see playbook for available icons).
+## 5. Features
 
-### 5. Features
+#### {Page Name} (`{route}`)
 
-Ordered list of pages/views with exact behavior. Each feature maps to a nav item and route.
+{Describe the page in detail:}
+- **List view:** columns, search, filters (dropdowns/tabs), sort options
+- **Detail view** (`{route}/[id]`): what info to show, related data sections
+- **Create/Edit** (modal or page): fields with * for required, dropdowns, defaults
+- **Delete:** ConfirmDialog, cascade behavior or warnings
 
-Format per feature:
+{For dashboards, describe summary cards, tables, and widgets.}
 
+{Note any intentional exceptions to standard CRUD (e.g., immutable audit logs).}
+
+## 6. Status Workflows
+
+#### {Entity} Status
 ```
-#### Dashboard (`/`)
-
-- Summary cards: total products, low stock alerts, pending orders, total suppliers
-- Recent activity: last 10 stock movements
-- Low stock table: products where quantity < reorderPoint
+{STATUS_A} ({badge variant}/{color}) → {STATUS_B} ({badge variant}/{color})
+{STATUS_A} → {STATUS_C}
 ```
+{Notes on transition rules — what triggers each transition, which are final.}
 
-```
-#### Products (`/products`)
+## 7. Seed Data
 
-List view:
-- Table with columns: name, SKU, category, quantity, reorder point, unit price, status
-- Search by name or SKU
-- Filter by category (dropdown) and status (tabs: All, Active, Inactive)
-- Sort by name, quantity, price, updated date
+**Business:** "{Fictional business name}" — {one-line description}
 
-Detail view (`/products/[id]`):
-- Product info card with edit button
-- Stock movement history table
-- Purchase order history
+- **{N} {Entity}:** {distribution of statuses, realistic field values, notable scenarios}
+- {Repeat for each entity.}
+- {Call out specific scenarios: items that demo empty states, alerts, edge cases.}
 
-Create/Edit (modal):
-- Fields: name*, SKU*, categoryId, description, unitPrice*, quantity, reorderPoint, status
-- * = required
-
-Delete: ConfirmDialog
-```
-
-### 6. Status Workflows
-
-State machines with badge colors for entities that have status fields.
-
-```
-#### Product Status
-ACTIVE (success/green) → INACTIVE (default/gray)
-INACTIVE → ACTIVE
-
-#### Purchase Order Status
-DRAFT (default/gray) → SUBMITTED (info/blue) → RECEIVED (success/green)
-DRAFT → CANCELLED (danger/red)
-SUBMITTED → CANCELLED
-```
-
-Map badge variants: success = green, warning = amber, info = blue, danger = red, default = gray.
-
-### 7. Seed Data
-
-Fictional business scenario with exact record counts. All records owned by admin user (userId = "preview").
-
-```
-Business: "Summit Outdoor Supply" — outdoor recreation equipment retailer
-
-- 5 Categories: Camping, Climbing, Cycling, Water Sports, Winter Sports
-- 12 Products: mix of statuses, some below reorder point
-- 4 Suppliers: with different specialties
-- 8 Stock Movements: mix of types (received, sold, adjusted, returned)
-- 3 Purchase Orders: one DRAFT, one SUBMITTED, one RECEIVED with line items
-```
-
-### 8. AI Query Handlers
-
-Cross-app data endpoints for `/api/ai-query`. Each handler name follows the `verb_model` convention.
+## 8. AI Query Handlers
 
 ```
 Handlers:
-  - list_products: Recent products with category, quantity, status
-  - low_stock: Products where quantity < reorderPoint
-  - list_suppliers: All suppliers with contact info
-  - recent_orders: Purchase orders from last 30 days with status
+  - {handler_name}: {what it returns — include key fields}
 ```
+````
 
 ---
 
-## Notes
+## Writing Guidelines
 
-- Do NOT include auth models (User, Account, Session, etc.) — they're in the template already. Only list fields you're adding to User (relation arrays).
-- Do NOT specify styling details — the playbook's design system handles that.
-- Do NOT specify component implementations — the playbook's pre-built components handle that.
-- DO specify exact field names, types, and enum values — these remove ambiguity.
-- DO specify exact nav items and their icons — this ensures consistency across apps.
-- DO specify exact seed data counts and scenario — this ensures demo quality.
+1. **Be specific about field values.** List all enum values (e.g., `values: DRAFT, SUBMITTED, RECEIVED`). Specify defaults. This removes ambiguity for the generator.
+
+2. **Describe UI behavior, not implementation.** Say "filter by status (tabs: All, Pending, Approved)" not "use useState with a statusFilter variable." The playbook handles implementation patterns.
+
+3. **Call out exceptions explicitly.** If an entity intentionally lacks delete (e.g., audit logs), say so and explain why. The playbook requires full CRUD by default.
+
+4. **Seed data should demo features.** Include records that trigger alerts (low stock, pending approvals), show empty states (no records in one category), and exercise status workflows (at least one record per status).
+
+5. **Domain boundaries prevent feature overlap.** Every spec must state what it DOES NOT own. This keeps apps focused and avoids duplicate functionality across the suite.
+
+6. **Use the User table for team members.** Per playbook rules, never create separate Employee/Staff/TeamMember models. Build relationships pointing to User. The `isAssigned` flag distinguishes active members.
+
+7. **AI query handlers follow `verb_model` naming.** Every main entity gets at least a `list_` handler. Add filtered handlers for common questions (e.g., `overdue_invoices`, `pending_timeoff`).
+
+8. **Navigation uses icons from `src/components/Icons.tsx`.** Available icons: HomeIcon, UsersIcon, CalendarIcon, ChartBarIcon, CogIcon, EnvelopeIcon, BriefcaseIcon, DocumentIcon, CurrencyIcon, TagIcon, ChatBubbleIcon, BuildingIcon, ClockIcon, BellIcon, CheckCircleIcon, FolderIcon, ListIcon, PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, ReceiptIcon, TargetIcon, MapPinIcon, LayersIcon, PhoneIcon, InboxIcon.
+
+---
+
+## 12-App Lineup & Feature Boundaries
+
+| # | App | Category | Icon | Owns | Does NOT Own |
+|---|-----|----------|------|------|-------------|
+| 1 | GoCRM | CRM / Sales | 🤝 | Contacts, companies, deals, sales pipeline, activity log | Scheduling, invoicing, project tasks |
+| 2 | GoProject | Project Management | 📋 | Projects, tasks, milestones, assignments, workload | CRM deals, timekeeping/hours, messaging |
+| 3 | GoSchedule | Scheduling / Bookings | 📅 | Appointments, provider availability, customer booking page | Employee time-off, project deadlines |
+| 4 | GoInventory | Inventory / Supply Chain | 📦 | Products, categories, stock levels, suppliers, purchase orders, stock movements | Customer invoicing, expense tracking |
+| 5 | GoInvoice | Invoicing / Finance | 💰 | Invoices, estimates, payments, expenses, AR/AP, financial reports | Inventory stock, employee pay, deal tracking |
+| 6 | GoSupport | Support / Helpdesk | 🎧 | Tickets, knowledge base articles, SLAs, CSAT | Internal messaging, internal wiki |
+| 7 | GoHR | People / HR | 👥 | Employee profiles, departments, time-off, onboarding, documents, timekeeping, pay tracking, announcements | Payroll processing, customer contacts, internal chat |
+| 8 | GoChat | Internal Chat | 💬 | Channels, DMs, threads, file sharing, AI coworker | Email campaigns, support tickets |
+| 9 | GoMailer | Marketing / Email | 📧 | Email campaigns, newsletters, contact lists, templates, send history | Customer contacts/deals, internal messaging |
+| 10 | GoDocs | Documents | 📄 | Contracts, proposals, document storage, folders, version tracking | Internal SOPs/wiki, employee HR docs |
+| 11 | GoForms | Forms / Surveys | 📝 | Form builder, surveys, checklists, submission tracking, response analytics | Support tickets, employee onboarding forms |
+| 12 | GoWiki | Knowledge Base | 📚 | Internal SOPs, training docs, team wiki, categories, search | Customer-facing KB, contracts/proposals |
