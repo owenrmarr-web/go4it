@@ -113,8 +113,8 @@ export default {
         }
         session.user.id = token.id as string;
         session.user.role = token.role as string;
-        (session.user as any).profileColor = token.profileColor || null;
-        (session.user as any).profileEmoji = token.profileEmoji || null;
+        session.user.profileColor = (token.profileColor as string) || null;
+        session.user.profileEmoji = (token.profileEmoji as string) || null;
       }
       return session;
     },

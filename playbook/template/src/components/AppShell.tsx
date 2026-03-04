@@ -82,8 +82,8 @@ export default function AppShell({
             <UserAvatar
               name={user.name || user.email || "User"}
               size="sm"
-              profileColor={(user as any).profileColor}
-              profileEmoji={(user as any).profileEmoji}
+              profileColor={user.profileColor}
+              profileEmoji={user.profileEmoji}
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-fg truncate">
