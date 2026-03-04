@@ -109,10 +109,16 @@ All in `prisma/scripts/redeploy/`. Run with `npx tsx <script>` with Turso env va
 | `reset-previews.ts` | Clears preview fields in DB for specific apps | After manually destroying preview machines |
 
 ### Batch update workflow (template change)
-1. Make changes in `builder/apps/{name}/` or `playbook/template/`
-2. `cd builder && flyctl deploy` (redeploy builder service)
-3. `npx tsx prisma/scripts/redeploy/redeploy-previews.ts` (update store previews)
-4. `npx tsx prisma/scripts/redeploy/redeploy-apps.ts` (update production apps)
+1. Make changes in `builder/apps/{name}/` and/or `playbook/template/`
+2. Commit and push to main
+3. `cd builder && bash build.sh && flyctl deploy --remote-only` (rebuild builder — `build.sh` copies prisma schema + playbook into the builder directory, then `flyctl deploy` bakes updated app sources into the Docker image)
+4. `npx tsx prisma/scripts/redeploy/redeploy-previews.ts` (update store previews)
+5. `npx tsx prisma/scripts/redeploy/redeploy-apps.ts` (update production apps)
+6. **If you changed fields that come from the platform** (e.g. user profile fields like `profileColor`), also run `npx tsx prisma/scripts/redeploy/sync-all-apps.ts` to push fresh data
+
+**Important:** Step 3 is required because the builder's Docker image bakes Go Suite app sources at build time (`COPY apps ./apps` in the Dockerfile). Without rebuilding the builder, redeploys will use the old source. Pushing to GitHub only auto-deploys the platform (Vercel) — the builder must be manually redeployed.
+
+For UI-only changes (CSS, layout, component markup), steps 1-5 are sufficient. The SQLite DB on each app's volume is preserved across redeploys — `prisma db push` in `start.sh` only applies schema diffs.
 
 ---
 
