@@ -253,6 +253,49 @@ function AccountPage() {
     }
   }, []);
 
+  // Auto-connect to SSE for any app currently deploying (e.g. triggered from marketplace)
+  useEffect(() => {
+    if (!org || deployingAppId) return; // skip if already tracking a deploy
+    const deployingApp = orgApps.find((a) => a.status === "DEPLOYING");
+    if (!deployingApp) return;
+
+    setDeployingAppId(deployingApp.appId);
+    setDeployMessage("Deploying...");
+
+    const eventSource = new EventSource(
+      `/api/organizations/${org.slug}/apps/${deployingApp.appId}/deploy/stream`
+    );
+
+    eventSource.onmessage = (event) => {
+      try {
+        const progress = JSON.parse(event.data);
+        setDeployMessage(progress.message);
+
+        if (progress.stage === "running") {
+          eventSource.close();
+          setDeployingAppId(null);
+          toast.success("App deployed successfully!");
+          fetchOrgData();
+        } else if (progress.stage === "failed") {
+          eventSource.close();
+          setDeployingAppId(null);
+          toast.error(progress.error || "Deployment failed");
+          fetchOrgData();
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+      setDeployingAppId(null);
+      fetchOrgData();
+    };
+
+    return () => eventSource.close();
+  }, [org, orgApps, deployingAppId, fetchOrgData]);
+
   // Apply org theme colors to CSS variables (mirrors ThemeProvider logic)
   const applyOrgTheme = useCallback((themeColors: { primary: string; secondary: string; accent: string } | null) => {
     const root = document.documentElement;
@@ -1351,7 +1394,7 @@ function AccountPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 sm:gap-3">
                           {deployingAppId === orgApp.appId ? (
                             <div className="flex items-center gap-2">
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600" />
@@ -1430,7 +1473,7 @@ function AccountPage() {
                                     orgApp.app.title
                                   )
                                 }
-                                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors shrink-0"
                                 title="Remove app"
                               >
                                 <svg
