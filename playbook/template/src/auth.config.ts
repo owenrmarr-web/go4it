@@ -51,7 +51,7 @@ export default {
           const user = await prisma.user.findUnique({ where: { email } });
           if (!user || !user.isAssigned) return null;
 
-          return { id: user.id, email: user.email, name: user.name, role: user.role };
+          return { id: user.id, email: user.email, name: user.name, role: user.role, profileColor: user.profileColor, profileEmoji: user.profileEmoji };
         }
 
         // Standard password flow
@@ -73,7 +73,7 @@ export default {
 
         if (!valid) return null;
 
-        return { id: user.id, email: user.email, name: user.name, role: user.role };
+        return { id: user.id, email: user.email, name: user.name, role: user.role, profileColor: user.profileColor, profileEmoji: user.profileEmoji };
       },
     }),
   ],
@@ -84,18 +84,22 @@ export default {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.profileColor = user.profileColor;
+        token.profileEmoji = user.profileEmoji;
       }
       // Re-check isAssigned on every token verification — blocks removed users mid-session
       if (token.id) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { isAssigned: true },
+            select: { isAssigned: true, profileColor: true, profileEmoji: true },
           });
           if (dbUser && !dbUser.isAssigned) {
             token.isBlocked = true;
           } else {
             token.isBlocked = false;
+            token.profileColor = dbUser?.profileColor || null;
+            token.profileEmoji = dbUser?.profileEmoji || null;
           }
         } catch { /* fail open if DB unreachable */ }
       }
@@ -109,6 +113,8 @@ export default {
         }
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        (session.user as any).profileColor = token.profileColor || null;
+        (session.user as any).profileEmoji = token.profileEmoji || null;
       }
       return session;
     },
