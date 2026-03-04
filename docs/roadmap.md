@@ -18,8 +18,10 @@ Active next steps in priority order. See `docs/completed-work.md` for finished i
 
 7. **Custom domains (phase 2)** — Support user-owned domains like `crm.mybusiness.com` (CNAME validation + Fly.io per-app certs).
 
-8. **Cross-platform avatar/profile system** — Sync `profileColor`, `profileEmoji`, `image` from platform User model to deployed apps via `GO4IT_TEAM_MEMBERS` or team-sync endpoint. Playbook update for avatar rendering. Blanket update to all Go Suite apps.
+8. **GoChat iOS completion** — Install Xcode, Apple Developer account ($99/yr), APNs p8 key, Xcode signing + capabilities, build to physical device, test push end-to-end.
 
-9. **GoChat iOS completion** — Install Xcode, Apple Developer account ($99/yr), APNs p8 key, Xcode signing + capabilities, build to physical device, test push end-to-end.
+9. **POS integration** — Connect to point-of-sale systems for payments, inventory sync, sales data. Priority: (1) **Square** — largest SMB base, free REST API, OAuth. (2) **Shopify POS** — GraphQL + REST. (3) **Clover** — REST. (4) **Toast** — requires partner approval. Start with Square OAuth pattern in playbook.
 
-10. **POS integration** — Connect to point-of-sale systems for payments, inventory sync, sales data. Priority: (1) **Square** — largest SMB base, free REST API, OAuth. (2) **Shopify POS** — GraphQL + REST. (3) **Clover** — REST. (4) **Toast** — requires partner approval. Start with Square OAuth pattern in playbook.
+10. **Go Suite polish pass** — Review all 12 apps for UI consistency, fix any rough edges from generation. Consider regenerating older apps (GoCRM, GoProject, GoSchedule, GoChat) with updated playbook for consistency.
+
+11. **GoLedger/GoExpense cleanup** — Remove legacy GoLedger and GoExpense from marketplace and builder/apps/ now that GoInvoice replaces them.

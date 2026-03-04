@@ -6,6 +6,12 @@ Archive of finished features and fixes. Reference when debugging regressions or 
 
 ## Features (newest first)
 
+### Go Suite Marketplace — All 12 Apps (2026-03-04)
+Built, published, and deployed all 12 Go Suite apps with live preview machines. Wrote structured specs for 6 new apps (GoInvoice, GoSupport, GoMailer, GoDocs, GoForms, GoWiki) in `playbook/specs/`. Generated all 6 via Claude Code CLI with the playbook. Validated builds, created `go4it.json` manifests, published to marketplace DB via `publish-gosuite.ts`, and deployed preview machines via `deploy-gosuite-previews.ts`. Sequential deploys required after concurrent batch overwhelmed the builder. GoLedger/GoExpense remain as legacy entries but GoInvoice replaces GoLedger functionally.
+
+### Avatar System — profileColor/profileEmoji (2026-03-03)
+Added `profileColor` and `profileEmoji` to NextAuth session for sidebar avatars in deployed apps. Updated GoHR, GoInventory, GoChat, and the playbook template.
+
 ### GoChat iOS Capacitor (2026-02-24)
 Wrapped GoChat in native iOS app via Capacitor 8. Remote URL approach: WKWebView loads deployed preview. Server-side push via `apns2`, SSE connection tracking for push-only-when-offline, client-side push registration + deep-links, SSE reconnection on resume from background. See `docs/go-suite.md` for details and remaining steps.
 

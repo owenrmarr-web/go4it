@@ -147,7 +147,7 @@ Two priorities before going to market:
    - Payment failure notifications (email/in-app)
    - Trial period logic
    - Switch from test mode to live Stripe keys when ready
-2. **Marketplace depth** — Build 12 Go Suite apps so the marketplace feels real. Structured spec files (`playbook/specs/`) define each app; the playbook handles how, the spec handles what. Generate via Claude Code CLI.
+2. **Marketplace depth** — DONE. All 12 Go Suite apps built, published, and live with preview machines. Specs in `playbook/specs/`, source in `builder/apps/`, manifests in `go4it.json`. Publishing via `prisma/scripts/redeploy/publish-gosuite.ts`, preview deploys via `deploy-gosuite-previews.ts`.
 
 ### Go Suite Lineup (12 apps)
 

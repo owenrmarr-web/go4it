@@ -8,22 +8,22 @@ GO4IT's first-party app ecosystem. Each app owns a single domain and stays focus
 
 | # | App | Category | Icon | Key Features | Status |
 |---|-----|----------|------|-------------|--------|
-| 1 | GoCRM | CRM / Sales | 🤝 | Contacts, companies, deals, pipeline, activity tracking | Exists |
-| 2 | GoProject | Project Management | 📋 | Projects, tasks, milestones, assignments, progress tracking | Exists |
-| 3 | GoSchedule | Scheduling | 📅 | Appointments, bookings, availability, customer booking page | Exists |
-| 4 | GoInventory | Inventory | 📦 | Products, stock levels, suppliers, purchase orders | Spec |
-| 5 | GoInvoice | Finance | 💰 | Invoices, estimates, payments, AR/AP, reports, cross-app rollup | Spec (evolves from GoLedger) |
-| 6 | GoSupport | Helpdesk | 🎧 | Tickets, customer-facing KB, SLAs, satisfaction tracking | Planned |
-| 7 | GoHR | People / HR | 👥 | Directory, time-off, onboarding, docs, timekeeping, pay tracking | Spec |
-| 8 | GoChat | Chat | 💬 | Channels, DMs, file sharing, AI coworker | Exists |
-| 9 | GoMailer | Marketing | 📧 | Email campaigns, newsletters, contact lists, templates | Planned |
-| 10 | GoDocs | Documents | 📄 | Contracts, proposals, document storage, version tracking | Planned |
-| 11 | GoForms | Forms | 📝 | Custom forms, surveys, checklists, submission tracking | Planned |
-| 12 | GoWiki | Knowledge Base | 📚 | Internal SOPs, training docs, team wiki, search | Planned |
+| 1 | GoCRM | CRM / Sales | 🤝 | Contacts, companies, deals, pipeline, activity tracking | Live |
+| 2 | GoProject | Project Management | 📋 | Projects, tasks, milestones, assignments, progress tracking | Live |
+| 3 | GoSchedule | Scheduling | 📅 | Appointments, bookings, availability, customer booking page | Live |
+| 4 | GoInventory | Inventory | 📦 | Products, stock levels, suppliers, purchase orders | Live |
+| 5 | GoInvoice | Finance | 💰 | Invoices, estimates, payments, expenses, financial reports | Live |
+| 6 | GoSupport | Helpdesk | 🎧 | Tickets, customer-facing KB, SLAs, satisfaction tracking | Live |
+| 7 | GoHR | People / HR | 👥 | Directory, time-off, onboarding, docs, timekeeping, pay tracking | Live |
+| 8 | GoChat | Chat | 💬 | Channels, DMs, file sharing, AI coworker | Live |
+| 9 | GoMailer | Marketing | 📧 | Email campaigns, newsletters, contact lists, templates | Live |
+| 10 | GoDocs | Documents | 📄 | Contracts, proposals, document storage, version tracking | Live |
+| 11 | GoForms | Forms | 📝 | Custom forms, surveys, checklists, submission tracking | Live |
+| 12 | GoWiki | Knowledge Base | 📚 | Internal SOPs, training docs, team wiki, search | Live |
 
-**Status key:** Exists = built in `builder/apps/`, Spec = spec written in `playbook/specs/`, Planned = spec not yet written.
+**Status key:** Live = built, published to marketplace, and preview machine deployed on Fly.io.
 
-All apps will be (re)generated from structured spec files using the playbook. Existing apps will be regenerated from scratch.
+All 12 apps are generated from structured spec files (`playbook/specs/{appname}.md`) using the playbook. Each has a `go4it.json` manifest in `builder/apps/{name}/`.
 
 ---
 
