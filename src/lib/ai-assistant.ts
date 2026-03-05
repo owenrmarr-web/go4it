@@ -47,7 +47,7 @@ export interface AIProvider {
 // Claude Provider
 // ============================================
 
-const anthropic = new Anthropic();
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export class ClaudeProvider implements AIProvider {
   async *streamChat(params: {
