@@ -63,7 +63,7 @@ export class ClaudeProvider implements AIProvider {
       content: m.content,
     }));
 
-    const maxIterations = 5;
+    const maxIterations = 3;
     let fullText = "";
     const toolCalls: ToolCall[] = [];
 
@@ -266,9 +266,9 @@ Current user: ${userName}
 
 Instructions:
 - Use the query_app_data tool to fetch real data before answering questions about business data.
+- IMPORTANT: Be efficient with tool calls. Use 1-3 queries max per response. Each query capability returns comprehensive data, so you rarely need to call the same app twice. Pick the single best query for each app.
 - Be concise and helpful. Use bullet points for lists.
 - If an app is down or a query fails, let the user know and suggest trying again.
-- You can query multiple apps in a single response to answer cross-functional questions.
 - For questions not related to business data, answer directly without using tools.
 - Keep responses under 500 words unless more detail is needed.
 - Format data clearly — use tables or bullet points for lists of records.`;
