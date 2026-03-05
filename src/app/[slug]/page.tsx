@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import ChatSearchBar from "@/components/portal/ChatSearchBar";
+import ChatPanel from "@/components/portal/ChatPanel";
 
 interface PortalApp {
   id: string;
@@ -43,6 +45,10 @@ export default function OrgPortalPage() {
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorCode, setErrorCode] = useState<number | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatQuery, setChatQuery] = useState<string | undefined>();
+  const [aiUsed, setAiUsed] = useState(0);
+  const [aiLimit, setAiLimit] = useState(10);
 
   useEffect(() => {
     fetch(`/api/portal/${slug}`)
@@ -174,6 +180,19 @@ export default function OrgPortalPage() {
       </header>
 
       <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10 w-full space-y-10">
+        {/* AI Search Bar */}
+        <section>
+          <ChatSearchBar
+            onOpen={(query) => {
+              setChatQuery(query);
+              setChatOpen(true);
+            }}
+            accentColor={colors.primary}
+            used={aiUsed}
+            limit={aiLimit}
+          />
+        </section>
+
         {/* Apps Grid */}
         {data.apps.length > 0 && (
           <section>
@@ -213,6 +232,23 @@ export default function OrgPortalPage() {
           <span className="font-semibold">GO4IT</span>
         </Link>
       </footer>
+
+      {/* AI Chat Panel */}
+      <ChatPanel
+        open={chatOpen}
+        onClose={() => {
+          setChatOpen(false);
+          setChatQuery(undefined);
+        }}
+        slug={slug}
+        orgName={data.name}
+        accentColor={colors.primary}
+        initialQuery={chatQuery}
+        onUsageUpdate={(used, limit) => {
+          setAiUsed(used);
+          setAiLimit(limit);
+        }}
+      />
     </div>
   );
 }
