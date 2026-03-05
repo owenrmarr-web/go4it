@@ -154,9 +154,12 @@ export async function POST(request: Request, context: RouteContext) {
   // Find the generationId for the builder service
   const generationId = orgApp.app.generatedApp?.id;
 
+  // Go Suite apps have source bundled in the builder — pass as templateApp
+  const templateApp = sourceDir || undefined;
+
   // Delegate to builder service if configured, otherwise fall back to local
   if (BUILDER_URL) {
-    if (!generationId && !uploadBlobUrl) {
+    if (!generationId && !uploadBlobUrl && !templateApp) {
       return NextResponse.json(
         { error: "No generation record found. Only generated apps can be deployed via the builder." },
         { status: 400 }
@@ -175,6 +178,7 @@ export async function POST(request: Request, context: RouteContext) {
           orgSlug: slug,
           generationId,
           uploadBlobUrl,
+          templateApp,
           teamMembers,
           subdomain: subdomain ?? undefined,
           existingFlyAppId,
