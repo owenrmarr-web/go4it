@@ -27,6 +27,14 @@ interface Conversation {
   updatedAt: string;
 }
 
+interface DarkTokens {
+  bg: string; border: string; text: string; textSecondary: string; textMuted: string;
+  hover: string; inputBg: string; inputBorder: string; activeItem: string; hoverItem: string;
+  editBg: string; editBorder: string; actionHover: string; promptBg: string; promptHover: string;
+  promptText: string; promptBorder: string; toolBg: string; toolText: string;
+  assistantBg: string; assistantText: string; dots: string; dotsText: string;
+}
+
 interface ChatPanelProps {
   open?: boolean;
   onClose?: () => void;
@@ -37,6 +45,7 @@ interface ChatPanelProps {
   onUsageUpdate?: (used: number, limit: number) => void;
   inline?: boolean;
   suggestedPrompts?: string[];
+  dark?: boolean;
 }
 
 // ============================================
@@ -53,6 +62,7 @@ export default function ChatPanel({
   onUsageUpdate,
   inline = false,
   suggestedPrompts,
+  dark = false,
 }: ChatPanelProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -362,18 +372,45 @@ export default function ChatPanel({
 
   if (!isVisible) return null;
 
+  // Dark mode color tokens
+  const d = {
+    bg: dark ? "bg-[#1a1d27]" : "bg-white",
+    border: dark ? "border-[#2a2d3a]" : "border-gray-100",
+    text: dark ? "text-gray-100" : "text-gray-900",
+    textSecondary: dark ? "text-gray-400" : "text-gray-500",
+    textMuted: dark ? "text-gray-500" : "text-gray-400",
+    hover: dark ? "hover:bg-[#252836]" : "hover:bg-gray-100",
+    inputBg: dark ? "bg-[#252836]" : "bg-gray-50",
+    inputBorder: dark ? "border-[#3a3d4a]" : "border-gray-200",
+    activeItem: dark ? "bg-[#252836]" : "bg-gray-100",
+    hoverItem: dark ? "hover:bg-[#1f2230]" : "hover:bg-gray-50",
+    editBg: dark ? "bg-[#252836]" : "bg-white",
+    editBorder: dark ? "border-[#3a3d4a]" : "border-gray-300",
+    actionHover: dark ? "hover:bg-[#3a3d4a]" : "hover:bg-gray-200",
+    promptBg: dark ? "bg-[#252836]" : "bg-gray-50",
+    promptHover: dark ? "hover:bg-[#2a2d3a]" : "hover:bg-gray-100",
+    promptText: dark ? "text-gray-300" : "text-gray-600",
+    promptBorder: dark ? "border-[#3a3d4a]" : "border-gray-100",
+    toolBg: dark ? "bg-[#252836]" : "bg-gray-50",
+    toolText: dark ? "text-gray-400" : "text-gray-500",
+    assistantBg: dark ? "bg-[#252836]" : "bg-gray-50",
+    assistantText: dark ? "text-gray-100" : "text-gray-900",
+    dots: dark ? "bg-gray-500" : "bg-gray-300",
+    dotsText: dark ? "text-gray-500" : "text-gray-400",
+  };
+
   // ============================================
   // Inline mode — fills parent container
   // ============================================
   if (inline) {
     return (
-      <div className="flex flex-col h-full bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className={`flex flex-col h-full ${d.bg} rounded-2xl border ${d.border} shadow-sm overflow-hidden`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className={`flex items-center justify-between px-4 py-3 border-b ${d.border}`}>
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setShowList(!showList)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              className={`p-1.5 rounded-lg ${d.hover} transition-colors ${d.textSecondary}`}
               title="Conversations"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -386,12 +423,12 @@ export default function ChatPanel({
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
                 <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
               </svg>
-              <h2 className="text-sm font-semibold text-gray-900">AI Assistant</h2>
+              <h2 className={`text-sm font-semibold ${d.text}`}>AI Assistant</h2>
             </div>
           </div>
           <button
             onClick={startNewChat}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500"
+            className={`p-1.5 rounded-lg ${d.hover} transition-colors ${d.textSecondary}`}
             title="New chat"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -416,6 +453,8 @@ export default function ChatPanel({
             onEditingChange={setEditingTitleValue}
             onSaveTitle={saveTitle}
             onCancelEditing={() => setEditingTitleId(null)}
+            dark={dark}
+            d={d}
           />
         ) : (
           <>
@@ -427,10 +466,10 @@ export default function ChatPanel({
                     <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
                     <path d="M18 14l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" />
                   </svg>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1">
+                  <h3 className={`text-sm font-semibold ${d.text} mb-1`}>
                     Ask anything about your business
                   </h3>
-                  <p className="text-xs text-gray-400 max-w-[280px] mb-5">
+                  <p className={`text-xs ${d.textMuted} max-w-[280px] mb-5`}>
                     Search across all your apps — contacts, invoices, tasks, tickets, and more.
                   </p>
                   {suggestedPrompts && suggestedPrompts.length > 0 && (
@@ -439,7 +478,7 @@ export default function ChatPanel({
                         <button
                           key={i}
                           onClick={() => sendMessage(prompt)}
-                          className="w-full text-left px-3.5 py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-sm text-gray-600 transition-colors border border-gray-100"
+                          className={`w-full text-left px-3.5 py-2.5 rounded-xl ${d.promptBg} ${d.promptHover} text-sm ${d.promptText} transition-colors border ${d.promptBorder}`}
                         >
                           {prompt}
                         </button>
@@ -454,6 +493,7 @@ export default function ChatPanel({
                   key={msg.id}
                   message={msg}
                   accentColor={accentColor}
+                  d={d}
                 />
               ))}
 
@@ -461,7 +501,7 @@ export default function ChatPanel({
             </div>
 
             {/* Input */}
-            <div className="px-4 py-3 border-t border-gray-100">
+            <div className={`px-4 py-3 border-t ${d.border}`}>
               <div className="relative">
                 <textarea
                   ref={inputRef}
@@ -471,7 +511,7 @@ export default function ChatPanel({
                   placeholder="Ask a question..."
                   disabled={streaming}
                   rows={1}
-                  className="w-full resize-none px-4 py-3 pr-12 bg-gray-50 rounded-xl border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:border-transparent disabled:opacity-50 transition-all"
+                  className={`w-full resize-none px-4 py-3 pr-12 ${d.inputBg} rounded-xl border ${d.inputBorder} text-sm ${d.text} placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:border-transparent disabled:opacity-50 transition-all`}
                   style={{
                     // @ts-expect-error -- CSS custom property
                     "--tw-ring-color": `${accentColor}40`,
@@ -591,6 +631,7 @@ export default function ChatPanel({
                   key={msg.id}
                   message={msg}
                   accentColor={accentColor}
+                  d={d}
                 />
               ))}
 
@@ -651,6 +692,7 @@ function ConversationList({
   onEditingChange,
   onSaveTitle,
   onCancelEditing,
+  d,
 }: {
   conversations: Conversation[];
   activeConversationId: string | null;
@@ -664,6 +706,8 @@ function ConversationList({
   onEditingChange: (value: string) => void;
   onSaveTitle: (id: string, title: string) => void;
   onCancelEditing: () => void;
+  dark?: boolean;
+  d?: DarkTokens;
 }) {
   return (
     <div className="flex-1 overflow-y-auto">
@@ -677,7 +721,7 @@ function ConversationList({
         </button>
       </div>
       {conversations.length === 0 ? (
-        <p className="text-center text-sm text-gray-400 mt-8">
+        <p className={`text-center text-sm ${d?.textMuted || "text-gray-400"} mt-8`}>
           No conversations yet
         </p>
       ) : (
@@ -688,8 +732,8 @@ function ConversationList({
               onClick={() => onLoadConversation(conv.id)}
               className={`flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-colors group ${
                 activeConversationId === conv.id
-                  ? "bg-gray-100"
-                  : "hover:bg-gray-50"
+                  ? (d?.activeItem || "bg-gray-100")
+                  : (d?.hoverItem || "hover:bg-gray-50")
               }`}
             >
               <div className="min-w-0 flex-1">
@@ -704,12 +748,12 @@ function ConversationList({
                       if (e.key === "Escape") onCancelEditing();
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-full text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1"
+                    className={`w-full text-sm font-medium ${d?.text || "text-gray-900"} ${d?.editBg || "bg-white"} border ${d?.editBorder || "border-gray-300"} rounded px-1.5 py-0.5 focus:outline-none focus:ring-1`}
                     style={{ ["--tw-ring-color" as string]: accentColor }}
                   />
                 ) : (
                   <p
-                    className="text-sm font-medium text-gray-900 truncate cursor-text"
+                    className={`text-sm font-medium ${d?.text || "text-gray-900"} truncate cursor-text`}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       onStartEditing(conv.id, conv.title || "");
@@ -718,7 +762,7 @@ function ConversationList({
                     {conv.title || "Untitled"}
                   </p>
                 )}
-                <p className="text-[11px] text-gray-400">
+                <p className={`text-[11px] ${d?.textMuted || "text-gray-400"}`}>
                   {new Date(conv.updatedAt).toLocaleDateString()}
                 </p>
               </div>
@@ -728,19 +772,19 @@ function ConversationList({
                     e.stopPropagation();
                     onStartEditing(conv.id, conv.title || "");
                   }}
-                  className="p-1 rounded hover:bg-gray-200"
+                  className={`p-1 rounded ${d?.actionHover || "hover:bg-gray-200"}`}
                   title="Rename"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={d?.textMuted || "text-gray-400"}>
                     <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                   </svg>
                 </button>
                 <button
                   onClick={(e) => onDeleteConversation(conv.id, e)}
-                  className="p-1 rounded hover:bg-gray-200"
+                  className={`p-1 rounded ${d?.actionHover || "hover:bg-gray-200"}`}
                   title="Delete"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={d?.textMuted || "text-gray-400"}>
                     <polyline points="3 6 5 6 21 6" />
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                   </svg>
@@ -761,9 +805,11 @@ function ConversationList({
 function MessageBubble({
   message,
   accentColor,
+  d,
 }: {
   message: Message;
   accentColor: string;
+  d?: DarkTokens;
 }) {
   const isUser = message.role === "user";
 
@@ -791,7 +837,7 @@ function MessageBubble({
         {!isUser && toolCallDisplays.length > 0 && (
           <div className="space-y-1.5">
             {toolCallDisplays.map((tc, i) => (
-              <ToolCallIndicator key={i} toolCall={tc} accentColor={accentColor} />
+              <ToolCallIndicator key={i} toolCall={tc} accentColor={accentColor} d={d} />
             ))}
           </div>
         )}
@@ -800,18 +846,18 @@ function MessageBubble({
           className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
             isUser
               ? "text-white"
-              : "bg-gray-50 text-gray-900"
+              : `${d?.assistantBg || "bg-gray-50"} ${d?.assistantText || "text-gray-900"}`
           }`}
           style={isUser ? { backgroundColor: accentColor } : undefined}
         >
           {message.content ? (
             <div className="whitespace-pre-wrap break-words">{message.content}</div>
           ) : (
-            <div className="flex items-center gap-2 text-gray-400">
+            <div className={`flex items-center gap-2 ${d?.dotsText || "text-gray-400"}`}>
               <div className="flex gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: "0ms" }} />
-                <div className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: "150ms" }} />
-                <div className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: "300ms" }} />
+                <div className={`w-1.5 h-1.5 rounded-full ${d?.dots || "bg-gray-300"} animate-bounce`} style={{ animationDelay: "0ms" }} />
+                <div className={`w-1.5 h-1.5 rounded-full ${d?.dots || "bg-gray-300"} animate-bounce`} style={{ animationDelay: "150ms" }} />
+                <div className={`w-1.5 h-1.5 rounded-full ${d?.dots || "bg-gray-300"} animate-bounce`} style={{ animationDelay: "300ms" }} />
               </div>
             </div>
           )}
@@ -828,12 +874,14 @@ function MessageBubble({
 function ToolCallIndicator({
   toolCall,
   accentColor,
+  d,
 }: {
   toolCall: ToolCallInfo;
   accentColor: string;
+  d?: DarkTokens;
 }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 text-xs text-gray-500">
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${d?.toolBg || "bg-gray-50"} text-xs ${d?.toolText || "text-gray-500"}`}>
       {toolCall.loading ? (
         <>
           <div
