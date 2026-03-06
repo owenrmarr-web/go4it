@@ -1048,14 +1048,14 @@ function AppStackSlide() {
       <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-7">The App Stack</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center">
         {/* Left: App screenshots */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {screenshots.map((s) => (
             <div
               key={s.label}
-              className="relative group cursor-pointer rounded-xl shadow-lg border border-gray-200 overflow-hidden bg-white"
+              className="relative group cursor-pointer rounded-xl shadow-lg border border-gray-200 overflow-hidden bg-white max-h-[35vh]"
               onClick={() => setExpandedImage(s)}
             >
-              <img src={s.src} alt={s.alt} className="w-full h-auto" />
+              <img src={s.src} alt={s.alt} className="w-full h-full object-cover object-top" />
               <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all duration-300">
                 <div className="opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all duration-300">
                   <div className="px-5 py-2.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 shadow-lg">
@@ -1078,7 +1078,7 @@ function AppStackSlide() {
               { logo: "/logos/vercel-logo.png", name: "Vercel", desc: "GO4IT platform with global edge delivery." },
               { logo: "/logos/github-logo.png", name: "GitHub + CI/CD", desc: "Version-controlled source with automated deploy pipeline." },
             ].map((t) => (
-              <div key={t.name} className="flex items-start gap-3 md:gap-4">
+              <div key={t.name} className="flex items-start gap-3 md:gap-4 min-h-[3.5rem] md:min-h-[4rem]">
                 <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-sm border border-gray-100">
                   <img src={t.logo} alt={t.name} className="w-7 h-7 md:w-9 md:h-9 object-contain" />
                 </div>
@@ -1506,6 +1506,7 @@ export default function DeckPage() {
   return (
     <>
     <head>
+      <link rel="preload" as="image" href="/deck/top-image.png" />
       <link rel="preload" as="image" href="/deck/app-screenshot.png" />
       <link rel="preload" as="image" href="/deck/step-1.png" />
       <link rel="preload" as="image" href="/deck/step-2.png" />
