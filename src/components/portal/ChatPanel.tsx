@@ -72,6 +72,8 @@ export default function ChatPanel({
   const [showList, setShowList] = useState(false);
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [editingTitleValue, setEditingTitleValue] = useState("");
+  const [aiUsed, setAiUsed] = useState(0);
+  const [aiLimit, setAiLimit] = useState(10);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const initialQueryHandled = useRef(false);
@@ -111,9 +113,11 @@ export default function ChatPanel({
     }
   }, [isVisible, initialQuery]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom (only when there are messages)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // Focus input when panel opens
@@ -268,6 +272,8 @@ export default function ChatPanel({
         break;
 
       case "usage":
+        setAiUsed(event.used as number);
+        setAiLimit(event.limit as number);
         onUsageUpdate?.(event.used as number, event.limit as number);
         break;
 
@@ -423,19 +429,26 @@ export default function ChatPanel({
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
                 <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
               </svg>
-              <h2 className={`text-sm font-semibold ${d.text}`}>AI Assistant</h2>
+              <h2 className={`text-sm font-semibold ${d.text}`}>GoPilot</h2>
             </div>
           </div>
-          <button
-            onClick={startNewChat}
-            className={`p-1.5 rounded-lg ${d.hover} transition-colors ${d.textSecondary}`}
-            title="New chat"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            {aiUsed > 0 && (
+              <span className={`text-[10px] ${d.textMuted} tabular-nums`}>
+                {aiUsed}/{aiLimit}
+              </span>
+            )}
+            <button
+              onClick={startNewChat}
+              className={`p-1.5 rounded-lg ${d.hover} transition-colors ${d.textSecondary}`}
+              title="New chat"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Conversation List */}
@@ -564,7 +577,7 @@ export default function ChatPanel({
               </svg>
             </button>
             <div>
-              <h2 className="text-sm font-bold text-gray-900">AI Assistant</h2>
+              <h2 className="text-sm font-bold text-gray-900">GoPilot</h2>
               <p className="text-[11px] text-gray-400">{orgName}</p>
             </div>
           </div>
