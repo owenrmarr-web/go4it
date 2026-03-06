@@ -202,18 +202,18 @@ export async function POST(
         // Increment usage
         await incrementUsage(org.id);
 
-        // Generate title for new conversations (fire and forget)
+        // Generate title for new conversations
         if (isNewConversation) {
-          generateTitle(body.message).then(async (title) => {
-            try {
-              await prisma.conversation.update({
-                where: { id: conversationId! },
-                data: { title },
-              });
-            } catch {
-              // non-critical
-            }
-          });
+          try {
+            const title = await generateTitle(body.message);
+            await prisma.conversation.update({
+              where: { id: conversationId! },
+              data: { title },
+            });
+            send({ type: "title", title, conversationId });
+          } catch {
+            // non-critical
+          }
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "An error occurred";

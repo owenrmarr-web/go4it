@@ -225,21 +225,22 @@ export default function OrgPortalPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header bar */}
-      <header className="bg-white border-b border-gray-100 px-4 sm:px-6 py-3">
-        <div className="max-w-[1440px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      {/* Gradient header */}
+      <header className="relative overflow-hidden" style={{ background: gradient }}>
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
             {data.logo ? (
-              <img src={data.logo} alt="" className="w-8 h-8 rounded-lg object-cover" />
+              <img src={data.logo} alt="" className="w-10 h-10 rounded-xl object-cover bg-white/20 backdrop-blur-sm shadow-sm" />
             ) : (
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-                style={{ background: gradient }}
-              >
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm shadow-sm flex items-center justify-center text-white text-lg font-bold">
                 {data.name[0]?.toUpperCase()}
               </div>
             )}
-            <span className="text-sm font-semibold text-gray-900">{data.name}</span>
+            <div>
+              <h2 className="text-sm font-bold text-white drop-shadow-sm">{data.name}</h2>
+              <p className="text-[11px] text-white/70">{data.apps.length} app{data.apps.length !== 1 ? "s" : ""}</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {/* Team presence summary */}
@@ -251,7 +252,7 @@ export default function OrgPortalPage() {
                   ))}
                 </div>
                 {onlineCount > 0 && (
-                  <span className="text-xs text-gray-400 ml-1">
+                  <span className="text-xs text-white/70 ml-1">
                     {onlineCount} online
                   </span>
                 )}
@@ -259,15 +260,22 @@ export default function OrgPortalPage() {
             )}
             {/* Usage badge */}
             {aiUsed > 0 && (
-              <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
+              <span className="text-xs text-white/70 bg-white/15 px-2 py-1 rounded-full">
                 {aiUsed}/{aiLimit} AI
               </span>
             )}
             <Link
               href="/account"
-              className="text-xs text-gray-500 hover:text-gray-700 transition-colors font-medium"
+              className="text-xs text-white/80 hover:text-white transition-colors font-medium"
             >
               My Account
+            </Link>
+            <Link
+              href="/"
+              className="ml-1 px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 transition-colors text-[11px] font-extrabold text-white tracking-tight"
+              title="GO4IT Home"
+            >
+              GO4IT
             </Link>
           </div>
         </div>

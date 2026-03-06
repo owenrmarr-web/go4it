@@ -261,6 +261,20 @@ export default function ChatPanel({
         onUsageUpdate?.(event.used as number, event.limit as number);
         break;
 
+      case "title": {
+        const titleConvId = event.conversationId as string;
+        const newTitle = event.title as string;
+        setConversations((prev) => {
+          const exists = prev.some((c) => c.id === titleConvId);
+          if (exists) {
+            return prev.map((c) => c.id === titleConvId ? { ...c, title: newTitle } : c);
+          }
+          // New conversation not yet in list — add it
+          return [{ id: titleConvId, title: newTitle, updatedAt: new Date().toISOString() }, ...prev];
+        });
+        break;
+      }
+
       case "text":
         setMessages((prev) =>
           prev.map((m) => {
