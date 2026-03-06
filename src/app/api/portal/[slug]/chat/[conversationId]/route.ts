@@ -50,6 +50,44 @@ export async function GET(
   });
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string; conversationId: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { slug, conversationId } = await params;
+
+  const org = await prisma.organization.findUnique({ where: { slug } });
+  if (!org) {
+    return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+  }
+
+  const conversation = await prisma.conversation.findFirst({
+    where: { id: conversationId, organizationId: org.id, userId: session.user.id },
+  });
+
+  if (!conversation) {
+    return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+  }
+
+  const body = await request.json();
+  const { title } = body;
+  if (typeof title !== "string") {
+    return NextResponse.json({ error: "Title must be a string" }, { status: 400 });
+  }
+
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { title: title.trim() || null },
+  });
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ slug: string; conversationId: string }> }

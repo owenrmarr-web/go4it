@@ -199,6 +199,7 @@ model OrganizationMember {
   role           OrgRole      @default(MEMBER)
   title          String?      // Job title within this organization
   joinedAt       DateTime     @default(now())
+  lastActiveAt   DateTime?    // Portal presence tracking
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)

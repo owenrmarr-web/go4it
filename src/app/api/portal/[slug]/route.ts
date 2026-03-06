@@ -100,11 +100,18 @@ export async function GET(
         : `V${oa.app.generatedApp?.marketplaceVersion ?? 1}.0`,
     }));
 
+  // Update presence timestamp
+  await prisma.organizationMember.update({
+    where: { id: membership.id },
+    data: { lastActiveAt: new Date() },
+  }).catch(() => {}); // non-critical
+
   return NextResponse.json({
     name: org.name,
     slug: org.slug,
     logo: org.logo,
     themeColors,
     apps,
+    userName: session.user.name || session.user.email || "there",
   });
 }
