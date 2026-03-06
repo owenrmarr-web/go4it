@@ -1035,6 +1035,89 @@ function PricingComparisonSlide() {
   );
 }
 
+function AppStackSlide() {
+  const [expandedImage, setExpandedImage] = useState<{ src: string; alt: string } | null>(null);
+
+  const screenshots = [
+    { src: "/deck/top-image.png", alt: "Organization Home Page", label: "Organization Home Page" },
+    { src: "/deck/app-screenshot.png", alt: "GoExpense Application", label: "GoExpense Application" },
+  ];
+
+  return (
+    <div className="flex flex-col md:justify-center md:h-full max-w-6xl mx-auto overflow-y-auto">
+      <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-7">The App Stack</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center">
+        {/* Left: App screenshots */}
+        <div className="flex flex-col gap-4">
+          {screenshots.map((s) => (
+            <div
+              key={s.label}
+              className="relative group cursor-pointer rounded-xl shadow-lg border border-gray-200 overflow-hidden bg-white"
+              onClick={() => setExpandedImage(s)}
+            >
+              <img src={s.src} alt={s.alt} className="w-full h-auto" />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all duration-300">
+                <div className="opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all duration-300">
+                  <div className="px-5 py-2.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 shadow-lg">
+                    <span className="text-white text-sm font-semibold tracking-wide">{s.label}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Right: Tech Stack */}
+        <div>
+          <h3 className="text-lg md:text-xl font-bold gradient-brand-text mb-3 md:mb-4 uppercase tracking-wide">The Stack</h3>
+          <div className="space-y-3 md:space-y-3.5">
+            {[
+              { logo: "/logos/claude-code-logo.png", name: "Claude Code", desc: "Proprietary playbook instruction set guides Claude to reliably produce custom, production-grade apps — our secret sauce." },
+              { logo: "/logos/nextjs-logo.svg", name: "Next.js + TypeScript", desc: "Industry-standard React framework with type-safe code." },
+              { logo: "/logos/prisma-logo.svg", name: "Prisma + SQLite", desc: "Embedded database per app — data accessible across each org by humans and agents." },
+              { logo: "/logos/fly-io-logo.png", name: "Fly.io + Docker", desc: "Each app gets its own containerized machine, with global edge deployment and on-demand scaling." },
+              { logo: "/logos/vercel-logo.png", name: "Vercel", desc: "GO4IT platform with global edge delivery." },
+              { logo: "/logos/github-logo.png", name: "GitHub + CI/CD", desc: "Version-controlled source with automated deploy pipeline." },
+            ].map((t) => (
+              <div key={t.name} className="flex items-start gap-3 md:gap-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-sm border border-gray-100">
+                  <img src={t.logo} alt={t.name} className="w-7 h-7 md:w-9 md:h-9 object-contain" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900 text-sm md:text-base">{t.name}</p>
+                  <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded image overlay */}
+      {expandedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setExpandedImage(null)}
+        >
+          <div className="relative w-[90vw] max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setExpandedImage(null)}
+              className="absolute -top-12 right-0 w-10 h-10 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 transition-colors"
+            >
+              ✕
+            </button>
+            <img
+              src={expandedImage.src}
+              alt={expandedImage.alt}
+              className="w-full h-auto rounded-xl shadow-2xl"
+            />
+            <p className="text-center text-white/80 text-sm mt-3 font-medium">{expandedImage.alt}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const slides = [
   {
     id: "title",
@@ -1260,47 +1343,7 @@ const slides = [
   },
   {
     id: "under-the-hood",
-    content: (
-      <div className="flex flex-col md:justify-center md:h-full max-w-6xl mx-auto overflow-y-auto">
-        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-7">The App Stack</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center">
-          {/* Left: App screenshot */}
-          <div className="flex justify-center">
-            <div className="rounded-xl shadow-lg border border-gray-200 overflow-hidden bg-white">
-              <img
-                src="/deck/app-screenshot.png"
-                alt="GO4IT app in action"
-                className="w-full h-auto"
-              />
-            </div>
-          </div>
-          {/* Right: Tech Stack */}
-          <div>
-            <h3 className="text-lg md:text-xl font-bold gradient-brand-text mb-3 md:mb-4 uppercase tracking-wide">The Stack</h3>
-            <div className="space-y-3 md:space-y-3.5">
-              {[
-                { logo: "/logos/claude-code-logo.png", name: "Claude Code", desc: "Proprietary playbook instruction set guides Claude to reliably produce custom, production-grade apps — our secret sauce." },
-                { logo: "/logos/nextjs-logo.svg", name: "Next.js + TypeScript", desc: "Industry-standard React framework with type-safe code." },
-                { logo: "/logos/prisma-logo.svg", name: "Prisma + SQLite", desc: "Embedded database per app — data accessible across each org by humans and agents." },
-                { logo: "/logos/fly-io-logo.png", name: "Fly.io + Docker", desc: "Each app gets its own containerized machine, with global edge deployment and on-demand scaling." },
-                { logo: "/logos/vercel-logo.png", name: "Vercel", desc: "GO4IT platform with global edge delivery." },
-                { logo: "/logos/github-logo.png", name: "GitHub + CI/CD", desc: "Version-controlled source with automated deploy pipeline." },
-              ].map((t) => (
-                <div key={t.name} className="flex items-start gap-3 md:gap-4">
-                  <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-sm border border-gray-100">
-                    <img src={t.logo} alt={t.name} className="w-7 h-7 md:w-9 md:h-9 object-contain" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 text-sm md:text-base">{t.name}</p>
-                    <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{t.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    ),
+    content: <AppStackSlide />,
   },
   {
     id: "how",
