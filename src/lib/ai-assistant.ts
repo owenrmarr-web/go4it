@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 // ============================================
 
 export interface StreamEvent {
-  type: "text" | "tool_start" | "tool_result" | "done" | "error";
+  type: "text" | "tool_start" | "tool_result" | "status" | "done" | "error";
   content?: string;
   app?: string;
   query?: string;
@@ -78,6 +78,8 @@ export class ClaudeProvider implements AIProvider {
 
       let currentToolUse: { id: string; name: string; inputJson: string } | null = null;
       let stopReason: string | null = null;
+      // Pending tool calls to execute after the stream completes
+      const pendingTools: { id: string; input: { app: string; query: string } }[] = [];
 
       for await (const event of stream) {
         if (event.type === "content_block_start") {
@@ -87,6 +89,8 @@ export class ClaudeProvider implements AIProvider {
               name: event.content_block.name,
               inputJson: "",
             };
+          } else if (event.content_block.type === "text") {
+            // Will be filled by deltas
           }
         } else if (event.type === "content_block_delta") {
           if (event.delta.type === "text_delta") {
@@ -97,38 +101,13 @@ export class ClaudeProvider implements AIProvider {
           }
         } else if (event.type === "content_block_stop") {
           if (currentToolUse) {
-            // Parse tool input and execute
+            // Parse and announce immediately so users see progress, but defer execution
             try {
               const input = JSON.parse(currentToolUse.inputJson) as { app: string; query: string };
+              pendingTools.push({ id: currentToolUse.id, input });
               yield { type: "tool_start", app: input.app, query: input.query };
-
-              const result = await onToolCall(input.app, input.query);
-              const resultStr = JSON.stringify(result);
-              const summary = (result as { data?: { summary?: string } })?.data?.summary || "Data retrieved";
-
-              toolCalls.push({ app: input.app, query: input.query, result: resultStr });
-              yield { type: "tool_result", app: input.app, summary };
-
-              // Add assistant message with tool use + tool result for next iteration
-              const assistantMessage = await stream.finalMessage();
-              messages = [
-                ...messages,
-                { role: "assistant", content: assistantMessage.content },
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "tool_result",
-                      tool_use_id: currentToolUse.id,
-                      content: resultStr,
-                    },
-                  ],
-                },
-              ];
-            } catch (err) {
-              const errMsg = err instanceof Error ? err.message : "Tool call failed";
-              toolCalls.push({ app: currentToolUse.name, query: currentToolUse.inputJson, error: errMsg });
-              yield { type: "tool_result", app: "unknown", summary: `Error: ${errMsg}` };
+            } catch {
+              // malformed tool input — skip
             }
             currentToolUse = null;
           }
@@ -137,10 +116,41 @@ export class ClaudeProvider implements AIProvider {
         }
       }
 
-      // If stop reason is end_turn (no more tool calls), we're done
-      if (stopReason !== "tool_use") {
+      // Stream is fully consumed — now get the final message and process tool calls
+      if (stopReason !== "tool_use" || pendingTools.length === 0) {
         break;
       }
+
+      // Get the complete assistant message (safe now that stream is fully consumed)
+      const assistantMessage = await stream.finalMessage();
+
+      // Execute each pending tool call and build tool_result messages
+      const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
+      for (const tool of pendingTools) {
+        try {
+          const result = await onToolCall(tool.input.app, tool.input.query);
+          const resultStr = JSON.stringify(result);
+          const summary = (result as { data?: { summary?: string } })?.data?.summary || "Data retrieved";
+
+          toolCalls.push({ app: tool.input.app, query: tool.input.query, result: resultStr });
+          yield { type: "tool_result", app: tool.input.app, summary };
+          toolResults.push({ type: "tool_result", tool_use_id: tool.id, content: resultStr });
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : "Tool call failed";
+          toolCalls.push({ app: tool.input.app, query: tool.input.query, error: errMsg });
+          yield { type: "tool_result", app: tool.input.app, summary: `Error: ${errMsg}` };
+          toolResults.push({ type: "tool_result", tool_use_id: tool.id, content: `Error: ${errMsg}`, is_error: true });
+        }
+      }
+
+      // Add assistant message + all tool results for the next iteration
+      messages = [
+        ...messages,
+        { role: "assistant", content: assistantMessage.content },
+        { role: "user", content: toolResults },
+      ];
+
+      yield { type: "status", content: "Analyzing results..." };
     }
 
     yield { type: "done", content: fullText };

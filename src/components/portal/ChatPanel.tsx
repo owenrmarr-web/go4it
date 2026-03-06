@@ -233,6 +233,8 @@ export default function ChatPanel({
         break;
 
       case "text":
+        // Clear any "Analyzing..." status indicators when text starts flowing
+        setToolCalls((prev) => prev.filter((tc) => tc.app !== "AI"));
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
@@ -261,6 +263,18 @@ export default function ChatPanel({
               : tc
           )
         );
+        break;
+
+      case "status":
+        setToolCalls((prev) => [
+          ...prev,
+          {
+            app: "AI",
+            query: undefined,
+            summary: event.content as string,
+            loading: true,
+          },
+        ]);
         break;
 
       case "error":
