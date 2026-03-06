@@ -1362,12 +1362,12 @@ const slides = [
             {
               step: "2",
               title: "Configure & Import",
-              desc: "Select & customize applications, import legacy data, and invite your team.",
+              desc: "Select & customize applications, import your legacy data with AI assist, and invite your team.",
             },
             {
               step: "3",
               title: "Launch & Thrive",
-              desc: "Access apps and GO4IT\u2019s cross-app AI intelligence \u2014 all from one home page.",
+              desc: "Access your custom applications and GO4IT\u2019s cross-app AI intelligence \u2014 all from your home page.",
             },
           ].map((s) => (
             <div key={s.step} className="text-center">
