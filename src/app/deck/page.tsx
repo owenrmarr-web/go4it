@@ -1245,11 +1245,13 @@ const slides = [
           <div className="border-t border-gray-200 pt-5 md:pt-7">
             <p className="text-lg md:text-2xl text-gray-700">
               GO4IT is built for what&apos;s next:{" "}
-              <span className="font-bold gradient-brand-text">AI agents as coworkers</span>.
+              <span className="font-bold gradient-brand-text">AI coworkers</span>.
             </p>
             <p className="text-base md:text-xl text-gray-500 mt-1">
-              Every app is structured for agent integration from day one — when businesses
-              start deploying AI teammates, GO4IT is the platform they&apos;ll run on.
+              Cross-app intelligence is AI-native — query for rapid insights across every
+              application. Organizations can add their own AI coworkers or deploy GO4IT&apos;s
+              proprietary AI coworkers, purpose-built for the platform. When businesses start
+              hiring AI teammates, GO4IT is where they&apos;ll work.
             </p>
           </div>
         </div>
