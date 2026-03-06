@@ -1350,7 +1350,7 @@ const slides = [
     content: (
       <div className="flex flex-col md:justify-center md:h-full max-w-5xl mx-auto">
         <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
-          Customer Experience
+          Get Started in Minutes
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
           {[
@@ -1361,13 +1361,13 @@ const slides = [
             },
             {
               step: "2",
-              title: "Configure",
-              desc: "Select your applications, customize layouts, and invite your team.",
+              title: "Configure & Import",
+              desc: "Select & customize applications, import legacy data, and invite your team.",
             },
             {
               step: "3",
-              title: "Launch",
-              desc: "Securely access your apps from your custom web address.",
+              title: "Launch & Thrive",
+              desc: "Access apps and GO4IT\u2019s cross-app AI intelligence \u2014 all from one home page.",
             },
           ].map((s) => (
             <div key={s.step} className="text-center">
