@@ -812,6 +812,62 @@ function ConversationList({
 }
 
 // ============================================
+// Markdown renderer (lightweight inline parsing)
+// ============================================
+
+function renderMarkdown(text: string): React.ReactNode[] {
+  const lines = text.split("\n");
+  return lines.map((line, lineIdx) => {
+    // Parse inline markdown: **bold**, *italic*, `code`
+    const parts: React.ReactNode[] = [];
+    let remaining = line;
+    let key = 0;
+
+    while (remaining.length > 0) {
+      // Find the earliest match
+      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+      const italicMatch = remaining.match(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/);
+      const codeMatch = remaining.match(/`([^`]+)`/);
+
+      const candidates: { type: string; index: number; full: string; inner: string }[] = [];
+      if (boldMatch?.index !== undefined) candidates.push({ type: "bold", index: boldMatch.index, full: boldMatch[0], inner: boldMatch[1] });
+      if (italicMatch?.index !== undefined) candidates.push({ type: "italic", index: italicMatch.index, full: italicMatch[0], inner: italicMatch[1] });
+      if (codeMatch?.index !== undefined) candidates.push({ type: "code", index: codeMatch.index, full: codeMatch[0], inner: codeMatch[1] });
+
+      if (candidates.length === 0) {
+        parts.push(remaining);
+        break;
+      }
+
+      // Pick the earliest match (bold takes priority over italic at same position)
+      candidates.sort((a, b) => a.index - b.index || (a.type === "bold" ? -1 : 1));
+      const match = candidates[0];
+
+      if (match.index > 0) {
+        parts.push(remaining.slice(0, match.index));
+      }
+
+      if (match.type === "bold") {
+        parts.push(<strong key={key++}>{match.inner}</strong>);
+      } else if (match.type === "italic") {
+        parts.push(<em key={key++}>{match.inner}</em>);
+      } else if (match.type === "code") {
+        parts.push(<code key={key++} className="px-1 py-0.5 rounded bg-black/10 text-[0.85em] font-mono">{match.inner}</code>);
+      }
+
+      remaining = remaining.slice(match.index + match.full.length);
+    }
+
+    // Add newline between lines (not after last)
+    if (lineIdx < lines.length - 1) {
+      parts.push(<br key={`br-${lineIdx}`} />);
+    }
+
+    return <span key={lineIdx}>{parts}</span>;
+  });
+}
+
+// ============================================
 // Message Bubble
 // ============================================
 
@@ -864,7 +920,7 @@ function MessageBubble({
           style={isUser ? { backgroundColor: accentColor } : undefined}
         >
           {message.content ? (
-            <div className="whitespace-pre-wrap break-words">{message.content}</div>
+            <div className="break-words">{renderMarkdown(message.content)}</div>
           ) : (
             <div className={`flex items-center gap-2 ${d?.dotsText || "text-gray-400"}`}>
               <div className="flex gap-1">
