@@ -60,7 +60,7 @@ function MarketSlide({ active }: { active: boolean }) {
   }, [active]);
 
   return (
-    <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
+    <div className="flex flex-col md:justify-center md:h-full max-w-5xl mx-auto">
       <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-8">2025 SaaS Spend</h2>
 
       {/* Desktop table */}
@@ -147,13 +147,13 @@ function MarketSlide({ active }: { active: boolean }) {
 
       {/* Mobile: circles + focused data */}
       <div className="md:hidden">
-        <div className="flex justify-center items-end gap-4 mb-2">
+        <div className="flex justify-center items-center gap-5 mb-2">
           <div className="flex flex-col items-center">
-            <div className="rounded-full flex items-center justify-center text-on-primary font-bold text-sm" style={{ width: 110, height: 110, backgroundColor: "var(--theme-primary)" }}>$350B</div>
+            <div className="rounded-full flex items-center justify-center text-on-primary font-bold text-sm" style={{ width: 100, height: 100, backgroundColor: "var(--theme-primary)" }}>$350B</div>
             <span className="text-xs font-semibold mt-1" style={{ color: "var(--theme-primary)" }}>Global</span>
           </div>
           <div className="flex flex-col items-center">
-            <div className="rounded-full flex items-center justify-center text-on-secondary font-bold text-sm" style={{ width: 60, height: 60, backgroundColor: "var(--theme-secondary)" }}>$105B</div>
+            <div className="rounded-full flex items-center justify-center text-on-secondary font-bold text-xs" style={{ width: 70, height: 70, backgroundColor: "var(--theme-secondary)" }}>$105B</div>
             <span className="text-xs font-semibold mt-1" style={{ color: "var(--theme-secondary)" }}>US 5–500</span>
           </div>
           <div className="flex flex-col items-center">
@@ -162,7 +162,7 @@ function MarketSlide({ active }: { active: boolean }) {
                 className="absolute border-2 rounded-lg transition-opacity duration-[2000ms]"
                 style={{ borderColor: "var(--theme-accent)", opacity: showHighlight ? 1 : 0, top: -6, bottom: -6, left: -6, right: -6, pointerEvents: "none" }}
               />
-              <div className="rounded-full flex items-center justify-center text-white font-bold text-xs" style={{ width: 44, height: 44, backgroundColor: "var(--theme-accent)" }}>$44B</div>
+              <div className="rounded-full flex items-center justify-center text-white font-bold text-xs" style={{ width: 50, height: 50, backgroundColor: "var(--theme-accent)" }}>$44B</div>
             </div>
             <span className="text-xs font-semibold mt-1" style={{ color: "var(--theme-accent)" }}>US 5–50</span>
           </div>
@@ -256,7 +256,7 @@ function DCFSlide() {
   };
 
   return (
-    <div className="flex flex-col justify-center h-full max-w-5xl mx-auto overflow-y-auto">
+    <div className="flex flex-col md:justify-center md:h-full max-w-5xl mx-auto overflow-y-auto">
       <style dangerouslySetInnerHTML={{ __html: hideSpinners }} />
       <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-6">DCF Valuation</h2>
 
@@ -513,7 +513,7 @@ function FinancialModelSlide() {
         : `$${n.toFixed(0)}`;
 
   return (
-    <div className="flex flex-col justify-center h-full max-w-5xl mx-auto overflow-y-auto">
+    <div className="flex flex-col md:justify-center md:h-full max-w-5xl mx-auto overflow-y-auto">
       <style dangerouslySetInnerHTML={{ __html: hideSpinners }} />
       <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-8">Financial Model</h2>
 
@@ -925,7 +925,7 @@ function PricingComparisonSlide() {
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
   return (
-    <div className="flex flex-col justify-center h-full max-w-5xl mx-auto overflow-y-auto">
+    <div className="flex flex-col md:justify-center md:h-full max-w-5xl mx-auto overflow-y-auto">
       <style dangerouslySetInnerHTML={{ __html: hideSpinners }} />
       <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-1 md:mb-2">Pricing Breakdown</h2>
       <p className="text-sm md:text-lg text-gray-500 mb-2 md:mb-3">
@@ -1133,7 +1133,7 @@ const slides = [
   {
     id: "problem",
     content: (
-      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
+      <div className="flex flex-col md:justify-center md:h-full max-w-5xl mx-auto">
         <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">The Problem</h2>
         <div className="space-y-4 md:space-y-6">
           <p className="text-lg md:text-2xl text-gray-700">
@@ -1158,7 +1158,7 @@ const slides = [
   {
     id: "solution",
     content: (
-      <div className="flex flex-col justify-center h-full max-w-[67rem] mx-auto">
+      <div className="flex flex-col md:justify-center md:h-full max-w-[67rem] mx-auto">
         <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
           The Solution
         </h2>
@@ -1195,7 +1195,7 @@ const slides = [
   {
     id: "sizing",
     content: (
-      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
+      <div className="flex flex-col md:justify-center md:h-full max-w-5xl mx-auto">
         <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
           Our Addressable Market
         </h2>
@@ -1292,7 +1292,7 @@ const slides = [
   {
     id: "why-now",
     content: (
-      <div className="flex flex-col justify-center h-full max-w-5xl mx-auto">
+      <div className="flex flex-col md:justify-center md:h-full max-w-5xl mx-auto">
         <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">Why Now</h2>
         <div className="space-y-5 md:space-y-7">
           <div>
@@ -1394,7 +1394,7 @@ const slides = [
   {
     id: "revenue",
     content: (
-      <div className="flex flex-col justify-center h-full max-w-sm md:max-w-[57.6rem] mx-auto">
+      <div className="flex flex-col md:justify-center md:h-full max-w-sm md:max-w-[57.6rem] mx-auto">
         <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 md:mb-10">
           Revenue Model
         </h2>
@@ -1589,7 +1589,7 @@ export default function DeckPage() {
       </div>
 
       {/* Slide counter */}
-      <div className="fixed bottom-6 right-8 text-sm text-gray-400">
+      <div className="fixed bottom-1 md:bottom-6 right-8 text-sm text-gray-400">
         {current + 1} / {slides.length}
       </div>
     </div>
