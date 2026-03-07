@@ -147,7 +147,7 @@ export default function Sidebar() {
               }`}
             >
               {item.icon}
-              <span>{item.label}</span>
+              <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
@@ -173,8 +173,8 @@ export default function Sidebar() {
               name={session.user.name || session.user.email || ""}
               image={profile.image}
               avatarUrl={profile.avatarUrl}
-              profileColor={profile.profileColor}
-              profileEmoji={profile.profileEmoji}
+              profileColor={session.user.profileColor || profile.profileColor}
+              profileEmoji={session.user.profileEmoji || profile.profileEmoji}
               avatarColor={profile.avatarColor}
               size="md"
             />
@@ -245,7 +245,7 @@ export default function Sidebar() {
       </button>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 bg-surface border-r border-border-default z-30">
+      <aside className="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-52 bg-surface border-r border-border-default z-30">
         {sidebarContent}
       </aside>
 
@@ -259,7 +259,7 @@ export default function Sidebar() {
 
       {/* Mobile slide-out sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface shadow-lg transform transition-transform duration-200 ease-in-out md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-52 bg-surface shadow-lg transform transition-transform duration-200 ease-in-out md:hidden ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

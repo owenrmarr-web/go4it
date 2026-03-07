@@ -5,20 +5,26 @@ import crypto from "crypto";
 import prisma from "@/lib/prisma";
 
 function verifySsoToken(token: string, email: string): boolean {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) return false;
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature) return false;
+  const authSecret = process.env.AUTH_SECRET;
+  if (!authSecret) return false;
+
+  const dotIndex = token.lastIndexOf(".");
+  if (dotIndex === -1) return false;
+
+  const payload = token.slice(0, dotIndex);
+  const signature = token.slice(dotIndex + 1);
+
+  // Verify HMAC signature
+  const expected = crypto.createHmac("sha256", authSecret).update(payload).digest("base64url");
+  if (expected.length !== signature.length) return false;
+  if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) return false;
+
+  // Decode and validate payload
   try {
-    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString());
-    if (decoded.email !== email) return false;
-    if (Date.now() > decoded.exp) return false;
-    const expected = crypto
-      .createHmac("sha256", secret)
-      .update(payload)
-      .digest("base64url");
-    if (expected.length !== signature.length) return false;
-    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString());
+    if (data.email !== email) return false;
+    if (Math.floor(Date.now() / 1000) > data.exp) return false;
+    return true;
   } catch {
     return false;
   }
@@ -35,16 +41,20 @@ export default {
       async authorize(credentials) {
         const email = credentials?.email as string;
         const ssoToken = credentials?.ssoToken as string;
+
         if (!email) return null;
 
-        // SSO flow
+        // SSO flow: verify HMAC token instead of password
         if (ssoToken) {
           if (!verifySsoToken(ssoToken, email)) return null;
+
           const user = await prisma.user.findUnique({ where: { email } });
           if (!user || !user.isAssigned) return null;
-          return { id: user.id, email: user.email, name: user.name, role: user.role };
+
+          return { id: user.id, email: user.email, name: user.name, role: user.role, profileColor: user.profileColor, profileEmoji: user.profileEmoji };
         }
 
+        // Standard password flow
         if (!credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
@@ -63,7 +73,7 @@ export default {
 
         if (!valid) return null;
 
-        return { id: user.id, email: user.email, name: user.name, role: user.role };
+        return { id: user.id, email: user.email, name: user.name, role: user.role, profileColor: user.profileColor, profileEmoji: user.profileEmoji };
       },
     }),
   ],
@@ -74,30 +84,37 @@ export default {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.profileColor = user.profileColor;
+        token.profileEmoji = user.profileEmoji;
       }
+      // Re-check isAssigned on every token verification — blocks removed users mid-session
       if (token.id) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { isAssigned: true },
+            select: { isAssigned: true, profileColor: true, profileEmoji: true },
           });
           if (dbUser && !dbUser.isAssigned) {
             token.isBlocked = true;
           } else {
             token.isBlocked = false;
+            token.profileColor = dbUser?.profileColor || null;
+            token.profileEmoji = dbUser?.profileEmoji || null;
           }
-        } catch { /* fail open */ }
+        } catch { /* fail open if DB unreachable */ }
       }
       return token;
     },
     async session({ session, token }) {
-      if (token.isBlocked) {
-        session.user = undefined as any;
-        return session;
-      }
       if (token && session.user) {
+        if (token.isBlocked) {
+          session.user = undefined as any;
+          return session;
+        }
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.profileColor = (token.profileColor as string) || null;
+        session.user.profileEmoji = (token.profileEmoji as string) || null;
       }
       return session;
     },

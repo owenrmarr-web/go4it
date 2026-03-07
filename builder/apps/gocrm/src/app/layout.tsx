@@ -32,7 +32,7 @@ export default function RootLayout({
           <ThemeProvider>
             <div className="flex min-h-screen">
               <Sidebar />
-              <main className="flex-1 ml-0 md:ml-64 min-h-screen">
+              <main className="flex-1 ml-0 md:ml-52 min-h-screen">
                 {children}
               </main>
             </div>
