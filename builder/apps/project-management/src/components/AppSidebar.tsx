@@ -146,8 +146,8 @@ export default function AppSidebar() {
                 name={session.user.name || session.user.email || "U"}
                 image={profileImage}
                 avatarUrl={avatarUrl}
-                profileColor={profileColor}
-                profileEmoji={profileEmoji}
+                profileColor={session.user.profileColor || profileColor}
+                profileEmoji={session.user.profileEmoji || profileEmoji}
                 avatarColor={avatarColor}
                 size="md"
               />
