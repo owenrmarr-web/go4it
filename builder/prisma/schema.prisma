@@ -31,6 +31,7 @@ model User {
   generatedApps GeneratedApp[]
   orgAppMembers OrgAppMember[]
   notifications Notification[]
+  conversations Conversation[]
   isAdmin       Boolean   @default(false)
   createdAt     DateTime  @default(now())
 }
@@ -181,6 +182,8 @@ model Organization {
   invitations   Invitation[]
   apps          OrgApp[]
   imports       ImportJob[]
+  conversations Conversation[]
+  aiUsage       AIUsage[]
 }
 
 enum OrgRole {
@@ -196,6 +199,7 @@ model OrganizationMember {
   role           OrgRole      @default(MEMBER)
   title          String?      // Job title within this organization
   joinedAt       DateTime     @default(now())
+  lastActiveAt   DateTime?    // Portal presence tracking
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -406,4 +410,47 @@ model ImportFile {
   importJob ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
 
   @@index([importJobId])
+}
+
+// ============================================
+// AI Chat Models
+// ============================================
+
+model Conversation {
+  id             String        @id @default(cuid())
+  organizationId String
+  userId         String
+  title          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     ChatMessage[]
+
+  @@index([organizationId, userId])
+}
+
+model ChatMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String   // "user" | "assistant"
+  content        String
+  toolCalls      String?  // JSON: [{ app, query, result }]
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+model AIUsage {
+  id             String   @id @default(cuid())
+  organizationId String
+  date           String   // "YYYY-MM-DD" for daily bucketing
+  queryCount     Int      @default(0)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, date])
 }

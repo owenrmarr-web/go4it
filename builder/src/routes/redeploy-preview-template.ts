@@ -1,7 +1,7 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import { FastifyInstance } from "fastify";
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "fs";
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import {
   flyctl,
@@ -67,7 +67,6 @@ async function runRedeployPipeline(
   templateApp: string,
   templateDir: string,
   flyAppName: string,
-  options: { seedData?: boolean } = {}
 ): Promise<void> {
   const log = (msg: string) => console.log(`[RedeployPreviewTemplate ${flyAppName}] ${msg}`);
 
@@ -108,30 +107,8 @@ async function runRedeployPipeline(
   writeFileSync(path.join(tmpDir, "start.sh"), generateStartScript());
 
   let dockerfile = generateDeployDockerfile(isPrisma7);
-
-  // For new previews: patch start.sh to run seed on first boot
-  // Uses a .seeded sentinel file since prisma db push already creates the DB before this runs
-  const seedPath = path.join(tmpDir, "prisma", "seed.ts");
-  if (options.seedData && existsSync(seedPath)) {
-    log("Patching start.sh for first-boot seed...");
-    const startScript = readFileSync(path.join(tmpDir, "start.sh"), "utf-8");
-    const patchedStart = startScript.replace(
-      'echo "Starting application..."',
-      `# Seed sample data on first boot
-if [ ! -f /data/.seeded ]; then
-  echo "First boot — seeding sample data..."
-  npx tsx prisma/seed.ts 2>&1 || echo "Warning: seed failed"
-  touch /data/.seeded
-  echo "Seed complete."
-fi
-
-echo "Starting application..."`
-    );
-    writeFileSync(path.join(tmpDir, "start.sh"), patchedStart);
-  } else if (existsSync(seedPath)) {
-    // Remove seed.ts for redeploys — preview already has seed data in its volume
-    unlinkSync(seedPath);
-  }
+  // Seed logic is now built into generateStartScript() — runs automatically
+  // when PREVIEW_MODE=true and /data/.seeded doesn't exist yet.
 
   writeFileSync(path.join(tmpDir, "Dockerfile.fly"), dockerfile);
   writeFileSync(path.join(tmpDir, ".dockerignore"), generateDockerignore());
@@ -176,7 +153,7 @@ async function runNewPreviewPipeline(
   log(`Fly app created: ${flyAppName}`);
 
   // 2. Run the standard redeploy pipeline (copy, build, deploy) — with seed data for new previews
-  await runRedeployPipeline(templateApp, templateDir, flyAppName, { seedData: true });
+  await runRedeployPipeline(templateApp, templateDir, flyAppName);
 
   // 3. Capture screenshot
   const flyUrl = `https://${flyAppName}.fly.dev`;

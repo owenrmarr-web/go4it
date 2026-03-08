@@ -186,8 +186,12 @@ export default function AuthPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    // Demo alias: let owen@spacegods.inc log in as owenmarr@umich.edu
+    const loginEmail = formData.email.toLowerCase() === "owen@spacegods.inc"
+      ? "owenmarr@umich.edu"
+      : formData.email;
     const result = await signIn("credentials", {
-      email: formData.email,
+      email: loginEmail,
       password: formData.password,
       redirect: false,
     });

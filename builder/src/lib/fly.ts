@@ -167,6 +167,7 @@ if [ ! -f "/data/.schema-$SCHEMA_HASH" ]; then
   echo "Running database setup..."
   npx prisma db push --accept-data-loss 2>&1 || echo "Warning: prisma db push had issues"
   rm -f /data/.schema-* 2>/dev/null
+  rm -f /data/.seeded 2>/dev/null
   touch "/data/.schema-$SCHEMA_HASH"
 else
   echo "Schema unchanged, skipping db push."
@@ -186,6 +187,21 @@ if [ -n "$GO4IT_TEAM_MEMBERS" ]; then
     touch "/data/.team-$TEAM_HASH"
   else
     echo "Team unchanged, skipping provisioning."
+  fi
+fi
+
+# --- Seed sample data (preview only, first boot) ---
+if [ "$PREVIEW_MODE" = "true" ] && [ ! -f /data/.seeded ]; then
+  if [ -f "prisma/seed.ts" ]; then
+    echo "First boot — seeding sample data..."
+    npx tsx prisma/seed.ts 2>&1 || echo "Warning: seed failed"
+    touch /data/.seeded
+    echo "Seed complete."
+  elif [ -f "prisma/seed.js" ]; then
+    echo "First boot — seeding sample data..."
+    node prisma/seed.js 2>&1 || echo "Warning: seed failed"
+    touch /data/.seeded
+    echo "Seed complete."
   fi
 fi
 
