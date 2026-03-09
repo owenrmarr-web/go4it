@@ -322,12 +322,13 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Live app preview — right column */}
-              <div className="md:w-[70%] rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gray-900 min-h-[500px]">
+              {/* Live app preview — right column, scaled down to fit */}
+              <div className="md:w-[70%] rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gray-900 relative" style={{ height: 500 }}>
                 <iframe
                   src="https://go4it-preview-cmlsrqa5.fly.dev?theme=dark"
                   title="GoProject — Live Preview"
-                  className="w-full h-full min-h-[500px]"
+                  className="absolute top-0 left-0 origin-top-left"
+                  style={{ width: '142.85%', height: '142.85%', transform: 'scale(0.7)' }}
                   loading="lazy"
                 />
               </div>
