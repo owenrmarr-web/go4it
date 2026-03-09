@@ -156,7 +156,7 @@ export default function Home() {
           GO4IT
         </h1>
         <p className="mt-3 sm:mt-4 text-lg sm:text-xl md:text-2xl opacity-90 font-medium max-w-3xl mx-auto">
-          AI-enabled software tools to help small businesses do big things.
+          Run your business on software that costs 10x less.
         </p>
         <p className="mt-2 opacity-70 text-base max-w-2xl mx-auto">
           Browse, deploy, and start using apps for your business in minutes — Let&apos;s GO4IT
