@@ -16,8 +16,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Allow ?theme=dark query param to force dark mode (e.g. for iframes)
+    const params = new URLSearchParams(window.location.search);
+    const paramTheme = params.get("theme") as Theme | null;
     const saved = localStorage.getItem("go4it-theme") as Theme | null;
-    const initial = saved === "dark" ? "dark" : "light";
+    const initial = paramTheme === "dark" || paramTheme === "light" ? paramTheme : saved === "dark" ? "dark" : "light";
     setTheme(initial);
     if (initial === "dark") {
       document.documentElement.classList.add("dark");

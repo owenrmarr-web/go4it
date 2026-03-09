@@ -20,17 +20,18 @@ export default function Home() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showAllApps, setShowAllApps] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(0);
+  const [highlightPaused, setHighlightPaused] = useState(false);
 
   const isSearching = search.trim().length > 0;
 
-  // Cycle preview highlight across first 4 featured apps
+  // Cycle preview highlight across first 4 featured apps, stop on hover
   useEffect(() => {
-    if (isSearching) return;
+    if (isSearching || highlightPaused) return;
     const timer = setInterval(() => {
       setHighlightIdx((i) => (i + 1) % 4);
     }, 3000);
     return () => clearInterval(timer);
-  }, [isSearching]);
+  }, [isSearching, highlightPaused]);
 
   useEffect(() => {
     fetch("/api/apps")
@@ -240,7 +241,10 @@ export default function Home() {
                 <h2 className="text-2xl sm:text-3xl font-bold mb-6">
                   Featured Apps
                 </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div
+                  className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+                  onMouseEnter={() => setHighlightPaused(true)}
+                >
                   {apps.slice(0, 4).map((app, i) => (
                     <AppCard
                       key={app.id}
@@ -250,7 +254,7 @@ export default function Home() {
                       orgs={orgs}
                       onAddToOrg={handleAddToOrg}
                       onAuthRequired={() => setShowAuthModal(true)}
-                      forceShowPreview={i === highlightIdx}
+                      forceShowPreview={!highlightPaused && i === highlightIdx}
                     />
                   ))}
                 </div>
@@ -279,37 +283,54 @@ export default function Home() {
             </div>
           </section>
 
-          {/* How It Works */}
+          {/* How It Works + Live Preview */}
           <section className="max-w-7xl mx-auto px-4 py-16 sm:py-20">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center mb-12">
-              How It Works
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
-              {[
-                {
-                  num: "1",
-                  title: "Browse or Build",
-                  desc: "Find apps in our marketplace or describe what you need and AI builds it.",
-                },
-                {
-                  num: "2",
-                  title: "Add & Assign",
-                  desc: "Add apps to your organization and give your team the access they need.",
-                },
-                {
-                  num: "3",
-                  title: "Deploy & Go",
-                  desc: "Apps deploy instantly in the browser. Nothing to install or maintain.",
-                },
-              ].map((step) => (
-                <div key={step.num} className="text-center">
-                  <div className="w-14 h-14 rounded-full gradient-brand flex items-center justify-center text-2xl font-bold mx-auto">
-                    {step.num}
-                  </div>
-                  <h3 className="mt-4 text-lg font-bold text-gray-900">{step.title}</h3>
-                  <p className="mt-2 text-gray-600">{step.desc}</p>
+            <div className="flex flex-col md:flex-row gap-10 md:gap-12 items-stretch">
+              {/* Steps — left column */}
+              <div className="md:w-[30%] flex flex-col justify-center">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-8">
+                  How It Works
+                </h2>
+                <div className="flex flex-col gap-8">
+                  {[
+                    {
+                      num: "1",
+                      title: "Browse or Build",
+                      desc: "Find apps in our marketplace or describe what you need and AI builds it.",
+                    },
+                    {
+                      num: "2",
+                      title: "Add & Assign",
+                      desc: "Add apps to your organization and give your team the access they need.",
+                    },
+                    {
+                      num: "3",
+                      title: "Deploy & Go",
+                      desc: "Apps deploy instantly in the browser. Nothing to install or maintain.",
+                    },
+                  ].map((step) => (
+                    <div key={step.num} className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-full gradient-brand flex items-center justify-center text-xl font-bold shrink-0">
+                        {step.num}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">{step.title}</h3>
+                        <p className="mt-1 text-gray-600 text-sm">{step.desc}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              {/* Live app preview — right column */}
+              <div className="md:w-[70%] rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gray-900 min-h-[500px]">
+                <iframe
+                  src="https://go4it-preview-cmlsrqa5.fly.dev?theme=dark"
+                  title="GoProject — Live Preview"
+                  className="w-full h-full min-h-[500px]"
+                  loading="lazy"
+                />
+              </div>
             </div>
           </section>
 
