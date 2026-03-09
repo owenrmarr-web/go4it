@@ -151,7 +151,7 @@ export default function Home() {
       <Header />
 
       {/* Hero */}
-      <section className="bg-black pt-24 sm:pt-36 pb-16 sm:pb-24 px-4 text-center text-white relative overflow-hidden">
+      <section className="bg-black pt-24 sm:pt-36 pb-20 sm:pb-32 px-4 text-center text-white relative overflow-hidden">
         {/* Background video */}
         <video
           src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-hero-clip.mp4?v=2"
@@ -210,7 +210,7 @@ export default function Home() {
       ) : (
         <>
           {/* Featured Apps */}
-          <section className="gradient-brand py-10 px-4 -mt-7">
+          <section className="gradient-brand py-10 px-4" style={{ marginTop: '-1px' }}>
             <div className="max-w-7xl mx-auto">
             {loading ? (
               <div className="flex justify-center py-20">
