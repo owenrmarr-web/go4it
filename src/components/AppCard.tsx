@@ -20,6 +20,7 @@ interface AppCardProps {
   orgs: UserOrg[];
   onAddToOrg: (orgSlug: string, appId: string, memberConfig?: MemberConfig[]) => void;
   onAuthRequired?: () => void;
+  forceShowPreview?: boolean;
 }
 
 const categoryColors: Record<string, string> = {
@@ -46,6 +47,7 @@ export default function AppCard({
   orgs,
   onAddToOrg,
   onAuthRequired,
+  forceShowPreview,
 }: AppCardProps) {
   const { data: session } = useSession();
   const [showOrgPicker, setShowOrgPicker] = useState(false);
@@ -143,9 +145,15 @@ export default function AppCard({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all duration-300"
+              className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${
+                forceShowPreview ? "bg-black/40" : "bg-black/0 group-hover:bg-black/40"
+              }`}
             >
-              <div className="opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all duration-300">
+              <div className={`transition-all duration-500 ${
+                forceShowPreview
+                  ? "opacity-100 scale-100"
+                  : "opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100"
+              }`}>
                 <div className="px-5 py-2.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 shadow-lg">
                   <span className="text-white text-sm font-semibold tracking-wide">Interactive Preview</span>
                 </div>

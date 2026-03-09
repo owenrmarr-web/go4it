@@ -19,8 +19,18 @@ export default function Home() {
   const { hearted, toggle } = useInteractions();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showAllApps, setShowAllApps] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(0);
 
   const isSearching = search.trim().length > 0;
+
+  // Cycle preview highlight across first 4 featured apps
+  useEffect(() => {
+    if (isSearching) return;
+    const timer = setInterval(() => {
+      setHighlightIdx((i) => (i + 1) % 4);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [isSearching]);
 
   useEffect(() => {
     fetch("/api/apps")
@@ -162,7 +172,7 @@ export default function Home() {
           <p className="mt-3 sm:mt-4 text-2xl sm:text-3xl md:text-4xl opacity-90 font-bold max-w-4xl mx-auto leading-tight">
             Run your business on software that costs 10x less.
           </p>
-          <p className="mt-3 opacity-70 text-base sm:text-lg max-w-2xl mx-auto">
+          <p className="mt-3 opacity-70 text-base sm:text-lg max-w-3xl mx-auto">
             Browse, deploy, and start using apps for your business in minutes — Let&apos;s GO4IT
           </p>
           <a
@@ -171,7 +181,7 @@ export default function Home() {
           >
             Create Apps for Free
           </a>
-          <div className="mt-6 max-w-2xl mx-auto">
+          <div className="mt-10 max-w-2xl mx-auto">
             <SearchBar value={search} onChange={setSearch} />
           </div>
         </div>
@@ -231,7 +241,18 @@ export default function Home() {
                   Featured Apps
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {apps.slice(0, 4).map(renderAppCard)}
+                  {apps.slice(0, 4).map((app, i) => (
+                    <AppCard
+                      key={app.id}
+                      app={app}
+                      isHearted={hearted.has(app.id)}
+                      onToggleHeart={() => toggle(app.id, "HEART")}
+                      orgs={orgs}
+                      onAddToOrg={handleAddToOrg}
+                      onAuthRequired={() => setShowAuthModal(true)}
+                      forceShowPreview={i === highlightIdx}
+                    />
+                  ))}
                 </div>
 
                 {/* Expanded rows: 4-wide grid */}
@@ -301,7 +322,7 @@ export default function Home() {
               >
                 <div className="text-4xl mb-4">🤖</div>
                 <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
-                  Can&apos;t find what you need?
+                  Want to build your own app?
                 </h3>
                 <p className="mt-2 text-gray-600">
                   Describe your dream business tool in plain English and our AI will build it for you in minutes.
