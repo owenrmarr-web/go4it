@@ -163,7 +163,7 @@ export default function Home() {
       <Header />
 
       {/* Hero */}
-      <section className="bg-black pt-24 sm:pt-36 pb-20 sm:pb-32 px-4 text-center text-white relative overflow-hidden">
+      <section className="bg-black pt-28 sm:pt-40 pb-28 sm:pb-40 px-4 text-center text-white relative overflow-hidden">
         {/* Background video */}
         <video
           src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-hero-clip.mp4?v=2"
@@ -186,7 +186,7 @@ export default function Home() {
           <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
             <a
               href="/create"
-              className="bg-white text-purple-700 px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+              className="bg-white/10 backdrop-blur-sm border border-white/30 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:bg-white/20 hover:scale-105 transition-all"
             >
               Create Apps for Free
             </a>
@@ -279,9 +279,12 @@ export default function Home() {
 
                 {/* Search + all apps */}
                 {showAllApps && (
-                  <div className="mt-8" id="app-store">
-                    <div className="max-w-2xl mx-auto mb-8">
-                      <SearchBar value={search} onChange={setSearch} />
+                  <div className="mt-8 scroll-mt-24" id="app-store">
+                    <div className="flex items-center gap-6 mb-8">
+                      <h2 className="text-2xl sm:text-3xl font-bold shrink-0">All Apps</h2>
+                      <div className="flex-1 max-w-2xl">
+                        <SearchBar value={search} onChange={setSearch} />
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                       {apps.map(renderAppCard)}
