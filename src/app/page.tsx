@@ -266,17 +266,6 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Full-width gradient banner */}
-          <section className="gradient-brand py-16 sm:py-20 px-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold leading-tight">
-                Small businesses spend an average of $1,400 a year per employee on software.
-                <br />
-                <span className="opacity-80">We think that&apos;s too much.</span>
-              </h2>
-            </div>
-          </section>
-
           {/* How It Works */}
           <section className="max-w-7xl mx-auto px-4 py-16 sm:py-20">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center mb-12">
@@ -349,17 +338,23 @@ export default function Home() {
           </section>
 
           {/* Full demo video */}
-          <section className="max-w-5xl mx-auto px-4 py-16 sm:py-20">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center mb-8">
-              See the full demo
-            </h2>
+          <section className="gradient-brand py-16 sm:py-20 px-4">
+            <div className="max-w-4xl mx-auto text-center mb-10">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold leading-tight">
+                Small businesses spend an average of $1,400 a year per employee on software.
+                <br />
+                <span className="opacity-80">We think that&apos;s too much.</span>
+              </h2>
+            </div>
+            <div className="max-w-5xl mx-auto">
             <video
               src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-demo.mp4"
               controls
               muted
               playsInline
-              className="w-full rounded-2xl shadow-xl"
+              className="w-full rounded-2xl shadow-2xl"
             />
+            </div>
           </section>
         </>
       )}
