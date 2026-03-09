@@ -159,7 +159,7 @@ export default function Home() {
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-20"
+          className="absolute top-0 left-0 w-full object-cover object-top opacity-20"
         />
         <div className="relative z-10">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold drop-shadow-lg">
