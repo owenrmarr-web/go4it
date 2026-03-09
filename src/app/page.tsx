@@ -151,7 +151,7 @@ export default function Home() {
       <Header />
 
       {/* Hero */}
-      <section className="gradient-brand pt-28 sm:pt-40 pb-20 sm:pb-28 px-4 text-center relative overflow-hidden">
+      <section className="bg-black pt-28 sm:pt-40 pb-20 sm:pb-28 px-4 text-center text-white relative overflow-hidden">
         {/* Background video */}
         <video
           src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-hero-clip.mp4?v=2"
@@ -159,7 +159,7 @@ export default function Home() {
           loop
           muted
           playsInline
-          className="absolute top-0 left-0 w-full object-cover object-top opacity-20"
+          className="absolute top-0 left-0 w-full object-cover object-top opacity-40"
         />
         <div className="relative z-10">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold drop-shadow-lg">
@@ -209,8 +209,9 @@ export default function Home() {
         </section>
       ) : (
         <>
-          {/* Above the fold: video + 2x2 apps side by side */}
-          <section className="max-w-7xl mx-auto px-4 py-10">
+          {/* Featured Apps */}
+          <section className="gradient-brand py-10 px-4">
+            <div className="max-w-7xl mx-auto">
             {loading ? (
               <div className="flex justify-center py-20">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
@@ -234,7 +235,7 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-6">
                   Featured Apps
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -254,7 +255,7 @@ export default function Home() {
                   <div className="text-center mt-8">
                     <button
                       onClick={() => setShowAllApps(true)}
-                      className="gradient-brand px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity"
+                      className="bg-white text-purple-700 px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
                     >
                       Browse All Apps
                     </button>
@@ -262,9 +263,10 @@ export default function Home() {
                 )}
               </>
             )}
+            </div>
           </section>
 
-          {/* Full-width gradient banner + video */}
+          {/* Full-width gradient banner */}
           <section className="gradient-brand py-16 sm:py-20 px-4">
             <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold leading-tight">
@@ -272,16 +274,6 @@ export default function Home() {
                 <br />
                 <span className="opacity-80">We think that&apos;s too much.</span>
               </h2>
-              <div className="mt-10">
-                <video
-                  src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-demo.mp4"
-                  controls
-                  autoPlay
-                  muted
-                  playsInline
-                  className="w-full rounded-2xl shadow-2xl"
-                />
-              </div>
             </div>
           </section>
 
@@ -354,6 +346,20 @@ export default function Home() {
                 </span>
               </a>
             </div>
+          </section>
+
+          {/* Full demo video */}
+          <section className="max-w-5xl mx-auto px-4 py-16 sm:py-20">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center mb-8">
+              See the full demo
+            </h2>
+            <video
+              src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-demo.mp4"
+              controls
+              muted
+              playsInline
+              className="w-full rounded-2xl shadow-xl"
+            />
           </section>
         </>
       )}
