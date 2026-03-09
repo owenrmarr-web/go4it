@@ -151,22 +151,33 @@ export default function Home() {
       <Header />
 
       {/* Hero */}
-      <section className="gradient-brand pt-24 sm:pt-32 pb-10 sm:pb-14 px-4 text-center">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold drop-shadow-lg">
-          GO4IT
-        </h1>
-        <p className="mt-3 sm:mt-4 text-lg sm:text-xl md:text-2xl opacity-90 font-medium max-w-3xl mx-auto">
-          Run your business on software that costs 10x less.
-        </p>
-        <p className="mt-2 opacity-70 text-base max-w-2xl mx-auto">
-          Browse, deploy, and start using apps for your business in minutes — Let&apos;s GO4IT
-        </p>
-        <a
-          href="/create"
-          className="inline-block mt-5 bg-white text-purple-700 px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
-        >
-          Create Apps for Free
-        </a>
+      <section className="gradient-brand pt-28 sm:pt-40 pb-20 sm:pb-28 px-4 text-center relative overflow-hidden">
+        {/* Background video */}
+        <video
+          src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-hero-clip.mp4?v=2"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] rounded-2xl opacity-20"
+        />
+        <div className="relative z-10">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold drop-shadow-lg">
+            GO4IT
+          </h1>
+          <p className="mt-3 sm:mt-4 text-2xl sm:text-3xl md:text-4xl opacity-90 font-bold max-w-4xl mx-auto leading-tight">
+            Run your business on software that costs 10x less.
+          </p>
+          <p className="mt-3 opacity-70 text-base sm:text-lg max-w-2xl mx-auto">
+            Browse, deploy, and start using apps for your business in minutes — Let&apos;s GO4IT
+          </p>
+          <a
+            href="/create"
+            className="inline-block mt-6 bg-white text-purple-700 px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+          >
+            Create Apps for Free
+          </a>
+        </div>
       </section>
 
       {/* Search — overlaps hero with negative margin */}
@@ -223,30 +234,11 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                  {/* Demo video */}
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">
-                      See it in action
-                    </h2>
-                    <video
-                      src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-hero-clip.mp4"
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      className="w-full rounded-2xl shadow-xl"
-                    />
-                  </div>
-                  {/* 2x2 featured apps */}
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">
-                      Featured Apps
-                    </h2>
-                    <div className="grid grid-cols-2 gap-4">
-                      {apps.slice(0, 4).map(renderAppCard)}
-                    </div>
-                  </div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">
+                  Featured Apps
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {apps.slice(0, 4).map(renderAppCard)}
                 </div>
 
                 {/* Expanded rows: 4-wide grid */}
