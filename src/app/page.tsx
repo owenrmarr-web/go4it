@@ -161,6 +161,12 @@ export default function Home() {
         <p className="mt-2 opacity-70 text-base max-w-2xl mx-auto">
           Browse, deploy, and start using apps for your business in minutes — Let&apos;s GO4IT
         </p>
+        <a
+          href="/create"
+          className="inline-block mt-5 bg-white text-purple-700 px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+        >
+          Create Apps for Free
+        </a>
       </section>
 
       {/* Search — overlaps hero with negative margin */}
@@ -224,9 +230,9 @@ export default function Home() {
                       See it in action
                     </h2>
                     <video
-                      src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-demo.mp4"
-                      controls
+                      src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-hero-clip.mp4"
                       autoPlay
+                      loop
                       muted
                       playsInline
                       className="w-full rounded-2xl shadow-xl"
