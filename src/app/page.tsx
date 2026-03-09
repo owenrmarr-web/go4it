@@ -285,9 +285,9 @@ export default function Home() {
 
           {/* How It Works + Live Preview */}
           <section className="max-w-7xl mx-auto px-4 py-16 sm:py-20">
-            <div className="flex flex-col md:flex-row gap-10 md:gap-12 items-stretch">
+            <div className="flex flex-col md:flex-row gap-10 md:gap-12 items-start">
               {/* Steps — left column */}
-              <div className="md:w-[30%] flex flex-col justify-center">
+              <div className="md:w-[30%] flex flex-col">
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-8">
                   How It Works
                 </h2>
@@ -323,7 +323,11 @@ export default function Home() {
               </div>
 
               {/* Live app preview — right column, scaled down to fit */}
-              <div className="md:w-[70%] rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gray-900 relative" style={{ height: 500 }}>
+              <div className="md:w-[70%] flex flex-col">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-8">
+                  See It Live
+                </h2>
+              <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gray-900 relative" style={{ height: 500 }}>
                 <iframe
                   src="https://go4it-preview-cmlsrqa5.fly.dev?theme=dark"
                   title="GoProject — Live Preview"
@@ -331,6 +335,7 @@ export default function Home() {
                   style={{ width: '142.85%', height: '142.85%', transform: 'scale(0.7)' }}
                   loading="lazy"
                 />
+              </div>
               </div>
             </div>
           </section>
