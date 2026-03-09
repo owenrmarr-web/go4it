@@ -151,7 +151,7 @@ export default function Home() {
       <Header />
 
       {/* Hero */}
-      <section className="bg-black pt-28 sm:pt-40 pb-20 sm:pb-28 px-4 text-center text-white relative overflow-hidden">
+      <section className="bg-black pt-24 sm:pt-36 pb-16 sm:pb-24 px-4 text-center text-white relative overflow-hidden">
         {/* Background video */}
         <video
           src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-hero-clip.mp4?v=2"
@@ -180,8 +180,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Search — overlaps hero with negative margin */}
-      <section className="max-w-7xl mx-auto px-4 -mt-7 relative z-10">
+      {/* Search — overlaps hero */}
+      <section className="max-w-7xl mx-auto px-4 -mt-7 relative z-20">
         <SearchBar value={search} onChange={setSearch} />
       </section>
 
@@ -210,7 +210,7 @@ export default function Home() {
       ) : (
         <>
           {/* Featured Apps */}
-          <section className="gradient-brand py-10 px-4">
+          <section className="gradient-brand py-10 px-4 -mt-7">
             <div className="max-w-7xl mx-auto">
             {loading ? (
               <div className="flex justify-center py-20">
