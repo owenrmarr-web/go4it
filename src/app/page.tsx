@@ -122,6 +122,13 @@ export default function Home() {
     [orgs]
   );
 
+  // Curated featured app titles — change these to pick which 4 are featured
+  const FEATURED_TITLES = ["GoCRM", "GoProject", "GoChat", "GoInvoice"];
+
+  const featuredApps = useMemo(() => {
+    return FEATURED_TITLES.map((title) => apps.find((a) => a.title === title)).filter(Boolean) as App[];
+  }, [apps]);
+
   const filteredApps = useMemo(() => {
     if (!search.trim()) return apps;
     const q = search.toLowerCase();
@@ -176,14 +183,25 @@ export default function Home() {
           <p className="mt-3 opacity-70 text-base sm:text-lg max-w-3xl mx-auto">
             Browse, deploy, and start using apps for your business in minutes — Let&apos;s GO4IT
           </p>
-          <a
-            href="/create"
-            className="inline-block mt-6 bg-white text-purple-700 px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
-          >
-            Create Apps for Free
-          </a>
-          <div className="mt-10 max-w-2xl mx-auto">
-            <SearchBar value={search} onChange={setSearch} />
+          <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
+            <a
+              href="/create"
+              className="bg-white text-purple-700 px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+            >
+              Create Apps for Free
+            </a>
+            <span className="text-white/60 font-medium">or</span>
+            <button
+              onClick={() => {
+                setShowAllApps(true);
+                setTimeout(() => {
+                  document.getElementById("app-store")?.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }}
+              className="bg-white/10 backdrop-blur-sm border border-white/30 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:bg-white/20 hover:scale-105 transition-all"
+            >
+              Browse Our App Store
+            </button>
           </div>
         </div>
       </section>
@@ -245,7 +263,7 @@ export default function Home() {
                   className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6"
                   onMouseEnter={() => setHighlightPaused(true)}
                 >
-                  {apps.slice(0, 4).map((app, i) => (
+                  {featuredApps.map((app, i) => (
                     <AppCard
                       key={app.id}
                       app={app}
@@ -259,16 +277,19 @@ export default function Home() {
                   ))}
                 </div>
 
-                {/* Expanded rows: 4-wide grid */}
-                {showAllApps && apps.length > 4 && (
-                  <div className="mt-8">
+                {/* Search + all apps */}
+                {showAllApps && (
+                  <div className="mt-8" id="app-store">
+                    <div className="max-w-2xl mx-auto mb-8">
+                      <SearchBar value={search} onChange={setSearch} />
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      {apps.slice(4).map(renderAppCard)}
+                      {apps.map(renderAppCard)}
                     </div>
                   </div>
                 )}
 
-                {!showAllApps && apps.length > 4 && (
+                {!showAllApps && apps.length > featuredApps.length && (
                   <div className="text-center mt-8">
                     <button
                       onClick={() => setShowAllApps(true)}
