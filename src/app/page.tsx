@@ -122,12 +122,6 @@ export default function Home() {
     );
   }, [apps, search]);
 
-  const visibleApps = isSearching
-    ? filteredApps
-    : showAllApps
-      ? apps
-      : apps.slice(0, 4);
-
   const renderAppCard = (app: App) => (
     <AppCard
       key={app.id}
@@ -177,12 +171,10 @@ export default function Home() {
           >
             Create Apps for Free
           </a>
+          <div className="mt-6 max-w-2xl mx-auto">
+            <SearchBar value={search} onChange={setSearch} />
+          </div>
         </div>
-      </section>
-
-      {/* Search — overlaps hero */}
-      <section className="max-w-7xl mx-auto px-4 -mt-7 relative z-20">
-        <SearchBar value={search} onChange={setSearch} />
       </section>
 
       {isSearching ? (
@@ -209,8 +201,8 @@ export default function Home() {
         </section>
       ) : (
         <>
-          {/* Featured Apps */}
-          <section className="gradient-brand py-10 px-4" style={{ marginTop: '-1px' }}>
+          {/* Featured Apps — negative margin pulls it under hero to eliminate gap */}
+          <section className="gradient-brand pt-12 pb-10 px-4 -mt-2 relative">
             <div className="max-w-7xl mx-auto">
             {loading ? (
               <div className="flex justify-center py-20">
