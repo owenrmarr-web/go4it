@@ -128,19 +128,21 @@ export default function Home() {
       ? apps
       : apps.slice(0, 4);
 
+  const renderAppCard = (app: App) => (
+    <AppCard
+      key={app.id}
+      app={app}
+      isHearted={hearted.has(app.id)}
+      onToggleHeart={() => toggle(app.id, "HEART")}
+      orgs={orgs}
+      onAddToOrg={handleAddToOrg}
+      onAuthRequired={() => setShowAuthModal(true)}
+    />
+  );
+
   const renderAppGrid = (appList: App[]) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {appList.map((app) => (
-        <AppCard
-          key={app.id}
-          app={app}
-          isHearted={hearted.has(app.id)}
-          onToggleHeart={() => toggle(app.id, "HEART")}
-          orgs={orgs}
-          onAddToOrg={handleAddToOrg}
-          onAuthRequired={() => setShowAuthModal(true)}
-        />
-      ))}
+      {appList.map(renderAppCard)}
     </div>
   );
 
@@ -190,11 +192,8 @@ export default function Home() {
         </section>
       ) : (
         <>
-          {/* Featured Apps */}
+          {/* Above the fold: video + 2x2 apps side by side */}
           <section className="max-w-7xl mx-auto px-4 py-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">
-              Featured Apps
-            </h2>
             {loading ? (
               <div className="flex justify-center py-20">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
@@ -218,7 +217,41 @@ export default function Home() {
               </div>
             ) : (
               <>
-                {renderAppGrid(visibleApps)}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                  {/* Demo video */}
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">
+                      See it in action
+                    </h2>
+                    <video
+                      src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-demo.mp4"
+                      controls
+                      autoPlay
+                      muted
+                      playsInline
+                      className="w-full rounded-2xl shadow-xl"
+                    />
+                  </div>
+                  {/* 2x2 featured apps */}
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">
+                      Featured Apps
+                    </h2>
+                    <div className="grid grid-cols-2 gap-4">
+                      {apps.slice(0, 4).map(renderAppCard)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded rows: 4-wide grid */}
+                {showAllApps && apps.length > 4 && (
+                  <div className="mt-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {apps.slice(4).map(renderAppCard)}
+                    </div>
+                  </div>
+                )}
+
                 {!showAllApps && apps.length > 4 && (
                   <div className="text-center mt-8">
                     <button
@@ -237,7 +270,7 @@ export default function Home() {
           <section className="gradient-brand py-16 sm:py-20 px-4">
             <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold leading-tight">
-                Small businesses spend $1,400/employee/year on software.
+                Small businesses spend an average of $1,400 a year per employee on software.
                 <br />
                 <span className="opacity-80">We think that&apos;s too much.</span>
               </h2>
@@ -245,6 +278,7 @@ export default function Home() {
                 <video
                   src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-demo.mp4"
                   controls
+                  autoPlay
                   muted
                   playsInline
                   className="w-full rounded-2xl shadow-2xl"
