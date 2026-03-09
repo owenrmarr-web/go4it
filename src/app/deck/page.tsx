@@ -1439,6 +1439,13 @@ const slides = [
         >
           Visit go4it.live
         </a>
+        <video
+          src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-demo.mp4"
+          controls
+          muted
+          playsInline
+          className="mt-8 rounded-xl shadow-lg w-full max-w-2xl"
+        />
       </div>
     ),
   },

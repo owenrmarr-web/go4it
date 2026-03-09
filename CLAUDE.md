@@ -140,9 +140,12 @@ builder/                   — Standalone builder service (deployed to Fly.io)
 
 ## Current Focus (pre-launch)
 
-Two priorities before going to market:
+Three priorities before going to market:
 
-1. **Stripe billing** — MVP is live. Checkout, webhooks, subscription sync, and invoices all working in test mode. Remaining work:
+1. **Fix app creation preview flow** — After a user creates an app via the AI builder, two issues:
+   - The user shouldn't have to manually "deploy" and wait — the platform should auto-deploy the preview and show a "View" button when ready.
+   - The preview page loads blank (nothing renders). Needs investigation — check the create flow on `go4it.live/create`, the builder's preview deploy pipeline, and the preview iframe/redirect logic.
+2. **Stripe billing** — MVP is live. Checkout, webhooks, subscription sync, and invoices all working in test mode. Remaining work:
    - Subscription enforcement (block/warn apps when payment fails or subscription is canceled)
    - Payment failure notifications (email/in-app)
    - Trial period logic

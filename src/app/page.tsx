@@ -18,6 +18,9 @@ export default function Home() {
   const [orgs, setOrgs] = useState<UserOrg[]>([]);
   const { hearted, toggle } = useInteractions();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAllApps, setShowAllApps] = useState(false);
+
+  const isSearching = search.trim().length > 0;
 
   useEffect(() => {
     fetch("/api/apps")
@@ -119,6 +122,28 @@ export default function Home() {
     );
   }, [apps, search]);
 
+  const visibleApps = isSearching
+    ? filteredApps
+    : showAllApps
+      ? apps
+      : apps.slice(0, 4);
+
+  const renderAppGrid = (appList: App[]) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {appList.map((app) => (
+        <AppCard
+          key={app.id}
+          app={app}
+          isHearted={hearted.has(app.id)}
+          onToggleHeart={() => toggle(app.id, "HEART")}
+          orgs={orgs}
+          onAddToOrg={handleAddToOrg}
+          onAuthRequired={() => setShowAuthModal(true)}
+        />
+      ))}
+    </div>
+  );
+
   return (
     <div className="min-h-screen">
       <Header />
@@ -141,62 +166,165 @@ export default function Home() {
         <SearchBar value={search} onChange={setSearch} />
       </section>
 
-      {/* App Grid */}
-      <section className="max-w-7xl mx-auto px-4 py-10">
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
-          </div>
-        ) : apps.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">🚀</div>
-            <p className="text-xl font-semibold text-gray-700">
-              No apps yet — be the first to create one!
-            </p>
-            <p className="text-gray-400 mt-2 max-w-md mx-auto">
-              Describe your dream business tool and our AI will build it
-              for you in minutes.
-            </p>
-            <a
-              href="/create"
-              className="inline-block mt-6 gradient-brand px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity"
-            >
-              Create Your First App
-            </a>
-          </div>
-        ) : filteredApps.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-xl text-gray-400">
-              No apps match your search.
-            </p>
-            <p className="text-gray-400 mt-1">
-              Try a different keyword or browse all apps.
-            </p>
-            {search && (
+      {isSearching ? (
+        /* Search mode: full results grid */
+        <section className="max-w-7xl mx-auto px-4 py-10">
+          {filteredApps.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-xl text-gray-400">
+                No apps match your search.
+              </p>
+              <p className="text-gray-400 mt-1">
+                Try a different keyword or browse all apps.
+              </p>
               <button
                 onClick={() => setSearch("")}
                 className="mt-4 text-purple-600 font-semibold hover:underline"
               >
                 Clear search
               </button>
+            </div>
+          ) : (
+            renderAppGrid(filteredApps)
+          )}
+        </section>
+      ) : (
+        <>
+          {/* Featured Apps */}
+          <section className="max-w-7xl mx-auto px-4 py-10">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">
+              Featured Apps
+            </h2>
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
+              </div>
+            ) : apps.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="text-6xl mb-4">🚀</div>
+                <p className="text-xl font-semibold text-gray-700">
+                  No apps yet — be the first to create one!
+                </p>
+                <p className="text-gray-400 mt-2 max-w-md mx-auto">
+                  Describe your dream business tool and our AI will build it
+                  for you in minutes.
+                </p>
+                <a
+                  href="/create"
+                  className="inline-block mt-6 gradient-brand px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity"
+                >
+                  Create Your First App
+                </a>
+              </div>
+            ) : (
+              <>
+                {renderAppGrid(visibleApps)}
+                {!showAllApps && apps.length > 4 && (
+                  <div className="text-center mt-8">
+                    <button
+                      onClick={() => setShowAllApps(true)}
+                      className="gradient-brand px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-opacity"
+                    >
+                      Browse All Apps
+                    </button>
+                  </div>
+                )}
+              </>
             )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredApps.map((app) => (
-              <AppCard
-                key={app.id}
-                app={app}
-                isHearted={hearted.has(app.id)}
-                onToggleHeart={() => toggle(app.id, "HEART")}
-                orgs={orgs}
-                onAddToOrg={handleAddToOrg}
-                onAuthRequired={() => setShowAuthModal(true)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+          </section>
+
+          {/* Full-width gradient banner + video */}
+          <section className="gradient-brand py-16 sm:py-20 px-4">
+            <div className="max-w-4xl mx-auto text-center">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold leading-tight">
+                Small businesses spend $1,400/employee/year on software.
+                <br />
+                <span className="opacity-80">We think that&apos;s too much.</span>
+              </h2>
+              <div className="mt-10">
+                <video
+                  src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-demo.mp4"
+                  controls
+                  muted
+                  playsInline
+                  className="w-full rounded-2xl shadow-2xl"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* How It Works */}
+          <section className="max-w-7xl mx-auto px-4 py-16 sm:py-20">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center mb-12">
+              How It Works
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+              {[
+                {
+                  num: "1",
+                  title: "Browse or Build",
+                  desc: "Find apps in our marketplace or describe what you need and AI builds it.",
+                },
+                {
+                  num: "2",
+                  title: "Add & Assign",
+                  desc: "Add apps to your organization and give your team the access they need.",
+                },
+                {
+                  num: "3",
+                  title: "Deploy & Go",
+                  desc: "Apps deploy instantly in the browser. Nothing to install or maintain.",
+                },
+              ].map((step) => (
+                <div key={step.num} className="text-center">
+                  <div className="w-14 h-14 rounded-full gradient-brand flex items-center justify-center text-2xl font-bold mx-auto">
+                    {step.num}
+                  </div>
+                  <h3 className="mt-4 text-lg font-bold text-gray-900">{step.title}</h3>
+                  <p className="mt-2 text-gray-600">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Side-by-side CTA cards */}
+          <section className="max-w-7xl mx-auto px-4 pb-16 sm:pb-20">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <a
+                href="/create"
+                className="group rounded-2xl border-2 border-gray-200 bg-white p-8 sm:p-10 hover:border-pink-300 hover:shadow-lg transition-all"
+              >
+                <div className="text-4xl mb-4">🤖</div>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                  Can&apos;t find what you need?
+                </h3>
+                <p className="mt-2 text-gray-600">
+                  Describe your dream business tool in plain English and our AI will build it for you in minutes.
+                </p>
+                <span className="mt-4 inline-flex items-center gap-1 font-semibold gradient-brand-text group-hover:gap-2 transition-all">
+                  Build with AI <span aria-hidden="true">&rarr;</span>
+                </span>
+              </a>
+
+              <a
+                href="/pricing"
+                className="group rounded-2xl border-2 border-gray-200 bg-white p-8 sm:p-10 hover:border-purple-300 hover:shadow-lg transition-all"
+              >
+                <div className="text-4xl mb-4">💰</div>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                  $5/app + $1/seat/month
+                </h3>
+                <p className="mt-2 text-gray-600">
+                  Enterprise-grade tools at a fraction of the cost. See how much your business could save.
+                </p>
+                <span className="mt-4 inline-flex items-center gap-1 font-semibold gradient-brand-text group-hover:gap-2 transition-all">
+                  See pricing <span aria-hidden="true">&rarr;</span>
+                </span>
+              </a>
+            </div>
+          </section>
+        </>
+      )}
 
       {showAuthModal && (
         <AuthModal
@@ -206,7 +334,7 @@ export default function Home() {
         />
       )}
 
-      {/* Footer — always uses GO4IT default brand colors */}
+      {/* Footer */}
       <footer className="border-t border-gray-200 bg-white mt-8">
         <div className="max-w-7xl mx-auto px-4 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
