@@ -118,7 +118,7 @@ export default function ChatPanel({
   // Auto-scroll to bottom (only when there are messages)
   useEffect(() => {
     if (messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [messages]);
 
