@@ -203,6 +203,9 @@ export default function Home() {
               Browse Our App Store
             </button>
           </div>
+          <span className="inline-block mt-4 px-4 py-1 rounded-full border border-white/30 text-sm font-semibold text-white/90 bg-white/10 backdrop-blur-sm">
+            Free during beta
+          </span>
         </div>
       </section>
 
