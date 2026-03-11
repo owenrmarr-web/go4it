@@ -166,7 +166,7 @@ export default function Home() {
       <section className="bg-black pt-28 sm:pt-40 pb-28 sm:pb-40 px-4 text-center text-white relative overflow-hidden">
         {/* Background video */}
         <video
-          src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-hero-clip.mp4?v=2"
+          src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-hero-clip.mp4?v=3"
           autoPlay
           loop
           muted
