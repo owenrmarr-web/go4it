@@ -266,16 +266,13 @@ export default function OrgPortalPage() {
               </div>
             </div>
 
-            {/* Center: GO4IT logo + subtitle */}
-            <div className="absolute left-1/2 -translate-x-1/2 text-center">
-              <Link
-                href="/"
-                className="text-lg font-extrabold text-white tracking-tight drop-shadow-sm hover:opacity-90 transition-opacity"
-              >
-                GO4IT
-              </Link>
-              <p className="text-[10px] text-white/60 font-medium -mt-0.5">Organization Home</p>
-            </div>
+            {/* Center: GO4IT logo */}
+            <Link
+              href="/"
+              className="absolute left-1/2 -translate-x-1/2 text-lg font-extrabold text-white tracking-tight drop-shadow-sm hover:opacity-90 transition-opacity"
+            >
+              GO4IT
+            </Link>
 
             {/* Right: Controls */}
             <div className="flex items-center gap-2">
@@ -328,14 +325,19 @@ export default function OrgPortalPage() {
 
       {/* Main content */}
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
-        {/* Greeting */}
-        <div className="mb-4">
-          <h1 className={`text-lg sm:text-xl font-bold ${t.text}`}>
-            {greeting}, {firstName}
-          </h1>
-          <p className={`text-xs ${t.textMuted} mt-0.5`}>
-            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-          </p>
+        {/* Greeting + Organization Home */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h1 className={`text-lg sm:text-xl font-bold ${t.text}`}>
+              {greeting}, {firstName}
+            </h1>
+            <p className={`text-xs ${t.textMuted} mt-0.5`}>
+              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            </p>
+          </div>
+          <h2 className={`text-lg sm:text-xl font-bold ${t.text}`}>
+            Organization Home
+          </h2>
         </div>
 
         {/* Mobile chat toggle */}
