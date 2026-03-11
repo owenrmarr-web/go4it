@@ -266,13 +266,16 @@ export default function OrgPortalPage() {
               </div>
             </div>
 
-            {/* Center: GO4IT logo */}
-            <Link
-              href="/"
-              className="absolute left-1/2 -translate-x-1/2 text-lg font-extrabold text-white tracking-tight drop-shadow-sm hover:opacity-90 transition-opacity"
-            >
-              GO4IT
-            </Link>
+            {/* Center: GO4IT logo + subtitle */}
+            <div className="absolute left-1/2 -translate-x-1/2 text-center">
+              <Link
+                href="/"
+                className="text-lg font-extrabold text-white tracking-tight drop-shadow-sm hover:opacity-90 transition-opacity"
+              >
+                GO4IT
+              </Link>
+              <p className="text-[10px] text-white/60 font-medium -mt-0.5">Organization Home</p>
+            </div>
 
             {/* Right: Controls */}
             <div className="flex items-center gap-2">
