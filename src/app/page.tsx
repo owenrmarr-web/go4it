@@ -214,28 +214,24 @@ export default function Home() {
         />
 
         {/* Left feature list */}
-        <div className="absolute left-2 xl:left-4 inset-y-0 hidden lg:flex flex-col justify-end pb-12 gap-4 text-left">
+        <div className="absolute left-2 xl:left-4 inset-y-0 hidden lg:flex flex-col justify-end pb-20 gap-4 text-left">
           {[
             ["feat-1", "Interactive App Store"],
             ["feat-2", "Free Custom App Generation"],
             ["feat-3", "Setup and Collaborate in Minutes"],
             ["feat-4", "Cross-App AI Intelligence"],
-            ["feat-5", "10x Cost Savings"],
-            ["feat-6", "No Code Required"],
           ].map(([cls, label]) => (
             <span key={label} className={`${cls} text-sm font-semibold tracking-wide max-w-[180px]`}>{label}</span>
           ))}
         </div>
 
         {/* Right feature list (mirrored) */}
-        <div className="absolute right-2 xl:right-4 inset-y-0 hidden lg:flex flex-col justify-end pb-12 gap-4 text-right">
+        <div className="absolute right-2 xl:right-4 inset-y-0 hidden lg:flex flex-col justify-end pb-20 gap-4 text-right">
           {[
             ["feat-1", "Interactive App Store"],
             ["feat-2", "Free Custom App Generation"],
             ["feat-3", "Setup and Collaborate in Minutes"],
             ["feat-4", "Cross-App AI Intelligence"],
-            ["feat-5", "10x Cost Savings"],
-            ["feat-6", "No Code Required"],
           ].map(([cls, label]) => (
             <span key={label} className={`${cls} text-sm font-semibold tracking-wide max-w-[180px]`}>{label}</span>
           ))}
