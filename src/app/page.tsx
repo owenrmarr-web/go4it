@@ -413,7 +413,7 @@ export default function Home() {
                   title="GoProject — Live Preview"
                   className="absolute top-0 left-0 origin-top-left"
                   style={{ width: '142.85%', height: '142.85%', transform: 'scale(0.7)' }}
-                  loading="lazy"
+                  loading="eager"
                 />
               </div>
               </div>
