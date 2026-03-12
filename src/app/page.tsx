@@ -214,7 +214,7 @@ export default function Home() {
         />
 
         {/* Left feature list */}
-        <div className="absolute left-6 xl:left-12 inset-y-0 hidden lg:flex flex-col justify-center gap-4 text-left">
+        <div className="absolute left-2 xl:left-4 inset-y-0 hidden lg:flex flex-col justify-end pb-12 gap-4 text-left">
           {[
             ["feat-1", "Interactive App Store"],
             ["feat-2", "Free Custom App Generation"],
@@ -228,7 +228,7 @@ export default function Home() {
         </div>
 
         {/* Right feature list (mirrored) */}
-        <div className="absolute right-6 xl:right-12 inset-y-0 hidden lg:flex flex-col justify-center gap-4 text-right">
+        <div className="absolute right-2 xl:right-4 inset-y-0 hidden lg:flex flex-col justify-end pb-12 gap-4 text-right">
           {[
             ["feat-1", "Interactive App Store"],
             ["feat-2", "Free Custom App Generation"],
