@@ -205,7 +205,7 @@ export default function Home() {
 
         {/* Background video */}
         <video
-          src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-hero-clip.mp4?v=3"
+          src="https://0vve0c2rxedop1n8.public.blob.vercel-storage.com/go4it-hero-clip.mp4?v=4"
           autoPlay
           loop
           muted
