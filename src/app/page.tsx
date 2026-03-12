@@ -167,23 +167,23 @@ export default function Home() {
         <style>{`
           @keyframes f1 {
             0%, 1%   { color: rgba(255,255,255,0.25); }
-            2%, 14%  { color: rgba(255,255,255,0.90); }
-            15%, 100%{ color: rgba(255,255,255,0.25); }
+            2%, 18%  { color: rgba(255,255,255,0.90); }
+            19%, 100%{ color: rgba(255,255,255,0.25); }
           }
           @keyframes f2 {
-            0%, 16%  { color: rgba(255,255,255,0.25); }
-            17%, 31% { color: rgba(255,255,255,0.90); }
-            32%, 100%{ color: rgba(255,255,255,0.25); }
+            0%, 20%  { color: rgba(255,255,255,0.25); }
+            21%, 35% { color: rgba(255,255,255,0.90); }
+            36%, 100%{ color: rgba(255,255,255,0.25); }
           }
           @keyframes f3 {
-            0%, 32%  { color: rgba(255,255,255,0.25); }
-            33%, 47% { color: rgba(255,255,255,0.90); }
-            48%, 100%{ color: rgba(255,255,255,0.25); }
+            0%, 36%  { color: rgba(255,255,255,0.25); }
+            37%, 51% { color: rgba(255,255,255,0.90); }
+            52%, 100%{ color: rgba(255,255,255,0.25); }
           }
           @keyframes f4 {
-            0%, 49%  { color: rgba(255,255,255,0.25); }
-            50%, 64% { color: rgba(255,255,255,0.90); }
-            65%, 100%{ color: rgba(255,255,255,0.25); }
+            0%, 53%  { color: rgba(255,255,255,0.25); }
+            54%, 68% { color: rgba(255,255,255,0.90); }
+            69%, 100%{ color: rgba(255,255,255,0.25); }
           }
           @keyframes f5 {
             0%, 65%  { color: rgba(255,255,255,0.25); }
@@ -214,26 +214,26 @@ export default function Home() {
         />
 
         {/* Left feature list */}
-        <div className="absolute left-2 xl:left-4 inset-y-0 hidden lg:flex flex-col justify-end pb-20 gap-4 text-left">
+        <div className="absolute left-2 xl:left-4 inset-y-0 hidden lg:flex flex-col justify-end pb-6 gap-4 text-left">
           {[
             ["feat-1", "Interactive App Store"],
             ["feat-2", "Free Custom App Generation"],
             ["feat-3", "Setup and Collaborate in Minutes"],
             ["feat-4", "Cross-App AI Intelligence"],
           ].map(([cls, label]) => (
-            <span key={label} className={`${cls} text-sm font-semibold tracking-wide max-w-[180px]`}>{label}</span>
+            <span key={label} className={`${cls} text-sm font-semibold tracking-wide max-w-[148px]`}>{label}</span>
           ))}
         </div>
 
         {/* Right feature list (mirrored) */}
-        <div className="absolute right-2 xl:right-4 inset-y-0 hidden lg:flex flex-col justify-end pb-20 gap-4 text-right">
+        <div className="absolute right-2 xl:right-4 inset-y-0 hidden lg:flex flex-col justify-end pb-6 gap-4 text-right">
           {[
             ["feat-1", "Interactive App Store"],
             ["feat-2", "Free Custom App Generation"],
             ["feat-3", "Setup and Collaborate in Minutes"],
             ["feat-4", "Cross-App AI Intelligence"],
           ].map(([cls, label]) => (
-            <span key={label} className={`${cls} text-sm font-semibold tracking-wide max-w-[180px]`}>{label}</span>
+            <span key={label} className={`${cls} text-sm font-semibold tracking-wide max-w-[148px]`}>{label}</span>
           ))}
         </div>
 
