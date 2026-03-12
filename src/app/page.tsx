@@ -164,6 +164,7 @@ export default function Home() {
 
       {/* Hero */}
       <section className="bg-black pt-28 sm:pt-40 pb-28 sm:pb-40 px-4 text-center text-white relative overflow-hidden">
+        {/* Feature label animations — disabled for now, re-enable by uncommenting
         <style>{`
           @keyframes f1 {
             0%, 1%   { color: rgba(255,255,255,0.25); }
@@ -185,23 +186,12 @@ export default function Home() {
             54%, 68% { color: rgba(255,255,255,0.90); }
             69%, 100%{ color: rgba(255,255,255,0.25); }
           }
-          @keyframes f5 {
-            0%, 65%  { color: rgba(255,255,255,0.25); }
-            66%, 80% { color: rgba(255,255,255,0.90); }
-            81%, 100%{ color: rgba(255,255,255,0.25); }
-          }
-          @keyframes f6 {
-            0%, 81%  { color: rgba(255,255,255,0.25); }
-            82%, 98% { color: rgba(255,255,255,0.90); }
-            99%, 100%{ color: rgba(255,255,255,0.25); }
-          }
           .feat-1 { animation: f1 100.5s linear infinite; }
           .feat-2 { animation: f2 100.5s linear infinite; }
           .feat-3 { animation: f3 100.5s linear infinite; }
           .feat-4 { animation: f4 100.5s linear infinite; }
-          .feat-5 { animation: f5 100.5s linear infinite; }
-          .feat-6 { animation: f6 100.5s linear infinite; }
         `}</style>
+        */}
 
         {/* Background video */}
         <video
@@ -213,7 +203,7 @@ export default function Home() {
           className="absolute top-0 left-0 w-full object-cover object-top opacity-40"
         />
 
-        {/* Left feature list */}
+        {/* Feature labels — disabled for now, re-enable by uncommenting
         <div className="absolute left-2 xl:left-4 inset-y-0 hidden lg:flex flex-col justify-end pb-6 gap-4 text-left">
           {[
             ["feat-1", "Interactive App Store"],
@@ -224,8 +214,6 @@ export default function Home() {
             <span key={label} className={`${cls} text-sm font-semibold tracking-wide max-w-[148px]`}>{label}</span>
           ))}
         </div>
-
-        {/* Right feature list (mirrored) */}
         <div className="absolute right-2 xl:right-4 inset-y-0 hidden lg:flex flex-col justify-end pb-6 gap-4 text-right">
           {[
             ["feat-1", "Interactive App Store"],
@@ -236,6 +224,7 @@ export default function Home() {
             <span key={label} className={`${cls} text-sm font-semibold tracking-wide max-w-[148px]`}>{label}</span>
           ))}
         </div>
+        */}
 
         <div className="relative z-10">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold drop-shadow-lg">
