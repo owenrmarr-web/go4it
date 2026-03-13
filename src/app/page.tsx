@@ -19,6 +19,7 @@ export default function Home() {
   const { hearted, toggle } = useInteractions();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showAllApps, setShowAllApps] = useState(false);
+  const [allAppsSearch, setAllAppsSearch] = useState("");
   const [highlightIdx, setHighlightIdx] = useState(0);
   const [highlightPaused, setHighlightPaused] = useState(false);
 
@@ -128,6 +129,17 @@ export default function Home() {
   const featuredApps = useMemo(() => {
     return FEATURED_TITLES.map((title) => apps.find((a) => a.title === title)).filter(Boolean) as App[];
   }, [apps]);
+
+  const filteredAllApps = useMemo(() => {
+    if (!allAppsSearch.trim()) return apps;
+    const q = allAppsSearch.toLowerCase();
+    return apps.filter(
+      (app) =>
+        app.title.toLowerCase().includes(q) ||
+        app.description.toLowerCase().includes(q) ||
+        app.category.toLowerCase().includes(q)
+    );
+  }, [apps, allAppsSearch]);
 
   const filteredApps = useMemo(() => {
     if (!search.trim()) return apps;
@@ -339,11 +351,11 @@ export default function Home() {
                     <div className="flex items-center gap-6 mb-8">
                       <h2 className="text-2xl sm:text-3xl font-bold shrink-0">All Apps</h2>
                       <div className="flex-1 max-w-2xl">
-                        <SearchBar value={search} onChange={setSearch} />
+                        <SearchBar value={allAppsSearch} onChange={setAllAppsSearch} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      {apps.map(renderAppCard)}
+                      {filteredAllApps.map(renderAppCard)}
                     </div>
                   </div>
                 )}
