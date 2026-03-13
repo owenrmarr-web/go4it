@@ -77,8 +77,10 @@ interface GoSuiteApp {
   generatedAppId: string;
   marketplaceVersion: number;
   previewFlyAppId: string | null;
+  createdAt: string;
   deployedCount: number;
   lastUpdate: { summary: string; publishedAt: string } | null;
+  updates: { id: string; version: number; summary: string; publishedAt: string }[];
   infraStatus: { latest: number; behind: number; total: number };
 }
 
@@ -94,6 +96,51 @@ interface AdminMachine {
   releaseVersion: number | null;
   releaseCreatedAt: string | null;
   previewExpiresAt: string | null;
+}
+
+type SortState = { key: string; dir: "asc" | "desc" };
+
+function getVal(obj: unknown, key: string): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return key.split(".").reduce((o: any, k) => o?.[k], obj) ?? "";
+}
+
+function sortData<T>(data: T[], sort: SortState): T[] {
+  return [...data].sort((a, b) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let av: any = getVal(a, sort.key);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let bv: any = getVal(b, sort.key);
+    if (av == null) av = "";
+    if (bv == null) bv = "";
+    if (typeof av === "string" && typeof bv === "string") {
+      return sort.dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
+    return sort.dir === "asc" ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
+}
+
+function SortTh({ label, sortKey, sort, onSort, className }: {
+  label: string;
+  sortKey: string;
+  sort: SortState;
+  onSort: (key: string) => void;
+  className?: string;
+}) {
+  const active = sort.key === sortKey;
+  return (
+    <th
+      className={`px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-800 transition-colors ${className ?? ""}`}
+      onClick={() => onSort(sortKey)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        <span className={`text-[10px] ${active ? "text-purple-500" : "text-gray-300"}`}>
+          {active ? (sort.dir === "asc" ? "▲" : "▼") : "⇅"}
+        </span>
+      </span>
+    </th>
+  );
 }
 
 export default function AdminPage() {
@@ -115,8 +162,21 @@ export default function AdminPage() {
   const [goSuiteApps, setGoSuiteApps] = useState<GoSuiteApp[]>([]);
   const [goSuiteLoading, setGoSuiteLoading] = useState(true);
   const [publishModal, setPublishModal] = useState<GoSuiteApp | null>(null);
+  const [historyModal, setHistoryModal] = useState<GoSuiteApp | null>(null);
   const [publishSummary, setPublishSummary] = useState("");
   const [publishingUpdate, setPublishingUpdate] = useState(false);
+
+  const [userSort, setUserSort] = useState<SortState>({ key: "createdAt", dir: "desc" });
+  const [orgSort, setOrgSort] = useState<SortState>({ key: "createdAt", dir: "desc" });
+  const [genSort, setGenSort] = useState<SortState>({ key: "createdAt", dir: "desc" });
+  const [subSort, setSubSort] = useState<SortState>({ key: "createdAt", dir: "desc" });
+  const [machineSort, setMachineSort] = useState<SortState>({ key: "flyAppId", dir: "asc" });
+  const [contactSort, setContactSort] = useState<SortState>({ key: "createdAt", dir: "desc" });
+  const [goSuiteSort, setGoSuiteSort] = useState<SortState>({ key: "title", dir: "asc" });
+
+  function makeToggle(setSort: React.Dispatch<React.SetStateAction<SortState>>) {
+    return (key: string) => setSort((prev) => ({ key, dir: prev.key === key && prev.dir === "asc" ? "desc" : "asc" }));
+  }
 
   useEffect(() => {
     if (status === "loading") return;
@@ -315,28 +375,16 @@ export default function AdminPage() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Company
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Orgs
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Generated
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Saves
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Joined
-                      </th>
+                      <SortTh label="User" sortKey="name" sort={userSort} onSort={makeToggle(setUserSort)} />
+                      <SortTh label="Company" sortKey="companyName" sort={userSort} onSort={makeToggle(setUserSort)} />
+                      <SortTh label="Orgs" sortKey="_count.organizations" sort={userSort} onSort={makeToggle(setUserSort)} className="text-center" />
+                      <SortTh label="Generated" sortKey="_count.generatedApps" sort={userSort} onSort={makeToggle(setUserSort)} className="text-center" />
+                      <SortTh label="Saves" sortKey="_count.interactions" sort={userSort} onSort={makeToggle(setUserSort)} className="text-center" />
+                      <SortTh label="Joined" sortKey="createdAt" sort={userSort} onSort={makeToggle(setUserSort)} />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {users.map((u) => (
+                    {sortData(users, userSort).map((u) => (
                       <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -429,28 +477,16 @@ export default function AdminPage() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Organization
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Owner
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Members
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Apps
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Pending
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Created
-                      </th>
+                      <SortTh label="Organization" sortKey="name" sort={orgSort} onSort={makeToggle(setOrgSort)} />
+                      <SortTh label="Owner" sortKey="owner.name" sort={orgSort} onSort={makeToggle(setOrgSort)} />
+                      <SortTh label="Members" sortKey="_count.members" sort={orgSort} onSort={makeToggle(setOrgSort)} className="text-center" />
+                      <SortTh label="Apps" sortKey="_count.apps" sort={orgSort} onSort={makeToggle(setOrgSort)} className="text-center" />
+                      <SortTh label="Pending" sortKey="_count.invitations" sort={orgSort} onSort={makeToggle(setOrgSort)} className="text-center" />
+                      <SortTh label="Created" sortKey="createdAt" sort={orgSort} onSort={makeToggle(setOrgSort)} />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {orgs.map((org) => (
+                    {sortData(orgs, orgSort).map((org) => (
                       <tr key={org.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -623,31 +659,17 @@ export default function AdminPage() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        App
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Created By
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Iterations
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Published
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Created
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Actions
-                      </th>
+                      <SortTh label="App" sortKey="title" sort={genSort} onSort={makeToggle(setGenSort)} />
+                      <SortTh label="Created By" sortKey="createdBy.name" sort={genSort} onSort={makeToggle(setGenSort)} />
+                      <SortTh label="Status" sortKey="status" sort={genSort} onSort={makeToggle(setGenSort)} className="text-center" />
+                      <SortTh label="Iterations" sortKey="iterationCount" sort={genSort} onSort={makeToggle(setGenSort)} className="text-center" />
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Published</th>
+                      <SortTh label="Created" sortKey="createdAt" sort={genSort} onSort={makeToggle(setGenSort)} />
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {generations.map((gen) => (
+                    {sortData(generations, genSort).map((gen) => (
                       <tr key={gen.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="min-w-0">
@@ -918,28 +940,16 @@ export default function AdminPage() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        App
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Submitted By
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Category
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Uploaded
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Actions
-                      </th>
+                      <SortTh label="App" sortKey="title" sort={subSort} onSort={makeToggle(setSubSort)} />
+                      <SortTh label="Submitted By" sortKey="createdBy.name" sort={subSort} onSort={makeToggle(setSubSort)} />
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Category</th>
+                      <SortTh label="Status" sortKey="status" sort={subSort} onSort={makeToggle(setSubSort)} className="text-center" />
+                      <SortTh label="Uploaded" sortKey="createdAt" sort={subSort} onSort={makeToggle(setSubSort)} />
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {submissions.map((sub) => {
+                    {sortData(submissions, subSort).map((sub) => {
                       const manifest = sub.manifestJson
                         ? JSON.parse(sub.manifestJson)
                         : null;
@@ -1190,37 +1200,19 @@ export default function AdminPage() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Fly App
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        App Title
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Org
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Version
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Fly Status
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Platform Status
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Release
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">
-                        Actions
-                      </th>
+                      <SortTh label="Fly App" sortKey="flyAppId" sort={machineSort} onSort={makeToggle(setMachineSort)} />
+                      <SortTh label="Type" sortKey="type" sort={machineSort} onSort={makeToggle(setMachineSort)} className="text-center" />
+                      <SortTh label="App Title" sortKey="appTitle" sort={machineSort} onSort={makeToggle(setMachineSort)} />
+                      <SortTh label="Org" sortKey="orgSlug" sort={machineSort} onSort={makeToggle(setMachineSort)} />
+                      <SortTh label="Version" sortKey="version" sort={machineSort} onSort={makeToggle(setMachineSort)} className="text-center" />
+                      <SortTh label="Fly Status" sortKey="flyStatus" sort={machineSort} onSort={makeToggle(setMachineSort)} className="text-center" />
+                      <SortTh label="Platform Status" sortKey="platformStatus" sort={machineSort} onSort={makeToggle(setMachineSort)} className="text-center" />
+                      <SortTh label="Release" sortKey="releaseVersion" sort={machineSort} onSort={makeToggle(setMachineSort)} className="text-center" />
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {machines.map((m) => (
+                    {sortData(machines, machineSort).map((m) => (
                       <tr key={m.flyAppId} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <a
@@ -1358,25 +1350,15 @@ export default function AdminPage() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Phone
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Message
-                      </th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
+                      <SortTh label="Name" sortKey="name" sort={contactSort} onSort={makeToggle(setContactSort)} />
+                      <SortTh label="Email" sortKey="email" sort={contactSort} onSort={makeToggle(setContactSort)} />
+                      <SortTh label="Phone" sortKey="phone" sort={contactSort} onSort={makeToggle(setContactSort)} />
+                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Message</th>
+                      <SortTh label="Date" sortKey="createdAt" sort={contactSort} onSort={makeToggle(setContactSort)} />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {contacts.map((c) => (
+                    {sortData(contacts, contactSort).map((c) => (
                       <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
                           {c.name}
@@ -1467,18 +1449,19 @@ export default function AdminPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">App</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Version</th>
+                      <SortTh label="App" sortKey="title" sort={goSuiteSort} onSort={makeToggle(setGoSuiteSort)} />
+                      <SortTh label="Category" sortKey="category" sort={goSuiteSort} onSort={makeToggle(setGoSuiteSort)} />
+                      <SortTh label="Version" sortKey="marketplaceVersion" sort={goSuiteSort} onSort={makeToggle(setGoSuiteSort)} />
                       <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Preview</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Deployed</th>
+                      <SortTh label="Created" sortKey="createdAt" sort={goSuiteSort} onSort={makeToggle(setGoSuiteSort)} />
+                      <SortTh label="Deployed" sortKey="deployedCount" sort={goSuiteSort} onSort={makeToggle(setGoSuiteSort)} />
                       <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Infra</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Update</th>
+                      <SortTh label="Last Update" sortKey="lastUpdate.publishedAt" sort={goSuiteSort} onSort={makeToggle(setGoSuiteSort)} />
                       <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {goSuiteApps.map((app) => (
+                    {sortData(goSuiteApps, goSuiteSort).map((app) => (
                       <tr key={app.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -1499,6 +1482,9 @@ export default function AdminPage() {
                             <span className="text-gray-400">None</span>
                           )}
                         </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {new Date(app.createdAt).toLocaleDateString()}
+                        </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {app.deployedCount} org{app.deployedCount !== 1 ? "s" : ""}
                         </td>
@@ -1517,10 +1503,13 @@ export default function AdminPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">
                           {app.lastUpdate ? (
-                            <div>
-                              <p className="text-gray-700 truncate max-w-[200px]">{app.lastUpdate.summary}</p>
-                              <p className="text-xs">{new Date(app.lastUpdate.publishedAt).toLocaleDateString()}</p>
-                            </div>
+                            <button
+                              onClick={() => setHistoryModal(app)}
+                              className="text-left hover:text-purple-600 transition-colors group"
+                            >
+                              <p className="text-gray-700 group-hover:text-purple-600 truncate max-w-[200px]">{app.lastUpdate.summary}</p>
+                              <p className="text-xs">{new Date(app.lastUpdate.publishedAt).toLocaleDateString()} · {app.updates.length} update{app.updates.length !== 1 ? "s" : ""}</p>
+                            </button>
                           ) : (
                             <span className="text-gray-300">&mdash;</span>
                           )}
@@ -1610,6 +1599,44 @@ export default function AdminPage() {
                   {publishingUpdate ? "Publishing..." : `Publish V${publishModal.marketplaceVersion + 1}.0`}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Update History Modal */}
+        {historyModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[80vh] flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {historyModal.icon} {historyModal.title} — Update History
+                </h2>
+                <button
+                  onClick={() => setHistoryModal(null)}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                >
+                  ✕
+                </button>
+              </div>
+              {historyModal.updates.length === 0 ? (
+                <p className="text-gray-400 text-sm py-8 text-center">No updates published yet.</p>
+              ) : (
+                <div className="overflow-y-auto divide-y divide-gray-100">
+                  {historyModal.updates.map((u) => (
+                    <div key={u.id} className="py-4">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                          V{u.version}.0
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(u.publishedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{u.summary}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

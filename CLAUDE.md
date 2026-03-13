@@ -198,3 +198,9 @@ Read the relevant doc(s) from `docs/` before making changes. Each doc starts wit
 - **Auth:** User, Account, Session, VerificationToken
 - **Marketplace:** App, UserInteraction, GeneratedApp, AppIteration
 - **Organizations:** Organization, OrganizationMember, Invitation, OrgApp, OrgAppMember
+
+---
+
+## Open Actions
+
+- [ ] Add deploy overlay to app previews

@@ -35,6 +35,7 @@ export async function GET() {
   // Find all apps flagged as Go Suite
   const apps = await prisma.app.findMany({
     where: { isGoSuite: true },
+    orderBy: { createdAt: "asc" },
     include: {
       generatedApp: {
         select: {
@@ -42,7 +43,6 @@ export async function GET() {
           marketplaceVersion: true,
           updates: {
             orderBy: { publishedAt: "desc" },
-            take: 1,
           },
         },
       },
@@ -66,6 +66,7 @@ export async function GET() {
     generatedAppId: app.generatedApp?.id ?? null,
     marketplaceVersion: app.generatedApp?.marketplaceVersion ?? 1,
     previewFlyAppId: app.previewFlyAppId,
+    createdAt: app.createdAt.toISOString(),
     deployedCount: app.orgApps.length,
     lastUpdate: app.generatedApp?.updates[0]
       ? {
@@ -73,6 +74,12 @@ export async function GET() {
           publishedAt: app.generatedApp.updates[0].publishedAt.toISOString(),
         }
       : null,
+    updates: (app.generatedApp?.updates ?? []).map((u) => ({
+      id: u.id,
+      version: u.version,
+      summary: u.summary,
+      publishedAt: u.publishedAt.toISOString(),
+    })),
     infraStatus: {
       latest: currentInfraVersion,
       behind: app.orgApps.filter(
