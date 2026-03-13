@@ -402,8 +402,8 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Live app preview — right column, scaled down to fit */}
-              <div className="md:w-[70%] flex flex-col">
+              {/* Live app preview — right column, hidden on mobile */}
+              <div className="hidden md:flex md:w-[70%] flex-col">
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-8">
                   See It Live
                 </h2>
