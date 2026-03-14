@@ -1039,11 +1039,11 @@ function LimitModal({
   d?: DarkTokens;
 }) {
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 rounded-2xl">
-      <div className={`mx-4 max-w-sm w-full rounded-2xl shadow-2xl overflow-hidden ${d?.bg || "bg-white"} border ${d?.border || "border-gray-100"}`}>
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 rounded-2xl">
+      <div className={`mx-4 max-w-sm w-full rounded-2xl shadow-2xl overflow-hidden ${dark ? "bg-[#1e2130]" : "bg-white"} border ${d?.border || "border-gray-100"}`}>
         {/* Header */}
         <div className="px-6 pt-6 pb-4 text-center">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center bg-amber-100 text-amber-600">
+          <div className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${dark ? "bg-amber-900/40 text-amber-400" : "bg-amber-100 text-amber-600"}`}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
               <line x1="12" y1="9" x2="12" y2="13" />
@@ -1065,12 +1065,12 @@ function LimitModal({
               {/* Plan comparison */}
               <div className={`rounded-xl border ${d?.border || "border-gray-100"} overflow-hidden mb-4`}>
                 <div className="grid grid-cols-2 text-xs">
-                  <div className={`p-3 ${d?.toolBg || "bg-gray-50"}`}>
+                  <div className={`p-3 ${dark ? "bg-[#252836]" : "bg-gray-50"}`}>
                     <p className={`font-semibold ${d?.textSecondary || "text-gray-500"} mb-1.5`}>Free</p>
                     <p className={`${d?.textMuted || "text-gray-400"}`}>10 queries/day</p>
                     <p className={`${d?.textMuted || "text-gray-400"}`}>Read-only</p>
                   </div>
-                  <div className="p-3 border-l" style={{ borderColor: d ? "#2a2d3a" : "#f3f4f6" }}>
+                  <div className={`p-3 border-l ${dark ? "border-[#2a2d3a]" : "border-gray-100"}`}>
                     <p className="font-semibold mb-1.5" style={{ color: accentColor }}>Pro</p>
                     <p className={`${d?.text || "text-gray-900"}`}>Unlimited queries</p>
                     <p className={`${d?.text || "text-gray-900"}`}>Write actions</p>
@@ -1091,8 +1091,8 @@ function LimitModal({
             </>
           ) : (
             <>
-              <div className={`rounded-xl p-4 ${d?.toolBg || "bg-gray-50"} text-center mb-4`}>
-                <p className={`text-sm ${d?.text || "text-gray-700"}`}>
+              <div className={`rounded-xl p-4 ${dark ? "bg-[#252836]" : "bg-gray-50"} text-center mb-4`}>
+                <p className={`text-sm ${d?.textSecondary || "text-gray-600"}`}>
                   Contact your organization owner or admin to upgrade to GoPilot Pro for unlimited queries.
                 </p>
               </div>
@@ -1104,7 +1104,7 @@ function LimitModal({
 
           <button
             onClick={onClose}
-            className={`w-full mt-3 py-2.5 rounded-xl text-sm font-medium ${d?.hover || "hover:bg-gray-100"} ${d?.textSecondary || "text-gray-500"} transition-colors`}
+            className={`w-full mt-3 py-2.5 rounded-xl text-sm font-medium ${dark ? "hover:bg-[#252836]" : "hover:bg-gray-100"} ${d?.textSecondary || "text-gray-500"} transition-colors`}
           >
             Close
           </button>
