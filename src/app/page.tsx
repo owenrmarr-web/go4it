@@ -212,7 +212,7 @@ export default function Home() {
           loop
           muted
           playsInline
-          className="absolute top-0 left-0 w-full object-cover object-top opacity-[0.18]"
+          className="absolute top-0 left-0 h-full object-contain object-top opacity-[0.18]"
         />
 
         {/* Feature labels — disabled for now, re-enable by uncommenting
