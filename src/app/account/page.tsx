@@ -1199,8 +1199,15 @@ function AccountPage() {
               </div>
             </section>
 
-            {/* ── Organization Apps ────────────────────── */}
-            <section className="mb-12">
+            {/* ── Organization Zone (gradient border) ────────────────────── */}
+            <div
+              className="rounded-2xl pl-4 mb-12"
+              style={{
+                borderLeft: `3px solid transparent`,
+                borderImage: `linear-gradient(to bottom, ${brandingColors.primary}, ${brandingColors.secondary}, ${brandingColors.accent}) 1`,
+              }}
+            >
+            <section className="mb-8">
               {/* Org tabs (only shown when user has 2+ orgs) */}
               {allOrgs.length > 1 && (
                 <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 overflow-x-auto">
@@ -1225,7 +1232,7 @@ function AccountPage() {
                   ))}
                 </div>
               )}
-              <h2 className="text-xl font-bold text-gray-800 mb-4">{org?.name ? `${org.name} Apps` : "My Organization\u2019s Apps"}</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-4">{org?.name || "My Organization"}</h2>
 
               {/* Quick Actions — 2x2 Card Grid */}
               {org && (
@@ -1654,7 +1661,7 @@ function AccountPage() {
 
             {/* ── Team Members (Owner & Admin only) ──────────── */}
             {userRole && userRole !== "MEMBER" && (
-            <section className="mb-12">
+            <section className="mb-0">
               <h2 className="text-xl font-bold text-gray-800 mb-4">
                 Team Members
               </h2>
@@ -1837,6 +1844,7 @@ function AccountPage() {
               )}
             </section>
             )}
+            </div>{/* end org gradient border wrapper */}
 
             {/* ── Apps I've Created ─────────────────────────── */}
             <section className="mb-12">
