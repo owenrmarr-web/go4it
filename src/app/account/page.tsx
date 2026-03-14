@@ -1250,18 +1250,26 @@ function AccountPage() {
                         <p className="text-xs text-gray-500 mt-0.5">go4it.live/{org.slug}</p>
                       </div>
                     </Link>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(`https://go4it.live/${org.slug}`);
-                        toast.success("Link copied to clipboard");
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
-                      </svg>
-                      Copy Link
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/${org.slug}`}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+                      >
+                        Visit
+                      </Link>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`https://go4it.live/${org.slug}`);
+                          toast.success("Link copied to clipboard");
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+                        </svg>
+                        Copy Link
+                      </button>
+                    </div>
                   </div>
 
                   {/* Branding Card (Owner) / Info Card (non-owner) */}
@@ -1334,11 +1342,8 @@ function AccountPage() {
 
                   {/* Import Data Card */}
                   {userRole !== "MEMBER" && orgApps.some((a) => a.status === "RUNNING") ? (
-                    <Link
-                      href={`/account/import?org=${org.slug}`}
-                      className="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-purple-200 transition-all flex flex-col items-center text-center gap-3"
-                    >
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-600">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
                         </svg>
@@ -1347,7 +1352,13 @@ function AccountPage() {
                         <p className="font-semibold text-gray-900 text-sm">Import Data</p>
                         <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">Import existing data into GO4IT apps with AI assistance</p>
                       </div>
-                    </Link>
+                      <Link
+                        href={`/account/import?org=${org.slug}`}
+                        className="w-full px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors text-center"
+                      >
+                        Import Data Now
+                      </Link>
+                    </div>
                   ) : (
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center gap-3 opacity-50">
                       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
