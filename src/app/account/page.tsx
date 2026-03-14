@@ -1201,12 +1201,12 @@ function AccountPage() {
 
             {/* ── Organization Zone (gradient border) ────────────────────── */}
             <div
-              className="rounded-2xl pl-4 mb-12"
+              className="rounded-2xl p-[2px] mb-12"
               style={{
-                borderLeft: `3px solid transparent`,
-                borderImage: `linear-gradient(to bottom, ${brandingColors.primary}, ${brandingColors.secondary}, ${brandingColors.accent}) 1`,
+                background: `linear-gradient(135deg, ${brandingColors.primary}, ${brandingColors.secondary}, ${brandingColors.accent})`,
               }}
             >
+            <div className="rounded-[14px] bg-[#f9fafb] p-5">
             <section className="mb-8">
               {/* Org tabs (only shown when user has 2+ orgs) */}
               {allOrgs.length > 1 && (
@@ -1844,7 +1844,7 @@ function AccountPage() {
               )}
             </section>
             )}
-            </div>{/* end org gradient border wrapper */}
+            </div></div>{/* end org gradient border wrapper */}
 
             {/* ── Apps I've Created ─────────────────────────── */}
             <section className="mb-12">
