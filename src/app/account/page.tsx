@@ -1006,13 +1006,13 @@ function AccountPage() {
               <>
                 <Link
                   href="/account/settings"
-                  className="text-sm text-gray-500 hover:text-purple-600 transition-colors border border-gray-200 hover:border-purple-300 px-4 py-2 rounded-lg"
+                  className="text-sm font-medium text-purple-600 bg-white border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors px-4 py-2"
                 >
                   Account Settings
                 </Link>
                 <Link
                   href="/account/payments"
-                  className="text-sm text-gray-500 hover:text-purple-600 transition-colors border border-gray-200 hover:border-purple-300 px-4 py-2 rounded-lg"
+                  className="text-sm font-medium text-purple-600 bg-white border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors px-4 py-2"
                 >
                   Payments
                 </Link>
@@ -1020,7 +1020,7 @@ function AccountPage() {
             )}
             <button
               onClick={handleSignOut}
-              className="text-sm text-gray-500 hover:text-red-500 transition-colors border border-gray-200 hover:border-red-300 px-4 py-2 rounded-lg"
+              className="text-sm font-medium text-purple-600 bg-white border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors px-4 py-2"
             >
               Sign Out
             </button>
@@ -1253,8 +1253,11 @@ function AccountPage() {
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/${org.slug}`}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+                        className="flex items-center justify-center px-3 py-1.5 text-xs font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity"
                       >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5 mr-1.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                        </svg>
                         Visit
                       </Link>
                       <button
@@ -1354,7 +1357,7 @@ function AccountPage() {
                       </div>
                       <Link
                         href={`/account/import?org=${org.slug}`}
-                        className="w-full px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors text-center"
+                        className="w-full mt-auto px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors text-center"
                       >
                         Import Data Now
                       </Link>
@@ -1392,7 +1395,7 @@ function AccountPage() {
                       <p className="text-xs text-gray-500 mt-0.5">AI assistant across all your apps</p>
                     </div>
                     {/* Tier indicator */}
-                    <div className="w-full pt-2 border-t border-purple-100 flex flex-col gap-2">
+                    <div className="w-full mt-auto pt-2 border-t border-purple-100 flex flex-col gap-2">
                       <div className="flex items-center justify-center gap-3 text-xs">
                         <span className="flex items-center gap-1">
                           <span className="w-2 h-2 rounded-full bg-green-500" />
@@ -1422,6 +1425,16 @@ function AccountPage() {
                       )}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Apps header — mirrors Team header */}
+              {org && orgApps.length > 0 && (
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-white drop-shadow-sm">{org.name}&apos;s Deployed Applications</h2>
+                  <span className="text-sm font-medium text-white/70">
+                    {orgApps.length} App{orgApps.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
               )}
 
@@ -1722,20 +1735,20 @@ function AccountPage() {
             {userRole && userRole !== "MEMBER" && (
             <section className="mb-0">
               <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white drop-shadow-sm">Team</h2>
                 <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-bold text-white drop-shadow-sm">Team</h2>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white">
-                    {members.length}{invitations.length > 0 ? ` + ${invitations.length} pending` : ""}
+                  <span className="text-sm font-medium text-white/70">
+                    {members.length} Team Member{members.length !== 1 ? "s" : ""}{invitations.length > 0 ? ` + ${invitations.length} pending` : ""}
                   </span>
+                  {org && (
+                    <button
+                      onClick={() => setShowInviteModal(true)}
+                      className="px-3 py-1.5 text-sm font-medium text-white border border-white/30 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      + Add
+                    </button>
+                  )}
                 </div>
-                {org && (
-                  <button
-                    onClick={() => setShowInviteModal(true)}
-                    className="px-3 py-1.5 text-sm font-medium text-white border border-white/30 rounded-lg hover:bg-white/10 transition-colors"
-                  >
-                    + Add
-                  </button>
-                )}
               </div>
 
               {!org ? (

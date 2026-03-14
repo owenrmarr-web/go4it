@@ -173,6 +173,19 @@ export default function OrgPortalPage() {
     }
   }, [data, loadPresence]);
 
+  // Set favicon to company logo
+  useEffect(() => {
+    if (data?.logo) {
+      let link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
+      }
+      link.href = data.logo;
+    }
+  }, [data?.logo]);
+
   // ============================================
   // Loading / Error states
   // ============================================
