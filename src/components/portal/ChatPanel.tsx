@@ -1070,10 +1070,10 @@ function LimitModal({
                     <p className={`${d?.textMuted || "text-gray-400"}`}>10 queries/day</p>
                     <p className={`${d?.textMuted || "text-gray-400"}`}>Read-only</p>
                   </div>
-                  <div className={`p-3 border-l ${dark ? "border-[#2a2d3a]" : "border-gray-100"}`}>
+                  <div className={`p-3 border-l ${dark ? "border-[#2a2d3a] bg-[#1e2130]" : "border-gray-100"}`}>
                     <p className="font-semibold mb-1.5" style={{ color: accentColor }}>Pro</p>
-                    <p className={`${d?.text || "text-gray-900"}`}>Unlimited queries</p>
-                    <p className={`${d?.text || "text-gray-900"}`}>Write actions</p>
+                    <p className={`${dark ? "text-gray-200" : "text-gray-900"}`}>Unlimited queries</p>
+                    <p className={`${dark ? "text-gray-200" : "text-gray-900"}`}>Write actions</p>
                   </div>
                 </div>
               </div>
