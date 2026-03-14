@@ -34,6 +34,7 @@ interface PortalData {
   themeColors: ThemeColors | null;
   apps: PortalApp[];
   userName: string;
+  userRole: string;
 }
 
 interface TeamMember {
@@ -364,6 +365,7 @@ export default function OrgPortalPage() {
                 accentColor={colors.primary}
                 suggestedPrompts={suggestedPrompts}
                 dark={dark}
+                userRole={data.userRole}
               />
             </div>
           </div>

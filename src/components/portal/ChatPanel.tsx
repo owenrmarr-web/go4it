@@ -48,6 +48,7 @@ interface ChatPanelProps {
   inline?: boolean;
   suggestedPrompts?: string[];
   dark?: boolean;
+  userRole?: string;
 }
 
 // ============================================
@@ -65,6 +66,7 @@ export default function ChatPanel({
   inline = false,
   suggestedPrompts,
   dark = false,
+  userRole: initialUserRole,
 }: ChatPanelProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -76,9 +78,15 @@ export default function ChatPanel({
   const [editingTitleValue, setEditingTitleValue] = useState("");
   const [aiUsed, setAiUsed] = useState(0);
   const [aiLimit, setAiLimit] = useState(10);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [userRole, setUserRole] = useState(initialUserRole || "MEMBER");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const initialQueryHandled = useRef(false);
+
+  const isAdminOrOwner = userRole === "OWNER" || userRole === "ADMIN";
+  const isAtLimit = aiUsed >= aiLimit;
+  const isNearLimit = aiUsed >= aiLimit - 1 && aiUsed < aiLimit;
 
   const isVisible = inline || open;
 
@@ -179,6 +187,12 @@ export default function ChatPanel({
   const sendMessage = async (text: string) => {
     if (!text.trim() || streaming) return;
 
+    // Intercept at limit — show modal instead of sending
+    if (isAtLimit) {
+      setShowLimitModal(true);
+      return;
+    }
+
     const userMessage: Message = {
       id: `temp-${Date.now()}`,
       role: "user",
@@ -276,7 +290,11 @@ export default function ChatPanel({
       case "usage":
         setAiUsed(event.used as number);
         setAiLimit(event.limit as number);
+        if (event.userRole) setUserRole(event.userRole as string);
         onUsageUpdate?.(event.used as number, event.limit as number);
+        if (event.limitReached) {
+          setShowLimitModal(true);
+        }
         break;
 
       case "title": {
@@ -436,8 +454,17 @@ export default function ChatPanel({
           </div>
           <div className="flex items-center gap-2">
             {aiUsed > 0 && (
-              <span className={`text-[10px] ${d.textMuted} tabular-nums`}>
+              <span className={`text-[10px] tabular-nums flex items-center gap-1 ${isAtLimit ? "text-red-500 font-semibold" : isNearLimit ? "text-amber-500 font-medium" : d.textMuted}`}>
                 {aiUsed}/{aiLimit}
+                {isNearLimit && <span className="text-[9px]">Last query</span>}
+                {isAtLimit && (
+                  <button
+                    onClick={() => setShowLimitModal(true)}
+                    className="text-[9px] underline hover:no-underline"
+                  >
+                    Limit reached
+                  </button>
+                )}
               </span>
             )}
             <button
@@ -523,7 +550,7 @@ export default function ChatPanel({
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask a question..."
+                  placeholder={isAtLimit ? "Daily query limit reached" : "Ask a question..."}
                   disabled={streaming}
                   rows={1}
                   className={`w-full resize-none px-4 py-3 pr-12 ${d.inputBg} rounded-xl border ${d.inputBorder} text-sm ${d.text} placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:border-transparent disabled:opacity-50 transition-all`}
@@ -546,6 +573,18 @@ export default function ChatPanel({
               </div>
             </div>
           </>
+        )}
+
+        {/* Limit Modal */}
+        {showLimitModal && (
+          <LimitModal
+            isAdminOrOwner={isAdminOrOwner}
+            accentColor={accentColor}
+            onClose={() => setShowLimitModal(false)}
+            slug={slug}
+            dark={dark}
+            d={d}
+          />
         )}
       </div>
     );
@@ -974,6 +1013,101 @@ function MessageBubble({
               </div>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Limit Modal
+// ============================================
+
+function LimitModal({
+  isAdminOrOwner,
+  accentColor,
+  onClose,
+  slug,
+  dark,
+  d,
+}: {
+  isAdminOrOwner: boolean;
+  accentColor: string;
+  onClose: () => void;
+  slug: string;
+  dark?: boolean;
+  d?: DarkTokens;
+}) {
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 rounded-2xl">
+      <div className={`mx-4 max-w-sm w-full rounded-2xl shadow-2xl overflow-hidden ${d?.bg || "bg-white"} border ${d?.border || "border-gray-100"}`}>
+        {/* Header */}
+        <div className="px-6 pt-6 pb-4 text-center">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center bg-amber-100 text-amber-600">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </div>
+          <h3 className={`text-lg font-bold ${d?.text || "text-gray-900"}`}>
+            Daily Limit Reached
+          </h3>
+          <p className={`text-sm mt-1 ${d?.textSecondary || "text-gray-500"}`}>
+            Your team has used all 10 free GoPilot queries for today.
+          </p>
+        </div>
+
+        {/* Body — different for admin/owner vs member */}
+        <div className="px-6 pb-6">
+          {isAdminOrOwner ? (
+            <>
+              {/* Plan comparison */}
+              <div className={`rounded-xl border ${d?.border || "border-gray-100"} overflow-hidden mb-4`}>
+                <div className="grid grid-cols-2 text-xs">
+                  <div className={`p-3 ${d?.toolBg || "bg-gray-50"}`}>
+                    <p className={`font-semibold ${d?.textSecondary || "text-gray-500"} mb-1.5`}>Free</p>
+                    <p className={`${d?.textMuted || "text-gray-400"}`}>10 queries/day</p>
+                    <p className={`${d?.textMuted || "text-gray-400"}`}>Read-only</p>
+                  </div>
+                  <div className="p-3 border-l" style={{ borderColor: d ? "#2a2d3a" : "#f3f4f6" }}>
+                    <p className="font-semibold mb-1.5" style={{ color: accentColor }}>Pro</p>
+                    <p className={`${d?.text || "text-gray-900"}`}>Unlimited queries</p>
+                    <p className={`${d?.text || "text-gray-900"}`}>Write actions</p>
+                  </div>
+                </div>
+              </div>
+
+              <a
+                href={`/${slug}/upgrade`}
+                className="block w-full text-center py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+                style={{ backgroundColor: accentColor }}
+              >
+                Upgrade to GoPilot Pro
+              </a>
+              <p className={`text-center text-[11px] mt-2 ${d?.textMuted || "text-gray-400"}`}>
+                Resets daily at midnight
+              </p>
+            </>
+          ) : (
+            <>
+              <div className={`rounded-xl p-4 ${d?.toolBg || "bg-gray-50"} text-center mb-4`}>
+                <p className={`text-sm ${d?.text || "text-gray-700"}`}>
+                  Contact your organization owner or admin to upgrade to GoPilot Pro for unlimited queries.
+                </p>
+              </div>
+              <p className={`text-center text-[11px] ${d?.textMuted || "text-gray-400"}`}>
+                Your free queries reset daily at midnight
+              </p>
+            </>
+          )}
+
+          <button
+            onClick={onClose}
+            className={`w-full mt-3 py-2.5 rounded-xl text-sm font-medium ${d?.hover || "hover:bg-gray-100"} ${d?.textSecondary || "text-gray-500"} transition-colors`}
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

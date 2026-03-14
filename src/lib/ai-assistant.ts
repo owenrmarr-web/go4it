@@ -319,7 +319,7 @@ export function buildTools(apps: AppInfo[]): Anthropic.Messages.Tool[] {
 // Usage Tracking
 // ============================================
 
-const DAILY_LIMIT = 10;
+const DAILY_LIMIT = 2; // TODO: revert to 10 after testing
 
 export async function checkUsageLimit(orgId: string): Promise<{
   allowed: boolean;

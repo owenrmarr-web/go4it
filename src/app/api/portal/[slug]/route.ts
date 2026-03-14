@@ -113,5 +113,6 @@ export async function GET(
     themeColors,
     apps,
     userName: session.user.name || session.user.email || "there",
+    userRole: membership.role,
   });
 }

@@ -76,8 +76,15 @@ export async function POST(
   if (!usage.allowed) {
     return new Response(
       sseFormat({
+        type: "usage",
+        used: usage.used,
+        limit: usage.limit,
+        userRole: membership.role,
+        limitReached: true,
+      }) +
+      sseFormat({
         type: "error",
-        message: `Daily limit reached (${usage.used}/${usage.limit}). Upgrade for unlimited queries.`,
+        message: `Daily limit reached (${usage.used}/${usage.limit}).`,
       }) + sseFormat({ type: "done" }),
       {
         headers: sseHeaders(),
@@ -136,8 +143,8 @@ export async function POST(
           send({ type: "conversation", id: conversationId });
         }
 
-        // Send current usage
-        send({ type: "usage", used: usage.used + 1, limit: usage.limit });
+        // Send current usage + user role
+        send({ type: "usage", used: usage.used + 1, limit: usage.limit, userRole: membership.role });
 
         // Discover org apps
         const apps = await discoverOrgApps(org.id);
