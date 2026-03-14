@@ -201,6 +201,17 @@ Read the relevant doc(s) from `docs/` before making changes. Each doc starts wit
 
 ---
 
+## Go-To-Market Strategies
+
+Four approaches under consideration — 1 and 2 are prioritized first to find product-market fit before scaling.
+
+1. **Local small business outreach** — Find and onboard local small businesses directly. High-touch, get real feedback fast.
+2. **Small business associations** — Partner with or get involved in SMB associations (e.g., local chambers of commerce, NSBA). Credibility + distribution.
+3. **Paid social media campaign** — Run targeted ads once PMF is established and there's something worth amplifying.
+4. **Early-stage startup program** — Offer the platform free to very early startups. Bet on a subset succeeding and growing with us. Long-term compounding play.
+
+---
+
 ## Open Actions
 
 - [ ] Add deploy overlay to app previews
