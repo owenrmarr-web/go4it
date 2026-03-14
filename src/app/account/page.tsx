@@ -1203,14 +1203,13 @@ function AccountPage() {
             <div
               className="rounded-2xl p-5 mb-12"
               style={{
-                background: `linear-gradient(135deg, ${brandingColors.primary}15, ${brandingColors.secondary}10, ${brandingColors.accent}15)`,
-                border: `1px solid ${brandingColors.primary}25`,
+                background: `linear-gradient(135deg, ${brandingColors.primary}, ${brandingColors.secondary}, ${brandingColors.accent})`,
               }}
             >
             <section className="mb-8">
               {/* Org tabs (only shown when user has 2+ orgs) */}
               {allOrgs.length > 1 && (
-                <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 overflow-x-auto">
+                <div className="flex gap-1 mb-4 bg-black/15 rounded-lg p-1 overflow-x-auto">
                   {allOrgs.map((o) => (
                     <button
                       key={o.slug}
@@ -1218,7 +1217,7 @@ function AccountPage() {
                       className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                         activeOrgSlug === o.slug
                           ? "bg-white shadow-sm text-gray-900"
-                          : "text-gray-600 hover:text-gray-900"
+                          : "text-white/70 hover:text-white"
                       }`}
                     >
                       {o.logo && (
@@ -1232,7 +1231,7 @@ function AccountPage() {
                   ))}
                 </div>
               )}
-              <h2 className="text-xl font-bold text-gray-800 mb-4">{org?.name || "My Organization"}</h2>
+              <h2 className="text-xl font-bold text-white mb-4 drop-shadow-sm">{org?.name || "My Organization"}</h2>
 
               {/* Quick Actions — 2x2 Card Grid */}
               {org && (
@@ -1711,15 +1710,15 @@ function AccountPage() {
             <section className="mb-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-bold text-gray-800">Team</h2>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
+                  <h2 className="text-xl font-bold text-white drop-shadow-sm">Team</h2>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white">
                     {members.length}{invitations.length > 0 ? ` + ${invitations.length} pending` : ""}
                   </span>
                 </div>
                 {org && (
                   <button
                     onClick={() => setShowInviteModal(true)}
-                    className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                    className="px-3 py-1.5 text-sm font-medium text-white border border-white/30 rounded-lg hover:bg-white/10 transition-colors"
                   >
                     + Add
                   </button>
