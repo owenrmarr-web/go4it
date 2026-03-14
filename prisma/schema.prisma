@@ -175,6 +175,8 @@ model Organization {
   themeColors          String?  // JSON: { primary, secondary, accent }
   stripeCustomerId     String?  // Stripe Customer ID (cus_xxx)
   stripeSubscriptionId String?  // Stripe Subscription ID (sub_xxx)
+  gopilotTier          String   @default("FREE") // FREE | STARTER | PRO | UNLIMITED
+  gopilotStripeSubId   String?  // Stripe Subscription ID for GoPilot (separate from app hosting)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

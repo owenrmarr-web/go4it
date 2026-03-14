@@ -93,6 +93,7 @@ export async function GET(request: Request) {
       slug: org.slug,
       logo: org.logo,
       themeColors: org.themeColors ? JSON.parse(org.themeColors) : null,
+      gopilotTier: org.gopilotTier || "FREE",
     },
     apps: await Promise.all(org.apps.map(async (oa) => {
       const genApp = oa.app.generatedApp;

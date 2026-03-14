@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import GoPilotTierPicker from "@/components/GoPilotTierPicker";
+import type { GoPilotTierKey } from "@/lib/gopilot-tiers";
 
 // ============================================
 // Types
@@ -78,6 +80,7 @@ export default function ChatPanel({
   const [editingTitleValue, setEditingTitleValue] = useState("");
   const [aiUsed, setAiUsed] = useState(0);
   const [aiLimit, setAiLimit] = useState(10);
+  const [currentTier, setCurrentTier] = useState<GoPilotTierKey>("FREE");
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [userRole, setUserRole] = useState(initialUserRole || "MEMBER");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -290,6 +293,7 @@ export default function ChatPanel({
       case "usage":
         setAiUsed(event.used as number);
         setAiLimit(event.limit as number);
+        if (event.tier) setCurrentTier(event.tier as GoPilotTierKey);
         if (event.userRole) setUserRole(event.userRole as string);
         onUsageUpdate?.(event.used as number, event.limit as number);
         if (event.limitReached) {
@@ -582,6 +586,7 @@ export default function ChatPanel({
             accentColor={accentColor}
             onClose={() => setShowLimitModal(false)}
             slug={slug}
+            currentTier={currentTier}
             dark={dark}
             d={d}
           />
@@ -1025,9 +1030,9 @@ function MessageBubble({
 
 function LimitModal({
   isAdminOrOwner,
-  accentColor,
   onClose,
   slug,
+  currentTier,
   dark,
   d,
 }: {
@@ -1035,12 +1040,13 @@ function LimitModal({
   accentColor: string;
   onClose: () => void;
   slug: string;
+  currentTier: GoPilotTierKey;
   dark?: boolean;
   d?: DarkTokens;
 }) {
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 rounded-2xl">
-      <div className={`mx-4 max-w-sm w-full rounded-2xl shadow-2xl overflow-hidden ${dark ? "bg-[#1e2130]" : "bg-white"} border ${d?.border || "border-gray-100"}`}>
+      <div className={`mx-4 max-w-md w-full rounded-2xl shadow-2xl overflow-hidden ${dark ? "bg-[#1e2130]" : "bg-white"} border ${d?.border || "border-gray-100"}`}>
         {/* Header */}
         <div className="px-6 pt-6 pb-4 text-center">
           <div className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${dark ? "bg-amber-900/40 text-amber-400" : "bg-amber-100 text-amber-600"}`}>
@@ -1054,7 +1060,7 @@ function LimitModal({
             Daily Limit Reached
           </h3>
           <p className={`text-sm mt-1 ${d?.textSecondary || "text-gray-500"}`}>
-            Your team has used all 10 free GoPilot queries for today.
+            Your team has used all free GoPilot queries for today.
           </p>
         </div>
 
@@ -1062,38 +1068,20 @@ function LimitModal({
         <div className="px-6 pb-6">
           {isAdminOrOwner ? (
             <>
-              {/* Plan comparison */}
-              <div className={`rounded-xl border ${d?.border || "border-gray-100"} overflow-hidden mb-4`}>
-                <div className="grid grid-cols-2 text-xs">
-                  <div className={`p-3 ${dark ? "bg-[#252836]" : "bg-gray-50"}`}>
-                    <p className={`font-semibold ${d?.textSecondary || "text-gray-500"} mb-1.5`}>Free</p>
-                    <p className={`${d?.textMuted || "text-gray-400"}`}>10 queries/day</p>
-                    <p className={`${d?.textMuted || "text-gray-400"}`}>Read-only</p>
-                  </div>
-                  <div className={`p-3 border-l ${dark ? "border-[#2a2d3a] bg-[#1e2130]" : "border-gray-100"}`}>
-                    <p className="font-semibold mb-1.5" style={{ color: accentColor }}>Pro</p>
-                    <p className={`${dark ? "text-gray-200" : "text-gray-900"}`}>Unlimited queries</p>
-                    <p className={`${dark ? "text-gray-200" : "text-gray-900"}`}>Write actions</p>
-                  </div>
-                </div>
-              </div>
-
-              <a
-                href={`/${slug}/upgrade`}
-                className="block w-full text-center py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-                style={{ backgroundColor: accentColor }}
-              >
-                Upgrade to GoPilot Pro
-              </a>
-              <p className={`text-center text-[11px] mt-2 ${d?.textMuted || "text-gray-400"}`}>
-                Resets daily at midnight
+              <GoPilotTierPicker
+                currentTier={currentTier}
+                orgSlug={slug}
+                compact
+              />
+              <p className={`text-center text-[11px] mt-3 ${d?.textMuted || "text-gray-400"}`}>
+                Queries reset daily at midnight
               </p>
             </>
           ) : (
             <>
               <div className={`rounded-xl p-4 ${dark ? "bg-[#252836]" : "bg-gray-50"} text-center mb-4`}>
                 <p className={`text-sm ${d?.textSecondary || "text-gray-600"}`}>
-                  Contact your organization owner or admin to upgrade to GoPilot Pro for unlimited queries.
+                  Contact your organization owner or admin to upgrade GoPilot for more queries.
                 </p>
               </div>
               <p className={`text-center text-[11px] ${d?.textMuted || "text-gray-400"}`}>

@@ -79,6 +79,7 @@ export async function POST(
         type: "usage",
         used: usage.used,
         limit: usage.limit,
+        tier: usage.tier,
         userRole: membership.role,
         limitReached: true,
       }) +
@@ -144,7 +145,7 @@ export async function POST(
         }
 
         // Send current usage + user role
-        send({ type: "usage", used: usage.used + 1, limit: usage.limit, userRole: membership.role });
+        send({ type: "usage", used: usage.used + 1, limit: usage.limit, tier: usage.tier, userRole: membership.role });
 
         // Discover org apps
         const apps = await discoverOrgApps(org.id);

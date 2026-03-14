@@ -12,12 +12,15 @@ import { useInteractions } from "@/hooks/useInteractions";
 import type { App } from "@/types";
 import { extractColorsFromImage } from "@/lib/colorExtractor";
 import { useActiveOrg } from "@/contexts/ActiveOrgContext";
+import GoPilotTierPicker from "@/components/GoPilotTierPicker";
+import type { GoPilotTierKey } from "@/lib/gopilot-tiers";
 
 interface OrgData {
   id: string;
   name: string;
   slug: string;
   logo: string | null;
+  gopilotTier?: string;
 }
 
 interface OrgAppMember {
@@ -1394,31 +1397,18 @@ function AccountPage() {
                       <p className="font-semibold text-gray-900 text-sm">GoPilot AI</p>
                       <p className="text-xs text-gray-500 mt-0.5">AI assistant across all your apps</p>
                     </div>
-                    {/* Tier indicator */}
-                    <div className="w-full mt-auto pt-2 border-t border-purple-100 flex flex-col gap-2">
-                      <div className="flex items-center justify-center gap-3 text-xs">
-                        <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-green-500" />
-                          <span className="font-medium text-gray-700">Free</span>
-                          <span className="text-gray-400">10/day</span>
-                        </span>
-                        <span className="flex items-center gap-1 opacity-40">
-                          <span className="w-2 h-2 rounded-full bg-purple-500" />
-                          <span className="font-medium text-gray-700">Pro</span>
-                          <span className="text-gray-400">Unlimited</span>
-                        </span>
-                      </div>
+                    {/* Tier picker */}
+                    <div className="w-full mt-auto pt-2 border-t border-purple-100">
                       {userRole !== "MEMBER" ? (
-                        <Link
-                          href={`/${org.slug}/upgrade`}
-                          className="w-full px-3 py-1.5 text-xs font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity text-center"
-                        >
-                          Upgrade to Pro
-                        </Link>
+                        <GoPilotTierPicker
+                          currentTier={(org.gopilotTier || "FREE") as GoPilotTierKey}
+                          orgSlug={org.slug}
+                          compact
+                        />
                       ) : (
                         <Link
                           href={`/${org.slug}`}
-                          className="w-full px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors text-center"
+                          className="w-full block px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors text-center"
                         >
                           Open GoPilot
                         </Link>

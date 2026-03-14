@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import prisma from "@/lib/prisma";
+import { getDailyLimit, type GoPilotTierKey } from "@/lib/gopilot-tiers";
 
 // ============================================
 // Provider Interface (future: OpenAI, Gemini, BYOK)
@@ -319,21 +320,28 @@ export function buildTools(apps: AppInfo[]): Anthropic.Messages.Tool[] {
 // Usage Tracking
 // ============================================
 
-const DAILY_LIMIT = 2; // TODO: revert to 10 after testing
-
 export async function checkUsageLimit(orgId: string): Promise<{
   allowed: boolean;
   used: number;
   limit: number;
+  tier: GoPilotTierKey;
 }> {
   const today = new Date().toISOString().split("T")[0];
 
-  const usage = await prisma.aIUsage.findUnique({
-    where: { organizationId_date: { organizationId: orgId, date: today } },
-  });
+  const [usage, org] = await Promise.all([
+    prisma.aIUsage.findUnique({
+      where: { organizationId_date: { organizationId: orgId, date: today } },
+    }),
+    prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { gopilotTier: true },
+    }),
+  ]);
 
+  const tier = (org?.gopilotTier || "FREE") as GoPilotTierKey;
+  const dailyLimit = getDailyLimit(tier);
   const used = usage?.queryCount ?? 0;
-  return { allowed: used < DAILY_LIMIT, used, limit: DAILY_LIMIT };
+  return { allowed: used < dailyLimit, used, limit: dailyLimit, tier };
 }
 
 export async function incrementUsage(orgId: string): Promise<void> {

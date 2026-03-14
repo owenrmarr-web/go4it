@@ -114,5 +114,6 @@ export async function GET(
     apps,
     userName: session.user.name || session.user.email || "there",
     userRole: membership.role,
+    gopilotTier: org.gopilotTier || "FREE",
   });
 }

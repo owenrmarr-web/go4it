@@ -26,8 +26,22 @@ export async function POST(request: Request) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
-      if (session.subscription && session.customer) {
-        // Save subscription ID on the organization
+      const isGoPilot = session.metadata?.productType === "gopilot";
+
+      if (isGoPilot && session.subscription && session.metadata?.gopilotTier) {
+        // GoPilot subscription — set tier + sub ID
+        const orgId = session.metadata.orgId;
+        if (orgId) {
+          await prisma.organization.update({
+            where: { id: orgId },
+            data: {
+              gopilotTier: session.metadata.gopilotTier,
+              gopilotStripeSubId: session.subscription as string,
+            },
+          });
+        }
+      } else if (session.subscription && session.customer) {
+        // App hosting subscription
         await prisma.organization.updateMany({
           where: { stripeCustomerId: session.customer as string },
           data: { stripeSubscriptionId: session.subscription as string },
@@ -42,20 +56,44 @@ export async function POST(request: Request) {
         subscription.status === "canceled" ||
         subscription.status === "unpaid"
       ) {
-        await prisma.organization.updateMany({
-          where: { stripeSubscriptionId: subscription.id },
-          data: { stripeSubscriptionId: null },
+        // Check if this is a GoPilot subscription
+        const gopilotOrg = await prisma.organization.findFirst({
+          where: { gopilotStripeSubId: subscription.id },
         });
+        if (gopilotOrg) {
+          await prisma.organization.update({
+            where: { id: gopilotOrg.id },
+            data: { gopilotTier: "FREE", gopilotStripeSubId: null },
+          });
+        } else {
+          // App hosting subscription
+          await prisma.organization.updateMany({
+            where: { stripeSubscriptionId: subscription.id },
+            data: { stripeSubscriptionId: null },
+          });
+        }
       }
       break;
     }
 
     case "customer.subscription.deleted": {
       const subscription = event.data.object;
-      await prisma.organization.updateMany({
-        where: { stripeSubscriptionId: subscription.id },
-        data: { stripeSubscriptionId: null },
+      // Check if GoPilot subscription
+      const gopilotOrg = await prisma.organization.findFirst({
+        where: { gopilotStripeSubId: subscription.id },
       });
+      if (gopilotOrg) {
+        await prisma.organization.update({
+          where: { id: gopilotOrg.id },
+          data: { gopilotTier: "FREE", gopilotStripeSubId: null },
+        });
+      } else {
+        // App hosting subscription
+        await prisma.organization.updateMany({
+          where: { stripeSubscriptionId: subscription.id },
+          data: { stripeSubscriptionId: null },
+        });
+      }
       break;
     }
 
