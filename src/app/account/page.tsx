@@ -1564,145 +1564,147 @@ function AccountPage() {
                           )}
                         </div>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-                      {/* Configure panel (Owner & Admin only) */}
-                      {configuringAppId === orgApp.id && userRole !== "MEMBER" && (
-                        <div className="border-t border-gray-100 px-5 py-4 bg-gray-50">
-                          {/* Custom URL */}
-                          <div className="mb-4 pb-4 border-b border-gray-200">
-                            <p className="text-sm font-medium text-gray-700 mb-2">
-                              Custom URL
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={subdomainInput}
-                                onChange={(e) =>
-                                  setSubdomainInput(
-                                    e.target.value
-                                      .toLowerCase()
-                                      .replace(/[^a-z0-9-]/g, "")
-                                  )
-                                }
-                                placeholder={
-                                  orgApp.subdomain ||
-                                  `${orgApp.app.title
-                                    .toLowerCase()
-                                    .replace(/[^a-z0-9]+/g, "-")
-                                    .replace(/^-+|-+$/g, "")
-                                    .substring(0, 30)}-${org?.slug || ""}`
-                                }
-                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                              />
-                              <span className="text-sm text-gray-500 whitespace-nowrap">
-                                .go4it.live
-                              </span>
-                              <button
-                                onClick={handleSaveSubdomain}
-                                disabled={
-                                  savingSubdomain || !subdomainInput.trim()
-                                }
-                                className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors disabled:opacity-50"
-                              >
-                                {savingSubdomain
-                                  ? "Saving..."
-                                  : orgApp.subdomain
-                                    ? "Update"
-                                    : "Set"}
-                              </button>
-                            </div>
-                            {subdomainError && (
-                              <p className="text-xs text-red-500 mt-1">
-                                {subdomainError}
-                              </p>
-                            )}
-                            {orgApp.subdomain && (
-                              <p className="text-xs text-green-600 mt-1">
-                                https://{orgApp.subdomain}.go4it.live
-                              </p>
-                            )}
+              {/* Configure Modal */}
+              {configuringAppId && userRole !== "MEMBER" && (() => {
+                const orgApp = orgApps.find((a) => a.id === configuringAppId);
+                if (!orgApp) return null;
+                return (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setConfiguringAppId(null)}>
+                    <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                      {/* Modal header */}
+                      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{orgApp.app.icon}</span>
+                          <div>
+                            <h3 className="font-bold text-gray-900">{orgApp.app.title}</h3>
+                            <p className="text-xs text-gray-500">{orgApp.app.category}</p>
                           </div>
+                        </div>
+                        <button
+                          onClick={() => setConfiguringAppId(null)}
+                          className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
 
+                      <div className="px-6 py-5 space-y-5">
+                        {/* Custom URL */}
+                        <div>
+                          <p className="text-sm font-medium text-gray-700 mb-2">Custom URL</p>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={subdomainInput}
+                              onChange={(e) =>
+                                setSubdomainInput(
+                                  e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                                )
+                              }
+                              placeholder={
+                                orgApp.subdomain ||
+                                `${orgApp.app.title
+                                  .toLowerCase()
+                                  .replace(/[^a-z0-9]+/g, "-")
+                                  .replace(/^-+|-+$/g, "")
+                                  .substring(0, 30)}-${org?.slug || ""}`
+                              }
+                              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                            />
+                            <span className="text-sm text-gray-500 whitespace-nowrap">.go4it.live</span>
+                            <button
+                              onClick={handleSaveSubdomain}
+                              disabled={savingSubdomain || !subdomainInput.trim()}
+                              className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors disabled:opacity-50"
+                            >
+                              {savingSubdomain ? "Saving..." : orgApp.subdomain ? "Update" : "Set"}
+                            </button>
+                          </div>
+                          {subdomainError && (
+                            <p className="text-xs text-red-500 mt-1">{subdomainError}</p>
+                          )}
+                          {orgApp.subdomain && (
+                            <p className="text-xs text-green-600 mt-1">https://{orgApp.subdomain}.go4it.live</p>
+                          )}
+                        </div>
+
+                        {/* Team Access */}
+                        <div>
                           <div className="flex items-center justify-between mb-3">
-                            <p className="text-sm font-medium text-gray-700">
-                              Team Access
-                            </p>
+                            <p className="text-sm font-medium text-gray-700">Team Access</p>
                             <button
                               onClick={handleSelectAllMembers}
                               className="text-xs text-purple-600 hover:text-purple-700 font-medium"
                             >
-                              {selectedMembers.size === members.length
-                                ? "Deselect All"
-                                : "Select All"}
+                              {selectedMembers.size === members.length ? "Deselect All" : "Select All"}
                             </button>
                           </div>
-                          <div className="space-y-2">
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
                             {members.map((member) => (
                               <label
                                 key={member.id}
-                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-white cursor-pointer transition-colors"
+                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                               >
                                 <input
                                   type="checkbox"
                                   checked={selectedMembers.has(member.user.id)}
-                                  onChange={() =>
-                                    handleToggleMember(member.user.id)
-                                  }
+                                  onChange={() => handleToggleMember(member.user.id)}
                                   className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-400"
                                 />
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-sm font-semibold">
                                   {member.user.name?.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "?"}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-gray-900 truncate">
-                                    {member.user.name}
-                                  </p>
-                                  <p className="text-xs text-gray-500 truncate">
-                                    {member.user.email}
-                                  </p>
+                                  <p className="text-sm font-medium text-gray-900 truncate">{member.user.name}</p>
+                                  <p className="text-xs text-gray-500 truncate">{member.user.email}</p>
                                 </div>
-                                <span
-                                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                    ROLE_COLORS[member.role]
-                                  }`}
-                                >
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[member.role]}`}>
                                   {ROLE_LABELS[member.role]}
                                 </span>
                               </label>
                             ))}
                           </div>
-                          <div className="flex gap-2 mt-4">
-                            <button
-                              onClick={handleSaveAppMembers}
-                              disabled={savingMembers}
-                              className="gradient-brand px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
-                            >
-                              {savingMembers ? "Saving..." : "Save Access"}
-                            </button>
-                            <button
-                              onClick={() => setConfiguringAppId(null)}
-                              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                            >
-                              Cancel
-                            </button>
-                            {orgApp.status === "RUNNING" && (
-                              <button
-                                onClick={() => {
-                                  setConfiguringAppId(null);
-                                  handleUpdateApp(orgApp);
-                                }}
-                                className="ml-auto px-4 py-2 border border-orange-200 rounded-lg text-sm font-medium text-orange-600 hover:bg-orange-50 transition-colors"
-                              >
-                                Re-deploy
-                              </button>
-                            )}
-                          </div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Modal footer */}
+                      <div className="px-6 py-4 border-t border-gray-100 flex items-center gap-2">
+                        <button
+                          onClick={handleSaveAppMembers}
+                          disabled={savingMembers}
+                          className="gradient-brand px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+                        >
+                          {savingMembers ? "Saving..." : "Save Access"}
+                        </button>
+                        <button
+                          onClick={() => setConfiguringAppId(null)}
+                          className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        {orgApp.status === "RUNNING" && (
+                          <button
+                            onClick={() => {
+                              setConfiguringAppId(null);
+                              handleUpdateApp(orgApp);
+                            }}
+                            className="ml-auto px-4 py-2 border border-orange-200 rounded-lg text-sm font-medium text-orange-600 hover:bg-orange-50 transition-colors"
+                          >
+                            Re-deploy
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                );
+              })()}
             </section>
 
             {/* ── Team Members (Owner & Admin only) ──────────── */}
