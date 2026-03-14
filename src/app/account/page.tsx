@@ -1227,101 +1227,124 @@ function AccountPage() {
               )}
               <h2 className="text-xl font-bold text-gray-800 mb-4">{org?.name ? `${org.name} Apps` : "My Organization\u2019s Apps"}</h2>
 
-              {/* Team Portal URL */}
-              {org && <PortalBanner slug={org.slug} />}
-
-              {/* Branding (Owner only) */}
-              {org && userRole === "OWNER" && (
-                <div className="mb-4 bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-sm font-semibold text-gray-800 mb-4">Branding</h3>
-                  <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
-                    {/* Logo */}
-                    <div className="flex sm:flex-col items-center gap-3 sm:gap-2">
-                      <div
-                        className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50 cursor-pointer hover:border-purple-300 transition-colors flex-shrink-0"
-                        onClick={() => brandingFileRef.current?.click()}
-                      >
-                        {brandingLogo ? (
-                          <img src={brandingLogo} alt="Logo" className="w-full h-full object-contain" />
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-400">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
-                          </svg>
-                        )}
-                      </div>
-                      <input ref={brandingFileRef} type="file" accept="image/*" onChange={handleBrandingLogoUpload} className="hidden" />
-                      <div className="flex gap-1">
-                        <button onClick={() => brandingFileRef.current?.click()} className="text-xs text-purple-600 hover:text-purple-700">
-                          {brandingLogo ? "Change" : "Upload"}
-                        </button>
-                        {brandingLogo && (
-                          <button onClick={() => setBrandingLogo(null)} className="text-xs text-gray-400 hover:text-red-500">
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Colors */}
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500 mb-2">Theme Colors</p>
-                      <div className="flex items-center gap-4">
-                        {(["primary", "secondary", "accent"] as const).map((key) => (
-                          <label key={key} className="flex items-center gap-1.5 cursor-pointer">
-                            <input
-                              type="color"
-                              value={brandingColors[key]}
-                              onChange={(e) => setBrandingColors((prev) => ({ ...prev, [key]: e.target.value }))}
-                              className="w-8 h-8 rounded-full border-2 border-gray-200 cursor-pointer p-0 overflow-hidden"
-                              style={{ appearance: "none", WebkitAppearance: "none" }}
-                            />
-                            <span className="text-xs text-gray-500 capitalize">{key}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Save */}
-                    <button
-                      onClick={handleSaveBranding}
-                      disabled={savingBranding}
-                      className="px-4 py-2 text-sm font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 self-start sm:self-center w-full sm:w-auto"
-                    >
-                      {savingBranding ? "Saving..." : "Save"}
-                    </button>
-                  </div>
-                  <canvas ref={brandingCanvasRef} className="hidden" />
-                </div>
-              )}
-
-              {/* Action Cards — OWNER/ADMIN with at least one RUNNING app */}
-              {org && userRole !== "MEMBER" && orgApps.some((a) => a.status === "RUNNING") && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                  {/* Import Data Card */}
+              {/* Quick Actions — 2x2 Card Grid */}
+              {org && (
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  {/* Team Portal Card */}
                   <Link
-                    href={`/account/import?org=${org.slug}`}
-                    className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-purple-300 transition-colors shadow-sm"
+                    href={`/${org.slug}`}
+                    className="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-purple-200 transition-all flex flex-col items-center text-center gap-3"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-purple-600">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                      </svg>
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <span className="text-2xl">🏠</span>
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900">Import Data</p>
-                      <p className="text-xs text-gray-500">Upload CSV or spreadsheet data</p>
+                      <p className="font-semibold text-gray-900 text-sm">Team Portal</p>
+                      <p className="text-xs text-gray-500 mt-0.5">go4it.live/{org.slug}</p>
                     </div>
                   </Link>
 
-                  {/* GoPilot Card */}
+                  {/* Branding Card (Owner) / Info Card (non-owner) */}
+                  {userRole === "OWNER" ? (
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-amber-600">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">Branding</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Logo & theme colors</p>
+                      </div>
+                      {/* Inline branding controls */}
+                      <div className="w-full pt-2 border-t border-gray-100 flex items-center justify-center gap-2">
+                        <div
+                          className="w-8 h-8 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50 cursor-pointer hover:border-purple-300 transition-colors flex-shrink-0"
+                          onClick={() => brandingFileRef.current?.click()}
+                        >
+                          {brandingLogo ? (
+                            <img src={brandingLogo} alt="Logo" className="w-full h-full object-contain" />
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5 text-gray-400">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
+                            </svg>
+                          )}
+                        </div>
+                        <input ref={brandingFileRef} type="file" accept="image/*" onChange={handleBrandingLogoUpload} className="hidden" />
+                        {(["primary", "secondary", "accent"] as const).map((key) => (
+                          <input
+                            key={key}
+                            type="color"
+                            value={brandingColors[key]}
+                            onChange={(e) => setBrandingColors((prev) => ({ ...prev, [key]: e.target.value }))}
+                            className="w-7 h-7 rounded-full border-2 border-gray-200 cursor-pointer p-0 overflow-hidden"
+                            style={{ appearance: "none", WebkitAppearance: "none" }}
+                            title={key}
+                          />
+                        ))}
+                        <button
+                          onClick={handleSaveBranding}
+                          disabled={savingBranding}
+                          className="px-2 py-1 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors disabled:opacity-60"
+                        >
+                          {savingBranding ? "..." : "Save"}
+                        </button>
+                      </div>
+                      <canvas ref={brandingCanvasRef} className="hidden" />
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-amber-600">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">Branding</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Managed by org owner</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Import Data Card */}
+                  {userRole !== "MEMBER" && orgApps.some((a) => a.status === "RUNNING") ? (
+                    <Link
+                      href={`/account/import?org=${org.slug}`}
+                      className="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-purple-200 transition-all flex flex-col items-center text-center gap-3"
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-600">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">Import Data</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Upload CSV or spreadsheet</p>
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center gap-3 opacity-50">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-600">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">Import Data</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Deploy an app first</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* GoPilot AI Card */}
                   <Link
                     href={`/${org.slug}`}
-                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl text-sm font-medium text-gray-700 hover:from-purple-100 hover:to-pink-100 transition-colors shadow-sm"
+                    className="group bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-sm border border-purple-100 p-5 hover:shadow-md hover:border-purple-300 transition-all flex flex-col items-center text-center gap-3"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-white/80 flex items-center justify-center flex-shrink-0">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#gopilot-gradient)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <div className="w-12 h-12 rounded-xl bg-white/80 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#gopilot-gradient-card)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <defs>
-                          <linearGradient id="gopilot-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <linearGradient id="gopilot-gradient-card" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" stopColor="#9333EA" />
                             <stop offset="100%" stopColor="#EC4899" />
                           </linearGradient>
@@ -1331,8 +1354,8 @@ function AccountPage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900">GoPilot AI</p>
-                      <p className="text-xs text-gray-500">Ask questions across all your apps</p>
+                      <p className="font-semibold text-gray-900 text-sm">GoPilot AI</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Ask across all your apps</p>
                     </div>
                   </Link>
                 </div>
@@ -1372,81 +1395,76 @@ function AccountPage() {
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {orgApps.map((orgApp) => (
                     <div
                       key={orgApp.id}
-                      className="bg-white rounded-2xl shadow-sm overflow-hidden"
+                      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
                     >
-                      <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 sm:gap-5 min-w-0">
-                          <span className="text-3xl sm:text-4xl flex-shrink-0">{orgApp.app.icon}</span>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-bold text-gray-900 text-lg">
+                      <div className="p-5">
+                        {/* App header */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl flex-shrink-0">{orgApp.app.icon}</span>
+                            <div>
+                              <h3 className="font-bold text-gray-900 text-base leading-tight">
                                 {orgApp.app.title}
                               </h3>
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                  orgApp.needsUpdate
-                                    ? "bg-orange-100 text-orange-700"
-                                    : "bg-purple-100 text-purple-700"
-                                }`}
-                              >
-                                {orgApp.deployedVersion || orgApp.latestVersion}
-                              </span>
-                              {orgApp.needsUpdate && (
-                                <span className="text-xs text-orange-600">
-                                  {orgApp.latestVersion} available
-                                </span>
-                              )}
+                              <p className="text-xs text-gray-500 mt-0.5">{orgApp.app.category}</p>
                             </div>
-                            {orgApp.needsUpdate && orgApp.updateSummary && (
-                              <p className="text-xs text-gray-500 mt-1 max-w-md">
-                                {orgApp.updateSummary}
-                              </p>
-                            )}
-                            <p className="text-sm text-gray-500 mt-0.5">
-                              {orgApp.app.category}
-                              {orgApp.subdomain && (
-                                <span className="ml-2">
-                                  · {orgApp.subdomain}.go4it.live
-                                </span>
-                              )}
-                              {orgApp.members.length > 0 && (
-                                <span className="ml-2">
-                                  · {orgApp.members.length} team member
-                                  {orgApp.members.length !== 1 && "s"}
-                                </span>
-                              )}
-                            </p>
                           </div>
+                          {userRole !== "MEMBER" && deployingAppId !== orgApp.appId && (
+                            <button
+                              onClick={() => handleRemoveApp(orgApp.appId, orgApp.app.title)}
+                              className="p-1 text-gray-300 hover:text-red-500 transition-colors shrink-0"
+                              title="Remove app"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
 
-                        <div className="flex items-center gap-2 sm:gap-3">
+                        {/* Status + Version badges */}
+                        <div className="flex items-center gap-2 mb-3">
                           {deployingAppId === orgApp.appId ? (
-                            <div className="flex items-center gap-2">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600" />
-                              <span className="text-xs text-purple-600 font-medium max-w-48 truncate">
+                            <div className="flex items-center gap-1.5">
+                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-purple-600" />
+                              <span className="text-xs text-purple-600 font-medium truncate max-w-[140px]">
                                 {deployMessage}
                               </span>
                             </div>
                           ) : (
-                            <span
-                              className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                                STATUS_COLORS[orgApp.status] ||
-                                "bg-gray-100 text-gray-600"
-                              }`}
-                            >
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[orgApp.status] || "bg-gray-100 text-gray-600"}`}>
                               {STATUS_LABELS[orgApp.status] || orgApp.status}
                             </span>
                           )}
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${orgApp.needsUpdate ? "bg-orange-100 text-orange-700" : "bg-purple-100 text-purple-700"}`}>
+                            {orgApp.deployedVersion || orgApp.latestVersion}
+                          </span>
+                        </div>
 
+                        {/* Meta info */}
+                        <div className="text-xs text-gray-500 space-y-0.5 mb-4">
+                          {orgApp.subdomain && (
+                            <p>{orgApp.subdomain}.go4it.live</p>
+                          )}
+                          {orgApp.members.length > 0 && (
+                            <p>{orgApp.members.length} team member{orgApp.members.length !== 1 && "s"}</p>
+                          )}
+                          {orgApp.needsUpdate && orgApp.updateSummary && (
+                            <p className="text-orange-600">{orgApp.updateSummary}</p>
+                          )}
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex flex-wrap items-center gap-2">
                           {(orgApp.status === "RUNNING" || orgApp.status === "PREVIEW") && orgApp.flyUrl && (
                             <button
                               onClick={() => ssoLaunchApp(orgApp.id)}
                               disabled={ssoLaunchingId === orgApp.id}
-                              className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors disabled:opacity-60 ${
+                              className={`px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors disabled:opacity-60 ${
                                 orgApp.status === "PREVIEW"
                                   ? "text-blue-600 border-blue-200 hover:bg-blue-50"
                                   : "text-green-600 border-green-200 hover:bg-green-50"
@@ -1462,7 +1480,7 @@ function AccountPage() {
                                 <button
                                   onClick={() => handleModifyApp(orgApp)}
                                   disabled={forkingAppId === orgApp.appId}
-                                  className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                                  className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
                                 >
                                   {forkingAppId === orgApp.appId ? "Forking..." : "Modify"}
                                 </button>
@@ -1470,56 +1488,25 @@ function AccountPage() {
                               {orgApp.needsUpdate && (
                                 <button
                                   onClick={() => handleUpdateApp(orgApp)}
-                                  className="px-3 py-1.5 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
+                                  className="px-3 py-1.5 text-xs font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
                                 >
                                   Update
                                 </button>
                               )}
                               <button
                                 onClick={() => handleConfigureApp(orgApp)}
-                                className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                                className="px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
                               >
                                 Configure
                               </button>
-                              {(orgApp.status === "ADDED" ||
-                                orgApp.status === "FAILED" ||
-                                orgApp.status === "PREVIEW") && (
+                              {(orgApp.status === "ADDED" || orgApp.status === "FAILED" || orgApp.status === "PREVIEW") && (
                                 <button
-                                  className="px-3 py-1.5 text-sm font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+                                  className="px-3 py-1.5 text-xs font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity"
                                   onClick={() => handleLaunchApp(orgApp)}
                                 >
-                                  {orgApp.status === "FAILED"
-                                    ? "Retry"
-                                    : orgApp.status === "PREVIEW"
-                                      ? "Go Live"
-                                      : "Launch"}
+                                  {orgApp.status === "FAILED" ? "Retry" : orgApp.status === "PREVIEW" ? "Go Live" : "Launch"}
                                 </button>
                               )}
-                              <button
-                                onClick={() =>
-                                  handleRemoveApp(
-                                    orgApp.appId,
-                                    orgApp.app.title
-                                  )
-                                }
-                                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors shrink-0"
-                                title="Remove app"
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  strokeWidth={1.5}
-                                  stroke="currentColor"
-                                  className="w-5 h-5"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M6 18 18 6M6 6l12 12"
-                                  />
-                                </svg>
-                              </button>
                             </>
                           )}
                         </div>
