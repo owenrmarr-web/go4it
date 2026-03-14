@@ -1237,47 +1237,63 @@ function AccountPage() {
               {/* Quick Actions — 2x2 Card Grid */}
               {org && (
                 <div className="grid grid-cols-2 gap-3 mb-6">
-                  {/* Team Portal Card */}
-                  <Link
-                    href={`/${org.slug}`}
-                    className="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-purple-200 transition-all flex flex-col items-center text-center gap-3"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <span className="text-2xl">🏠</span>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">Team Portal</p>
-                      <p className="text-xs text-gray-500 mt-0.5">go4it.live/{org.slug}</p>
-                    </div>
-                  </Link>
+                  {/* Organization Home Page Card */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center gap-3">
+                    <Link
+                      href={`/${org.slug}`}
+                      className="group flex flex-col items-center gap-3"
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <span className="text-2xl">🏠</span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">Organization Home Page</p>
+                        <p className="text-xs text-gray-500 mt-0.5">go4it.live/{org.slug}</p>
+                      </div>
+                    </Link>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`https://go4it.live/${org.slug}`);
+                        toast.success("Link copied to clipboard");
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+                      </svg>
+                      Copy Link
+                    </button>
+                  </div>
 
                   {/* Branding Card (Owner) / Info Card (non-owner) */}
                   {userRole === "OWNER" ? (
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-amber-600">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
-                        </svg>
+                      <div
+                        className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity relative"
+                        onClick={() => brandingFileRef.current?.click()}
+                      >
+                        {brandingLogo ? (
+                          <img src={brandingLogo} alt="Logo" className="w-full h-full object-contain" />
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-amber-600">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
+                            </svg>
+                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-purple-600 flex items-center justify-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="white" className="w-2.5 h-2.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                              </svg>
+                            </div>
+                          </>
+                        )}
                       </div>
+                      <input ref={brandingFileRef} type="file" accept="image/*" onChange={handleBrandingLogoUpload} className="hidden" />
                       <div>
                         <p className="font-semibold text-gray-900 text-sm">Branding</p>
                         <p className="text-xs text-gray-500 mt-0.5">Logo & theme colors</p>
                       </div>
                       {/* Inline branding controls */}
                       <div className="w-full pt-2 border-t border-gray-100 flex items-center justify-center gap-2">
-                        <div
-                          className="w-8 h-8 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50 cursor-pointer hover:border-purple-300 transition-colors flex-shrink-0"
-                          onClick={() => brandingFileRef.current?.click()}
-                        >
-                          {brandingLogo ? (
-                            <img src={brandingLogo} alt="Logo" className="w-full h-full object-contain" />
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5 text-gray-400">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
-                            </svg>
-                          )}
-                        </div>
-                        <input ref={brandingFileRef} type="file" accept="image/*" onChange={handleBrandingLogoUpload} className="hidden" />
                         {(["primary", "secondary", "accent"] as const).map((key) => (
                           <input
                             key={key}
@@ -1301,10 +1317,14 @@ function AccountPage() {
                     </div>
                   ) : (
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-amber-600">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
-                        </svg>
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center overflow-hidden">
+                        {brandingLogo ? (
+                          <img src={brandingLogo} alt="Logo" className="w-full h-full object-contain" />
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-amber-600">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
+                          </svg>
+                        )}
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900 text-sm">Branding</p>
@@ -1326,7 +1346,7 @@ function AccountPage() {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900 text-sm">Import Data</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Upload CSV or spreadsheet</p>
+                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">Import existing data into GO4IT apps with AI assistance</p>
                       </div>
                     </Link>
                   ) : (
@@ -1344,11 +1364,8 @@ function AccountPage() {
                   )}
 
                   {/* GoPilot AI Card */}
-                  <Link
-                    href={`/${org.slug}`}
-                    className="group bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-sm border border-purple-100 p-5 hover:shadow-md hover:border-purple-300 transition-all flex flex-col items-center text-center gap-3"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-white/80 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-sm border border-purple-100 p-5 flex flex-col items-center text-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-white/80 flex items-center justify-center">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#gopilot-gradient-card)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <defs>
                           <linearGradient id="gopilot-gradient-card" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -1362,9 +1379,39 @@ function AccountPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-gray-900 text-sm">GoPilot AI</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Ask across all your apps</p>
+                      <p className="text-xs text-gray-500 mt-0.5">AI assistant across all your apps</p>
                     </div>
-                  </Link>
+                    {/* Tier indicator */}
+                    <div className="w-full pt-2 border-t border-purple-100 flex flex-col gap-2">
+                      <div className="flex items-center justify-center gap-3 text-xs">
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          <span className="font-medium text-gray-700">Free</span>
+                          <span className="text-gray-400">10/day</span>
+                        </span>
+                        <span className="flex items-center gap-1 opacity-40">
+                          <span className="w-2 h-2 rounded-full bg-purple-500" />
+                          <span className="font-medium text-gray-700">Pro</span>
+                          <span className="text-gray-400">Unlimited</span>
+                        </span>
+                      </div>
+                      {userRole !== "MEMBER" ? (
+                        <Link
+                          href={`/${org.slug}/upgrade`}
+                          className="w-full px-3 py-1.5 text-xs font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity text-center"
+                        >
+                          Upgrade to Pro
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/${org.slug}`}
+                          className="w-full px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors text-center"
+                        >
+                          Open GoPilot
+                        </Link>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
