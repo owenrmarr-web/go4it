@@ -1199,14 +1199,14 @@ function AccountPage() {
               </div>
             </section>
 
-            {/* ── Organization Zone (gradient border) ────────────────────── */}
+            {/* ── Organization Zone (gradient fill) ────────────────────── */}
             <div
-              className="rounded-2xl p-[2px] mb-12"
+              className="rounded-2xl p-5 mb-12"
               style={{
-                background: `linear-gradient(135deg, ${brandingColors.primary}, ${brandingColors.secondary}, ${brandingColors.accent})`,
+                background: `linear-gradient(135deg, ${brandingColors.primary}15, ${brandingColors.secondary}10, ${brandingColors.accent}15)`,
+                border: `1px solid ${brandingColors.primary}25`,
               }}
             >
-            <div className="rounded-[14px] bg-[#f9fafb] p-5">
             <section className="mb-8">
               {/* Org tabs (only shown when user has 2+ orgs) */}
               {allOrgs.length > 1 && (
@@ -1709,9 +1709,22 @@ function AccountPage() {
             {/* ── Team Members (Owner & Admin only) ──────────── */}
             {userRole && userRole !== "MEMBER" && (
             <section className="mb-0">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">
-                Team Members
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-bold text-gray-800">Team</h2>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
+                    {members.length}{invitations.length > 0 ? ` + ${invitations.length} pending` : ""}
+                  </span>
+                </div>
+                {org && (
+                  <button
+                    onClick={() => setShowInviteModal(true)}
+                    className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                  >
+                    + Add
+                  </button>
+                )}
+              </div>
 
               {!org ? (
                 <div className="text-center py-10 bg-white rounded-xl shadow-sm">
@@ -1720,178 +1733,101 @@ function AccountPage() {
                   </p>
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                  {/* Header bar with count + invite */}
-                  <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <p className="text-sm text-gray-600">
-                      {members.length} member
-                      {members.length !== 1 && "s"}
-                      {invitations.length > 0 &&
-                        ` · ${invitations.length} pending`}
-                    </p>
-                    <button
-                      onClick={() => setShowInviteModal(true)}
-                      className="px-4 py-2 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
-                    >
-                      + Add Team Member
-                    </button>
-                  </div>
-
-                  {/* Unified members + pending list */}
-                  <div className="divide-y divide-gray-100">
-                    {members.map((member) => {
-                      const isOnlyOwner =
-                        member.role === "OWNER" &&
-                        members.filter((m) => m.role === "OWNER").length === 1;
-                      return (
-                        <div
-                          key={member.id}
-                          className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
-                              {member.user.name?.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "?"}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {member.user.name}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {member.user.email}
-                              </p>
-                              {member.title && (
-                                <p className="text-xs text-gray-400">{member.title}</p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            {!isOnlyOwner ? (
-                              <>
-                                <select
-                                  value={member.role}
-                                  onChange={(e) =>
-                                    handleRoleChange(
-                                      member.id,
-                                      e.target.value
-                                    )
-                                  }
-                                  className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                >
-                                  <option value="OWNER">Owner</option>
-                                  <option value="ADMIN">Admin</option>
-                                  <option value="MEMBER">Member</option>
-                                </select>
-                                <button
-                                  onClick={() =>
-                                    handleRemoveMember(
-                                      member.id,
-                                      member.user.name
-                                    )
-                                  }
-                                  className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                                  title="Remove member"
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth={1.5}
-                                    stroke="currentColor"
-                                    className="w-5 h-5"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      d="M6 18 18 6M6 6l12 12"
-                                    />
-                                  </svg>
-                                </button>
-                              </>
-                            ) : (
-                              <span
-                                className={`px-3 py-1 rounded-full text-sm font-medium ${ROLE_COLORS[member.role]}`}
-                              >
-                                {ROLE_LABELS[member.role]}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Pending invitations inline */}
-                    {invitations.map((invite) => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {members.map((member) => {
+                    const isOnlyOwner =
+                      member.role === "OWNER" &&
+                      members.filter((m) => m.role === "OWNER").length === 1;
+                    return (
                       <div
-                        key={`inv-${invite.id}`}
-                        className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/50"
+                        key={member.id}
+                        className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col items-center text-center gap-2 hover:shadow-md transition-shadow relative"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-semibold">
-                            {invite.name?.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || invite.email[0]?.toUpperCase() || "?"}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-gray-700">
-                                {invite.name || invite.email}
-                              </p>
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                                Pending
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-500">
-                              {invite.name ? invite.email : ""}
-                              {invite.title && (
-                                <span>
-                                  {invite.name ? " · " : ""}{invite.title}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-medium ${ROLE_COLORS[invite.role]}`}
-                          >
-                            {ROLE_LABELS[invite.role]}
-                          </span>
+                        {/* Remove button */}
+                        {!isOnlyOwner && (
                           <button
-                            onClick={() => handleResendInvite(invite.id)}
-                            disabled={resendingInviteId === invite.id}
-                            className="px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors disabled:opacity-50"
+                            onClick={() => handleRemoveMember(member.id, member.user.name)}
+                            className="absolute top-2 right-2 p-1 text-gray-300 hover:text-red-500 transition-colors"
+                            title="Remove member"
                           >
-                            {resendingInviteId === invite.id ? "Sending..." : "Resend"}
-                          </button>
-                          <button
-                            onClick={() => handleCancelInvite(invite.id)}
-                            className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                            title="Cancel invitation"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              stroke="currentColor"
-                              className="w-5 h-5"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M6 18 18 6M6 6l12 12"
-                              />
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                             </svg>
                           </button>
+                        )}
+                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold text-sm">
+                          {member.user.name?.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "?"}
                         </div>
+                        <div className="min-w-0 w-full">
+                          <p className="font-semibold text-gray-900 text-sm truncate">{member.user.name}</p>
+                          {member.title && (
+                            <p className="text-xs text-gray-500 truncate">{member.title}</p>
+                          )}
+                          <p className="text-xs text-gray-400 truncate">{member.user.email}</p>
+                        </div>
+                        {!isOnlyOwner ? (
+                          <select
+                            value={member.role}
+                            onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                            className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 text-center"
+                          >
+                            <option value="OWNER">Owner</option>
+                            <option value="ADMIN">Admin</option>
+                            <option value="MEMBER">Member</option>
+                          </select>
+                        ) : (
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[member.role]}`}>
+                            {ROLE_LABELS[member.role]}
+                          </span>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
+
+                  {/* Pending invitations as cards */}
+                  {invitations.map((invite) => (
+                    <div
+                      key={`inv-${invite.id}`}
+                      className="bg-white/70 rounded-2xl shadow-sm border border-dashed border-gray-200 p-4 flex flex-col items-center text-center gap-2 relative"
+                    >
+                      <button
+                        onClick={() => handleCancelInvite(invite.id)}
+                        className="absolute top-2 right-2 p-1 text-gray-300 hover:text-red-500 transition-colors"
+                        title="Cancel invitation"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                      <div className="w-11 h-11 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 font-semibold text-sm">
+                        {invite.name?.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || invite.email[0]?.toUpperCase() || "?"}
+                      </div>
+                      <div className="min-w-0 w-full">
+                        <p className="font-semibold text-gray-700 text-sm truncate">{invite.name || invite.email}</p>
+                        {invite.title && (
+                          <p className="text-xs text-gray-500 truncate">{invite.title}</p>
+                        )}
+                        {invite.name && (
+                          <p className="text-xs text-gray-400 truncate">{invite.email}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">Pending</span>
+                        <button
+                          onClick={() => handleResendInvite(invite.id)}
+                          disabled={resendingInviteId === invite.id}
+                          className="px-2 py-0.5 text-xs font-medium text-purple-600 border border-purple-200 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50"
+                        >
+                          {resendingInviteId === invite.id ? "..." : "Resend"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </section>
             )}
-            </div></div>{/* end org gradient border wrapper */}
+            </div>{/* end org gradient fill wrapper */}
 
             {/* ── Apps I've Created ─────────────────────────── */}
             <section className="mb-12">
