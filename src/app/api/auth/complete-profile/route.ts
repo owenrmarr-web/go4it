@@ -1,54 +1,33 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { generateSlug, isReservedSlug } from "@/lib/slug";
 import { validateUsername } from "@/lib/username";
-import { createAndSendVerificationToken } from "@/lib/verification";
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password, username, companyName, portalSlug, logo, themeColors, state, country, useCases, businessDescription } =
-      await request.json();
-
-    if (!name || !email || !password || !username) {
-      return NextResponse.json(
-        { error: "Name, email, password, and username are required" },
-        { status: 400 }
-      );
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
-        { status: 400 }
-      );
+    const { username, companyName, portalSlug, logo, themeColors, state, country, useCases, businessDescription } =
+      await request.json();
+
+    if (!username) {
+      return NextResponse.json({ error: "Username is required" }, { status: 400 });
     }
 
     const usernameCheck = await validateUsername(username);
     if (!usernameCheck.valid) {
-      return NextResponse.json(
-        { error: usernameCheck.error },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: usernameCheck.error }, { status: 400 });
     }
-
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "An account with this email already exists. Try signing in with Google or use your password." },
-        { status: 409 }
-      );
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 12);
 
     await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
+      await tx.user.update({
+        where: { id: session.user!.id },
         data: {
-          name,
-          email,
           username,
-          password: hashedPassword,
           companyName: companyName || null,
           logo: logo || null,
           themeColors: themeColors ? JSON.stringify(themeColors) : null,
@@ -64,7 +43,6 @@ export async function POST(request: Request) {
         let slug: string;
 
         if (portalSlug) {
-          // Validate custom slug
           if (portalSlug.length < 3 || portalSlug.length > 40) {
             throw new Error("Portal slug must be 3-40 characters");
           }
@@ -94,32 +72,22 @@ export async function POST(request: Request) {
             logo: logo || null,
             themeColors: themeColors ? JSON.stringify(themeColors) : null,
             members: {
-              create: { userId: user.id, role: "OWNER" },
+              create: { userId: session.user!.id as string, role: "OWNER" },
             },
           },
         });
       }
     });
 
-    // Send verification email (outside transaction — user exists, they can resend if this fails)
-    try {
-      await createAndSendVerificationToken(email);
-    } catch (emailError) {
-      console.error("Failed to send verification email:", emailError);
-    }
-
-    return NextResponse.json({ success: true, email });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Signup error:", error);
+    console.error("Complete profile error:", error);
     if (error instanceof Error && (
       error.message.includes("Portal slug") ||
       error.message.includes("portal URL")
     )) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    return NextResponse.json(
-      { error: "Failed to create account" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to save profile" }, { status: 500 });
   }
 }

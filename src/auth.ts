@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
@@ -13,6 +14,7 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       isAdmin?: boolean;
+      profileComplete?: boolean;
     };
   }
 }
@@ -22,6 +24,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+    }),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
@@ -52,9 +59,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
-    async jwt({ token, user }) {
+    async signIn({ account }) {
+      // Mark Google users' email as verified so credentials login works if they later set a password
+      if (account?.provider === "google" && account.userId) {
+        await prisma.user.update({
+          where: { id: account.userId },
+          data: { emailVerified: new Date() },
+        }).catch(() => {}); // non-blocking
+      }
+      return true;
+    },
+    async jwt({ token, user, trigger, session }) {
+      // Allow client-side session update to mark profile as complete
+      if (trigger === "update" && (session as { profileComplete?: boolean })?.profileComplete === true) {
+        token.profileComplete = true;
+      }
       if (user) {
-        token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id! },
+          select: { username: true, isAdmin: true },
+        });
+        token.isAdmin = dbUser?.isAdmin ?? false;
+        token.profileComplete = !!dbUser?.username;
       }
       return token;
     },
@@ -64,6 +90,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       if (session.user) {
         session.user.isAdmin = token.isAdmin as boolean ?? false;
+        session.user.profileComplete = token.profileComplete as boolean ?? true;
       }
       return session;
     },

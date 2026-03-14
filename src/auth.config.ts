@@ -13,6 +13,8 @@ export const authConfig = {
       const isOnAuth = nextUrl.pathname.startsWith("/auth");
       const isOnAccount = nextUrl.pathname.startsWith("/account");
       const isOnAdmin = nextUrl.pathname.startsWith("/admin");
+      const isOnCompleteProfile = nextUrl.pathname.startsWith("/auth/complete-profile");
+      const isProfileComplete = (auth?.user as { profileComplete?: boolean })?.profileComplete ?? true;
 
       // Public single-segment routes that are NOT org portals
       const publicRoutes = [
@@ -26,6 +28,14 @@ export const authConfig = {
         /^\/[a-z0-9][\w-]*$/i.test(nextUrl.pathname) &&
         nextUrl.pathname !== "/" &&
         !publicRoutes.includes(nextUrl.pathname);
+
+      // Allow complete-profile page for any logged-in user
+      if (isOnCompleteProfile && isLoggedIn) return true;
+
+      // Redirect logged-in users with incomplete profiles to complete-profile
+      if (isLoggedIn && !isProfileComplete && !isOnAuth) {
+        return Response.redirect(new URL("/auth/complete-profile", nextUrl));
+      }
 
       if ((isOnAccount || isOnAdmin || isOrgPortal) && !isLoggedIn) return false;
       if (isOnAuth && isLoggedIn) return Response.redirect(new URL("/", nextUrl));
