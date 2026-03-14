@@ -1294,17 +1294,46 @@ function AccountPage() {
                 </div>
               )}
 
-              {/* Import Data button — OWNER/ADMIN with at least one RUNNING app */}
+              {/* Action Cards — OWNER/ADMIN with at least one RUNNING app */}
               {org && userRole !== "MEMBER" && orgApps.some((a) => a.status === "RUNNING") && (
-                <div className="mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  {/* Import Data Card */}
                   <Link
                     href={`/account/import?org=${org.slug}`}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-purple-300 transition-colors shadow-sm"
+                    className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-purple-300 transition-colors shadow-sm"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                    </svg>
-                    Import Data
+                    <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-purple-600">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">Import Data</p>
+                      <p className="text-xs text-gray-500">Upload CSV or spreadsheet data</p>
+                    </div>
+                  </Link>
+
+                  {/* GoPilot Card */}
+                  <Link
+                    href={`/${org.slug}`}
+                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl text-sm font-medium text-gray-700 hover:from-purple-100 hover:to-pink-100 transition-colors shadow-sm"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-white/80 flex items-center justify-center flex-shrink-0">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#gopilot-gradient)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <defs>
+                          <linearGradient id="gopilot-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#9333EA" />
+                            <stop offset="100%" stopColor="#EC4899" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+                        <path d="M18 14l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">GoPilot AI</p>
+                      <p className="text-xs text-gray-500">Ask questions across all your apps</p>
+                    </div>
                   </Link>
                 </div>
               )}
@@ -1636,133 +1665,6 @@ function AccountPage() {
               )}
             </section>
 
-            {/* ── Apps I've Created ─────────────────────────── */}
-            <section className="mb-12">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Apps I&apos;ve Created</h2>
-              {createdApps.length === 0 ? (
-                <div className="text-center py-10 bg-white rounded-xl shadow-sm">
-                  <p className="text-gray-400 mb-4">
-                    Apps you generate or upload will appear here.
-                  </p>
-                  <Link
-                    href="/create"
-                    className="inline-block gradient-brand px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    Create an App
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {createdApps.map((ca) => {
-                    const timeAgo = getTimeAgo(ca.updatedAt);
-                    return (
-                      <div
-                        key={ca.id}
-                        className="bg-white rounded-2xl shadow-sm overflow-hidden"
-                      >
-                        <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div className="flex items-center gap-4 sm:gap-5 min-w-0">
-                            <span className="text-3xl sm:text-4xl flex-shrink-0">{ca.icon}</span>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="font-bold text-gray-900 text-lg">
-                                  {ca.title}
-                                </h3>
-                                {ca.isPublished && ca.storeVersion && (
-                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                                    {ca.storeVersion} Published
-                                  </span>
-                                )}
-                                {!ca.isPublished && (
-                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
-                                    Draft
-                                  </span>
-                                )}
-                                {ca.hasUnpublishedChanges && (
-                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
-                                    Unpublished changes
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-500 mt-0.5">
-                                {ca.category}
-                                <span className="ml-2">· Updated {timeAgo}</span>
-                                {ca.source === "uploaded" && (
-                                  <span className="ml-2">· Uploaded</span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                            {/* Store preview indicator */}
-                            {ca.isPublished && (
-                              <span className={`flex items-center gap-1 text-xs ${ca.storePreviewUrl ? "text-green-600" : "text-gray-400"}`}>
-                                <span className={`w-2 h-2 rounded-full ${ca.storePreviewUrl ? "bg-green-500" : "bg-gray-300"}`} />
-                                {ca.storePreviewUrl ? "Store preview live" : "No store preview"}
-                              </span>
-                            )}
-
-                            {/* Draft preview expiration warning */}
-                            {ca.draftExpiresInDays !== null && ca.draftExpiresInDays <= 5 && (
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                ca.draftExpiresInDays <= 2
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                              }`}>
-                                Draft expires in {ca.draftExpiresInDays}d
-                              </span>
-                            )}
-
-                            {/* View Draft */}
-                            {ca.draftPreviewUrl && (
-                              <a
-                                href={ca.draftPreviewUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
-                              >
-                                View Draft
-                              </a>
-                            )}
-
-                            {/* Preview Draft */}
-                            {!ca.draftPreviewUrl && (
-                              <button
-                                onClick={() => handleDeployDraft(ca)}
-                                disabled={deployingDraftId === ca.id}
-                                className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
-                              >
-                                {deployingDraftId === ca.id ? "Deploying..." : "Preview Draft"}
-                              </button>
-                            )}
-
-                            {/* Iterate */}
-                            <button
-                              onClick={() => router.push(`/create?gen=${ca.id}`)}
-                              className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
-                            >
-                              Iterate
-                            </button>
-
-                            {/* Publish / Publish Update */}
-                            {(!ca.isPublished || ca.hasUnpublishedChanges) && (
-                              <button
-                                onClick={() => router.push(`/create?gen=${ca.id}&publish=true`)}
-                                className="px-3 py-1.5 text-sm font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity"
-                              >
-                                {ca.isPublished ? "Publish Update" : "Publish"}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-
             {/* ── Team Members (Owner & Admin only) ──────────── */}
             {userRole && userRole !== "MEMBER" && (
             <section className="mb-12">
@@ -1948,6 +1850,133 @@ function AccountPage() {
               )}
             </section>
             )}
+
+            {/* ── Apps I've Created ─────────────────────────── */}
+            <section className="mb-12">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Apps I&apos;ve Created</h2>
+              {createdApps.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-xl shadow-sm">
+                  <p className="text-gray-400 mb-4">
+                    Apps you generate or upload will appear here.
+                  </p>
+                  <Link
+                    href="/create"
+                    className="inline-block gradient-brand px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    Create an App
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {createdApps.map((ca) => {
+                    const timeAgo = getTimeAgo(ca.updatedAt);
+                    return (
+                      <div
+                        key={ca.id}
+                        className="bg-white rounded-2xl shadow-sm overflow-hidden"
+                      >
+                        <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-center gap-4 sm:gap-5 min-w-0">
+                            <span className="text-3xl sm:text-4xl flex-shrink-0">{ca.icon}</span>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-bold text-gray-900 text-lg">
+                                  {ca.title}
+                                </h3>
+                                {ca.isPublished && ca.storeVersion && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                                    {ca.storeVersion} Published
+                                  </span>
+                                )}
+                                {!ca.isPublished && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+                                    Draft
+                                  </span>
+                                )}
+                                {ca.hasUnpublishedChanges && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
+                                    Unpublished changes
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-500 mt-0.5">
+                                {ca.category}
+                                <span className="ml-2">· Updated {timeAgo}</span>
+                                {ca.source === "uploaded" && (
+                                  <span className="ml-2">· Uploaded</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                            {/* Store preview indicator */}
+                            {ca.isPublished && (
+                              <span className={`flex items-center gap-1 text-xs ${ca.storePreviewUrl ? "text-green-600" : "text-gray-400"}`}>
+                                <span className={`w-2 h-2 rounded-full ${ca.storePreviewUrl ? "bg-green-500" : "bg-gray-300"}`} />
+                                {ca.storePreviewUrl ? "Store preview live" : "No store preview"}
+                              </span>
+                            )}
+
+                            {/* Draft preview expiration warning */}
+                            {ca.draftExpiresInDays !== null && ca.draftExpiresInDays <= 5 && (
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                ca.draftExpiresInDays <= 2
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                              }`}>
+                                Draft expires in {ca.draftExpiresInDays}d
+                              </span>
+                            )}
+
+                            {/* View Draft */}
+                            {ca.draftPreviewUrl && (
+                              <a
+                                href={ca.draftPreviewUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                              >
+                                View Draft
+                              </a>
+                            )}
+
+                            {/* Preview Draft */}
+                            {!ca.draftPreviewUrl && (
+                              <button
+                                onClick={() => handleDeployDraft(ca)}
+                                disabled={deployingDraftId === ca.id}
+                                className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                              >
+                                {deployingDraftId === ca.id ? "Deploying..." : "Preview Draft"}
+                              </button>
+                            )}
+
+                            {/* Iterate */}
+                            <button
+                              onClick={() => router.push(`/create?gen=${ca.id}`)}
+                              className="px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                            >
+                              Iterate
+                            </button>
+
+                            {/* Publish / Publish Update */}
+                            {(!ca.isPublished || ca.hasUnpublishedChanges) && (
+                              <button
+                                onClick={() => router.push(`/create?gen=${ca.id}&publish=true`)}
+                                className="px-3 py-1.5 text-sm font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity"
+                              >
+                                {ca.isPublished ? "Publish Update" : "Publish"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
 
             {/* ── Saved Apps ───────────────────────────────── */}
             <section>
