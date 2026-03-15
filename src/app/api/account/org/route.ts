@@ -50,12 +50,13 @@ const orgInclude = {
 } as const;
 
 export async function GET(request: Request) {
+  try {
   const session = await auth();
+  const slug = new URL(request.url).searchParams.get("slug");
+  console.log("[/api/account/org] session.user.id:", session?.user?.id ?? "MISSING", "slug:", slug);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const slug = new URL(request.url).searchParams.get("slug");
 
   let membership;
 
@@ -161,4 +162,8 @@ export async function GET(request: Request) {
       createdAt: inv.createdAt,
     })),
   });
+  } catch (err) {
+    console.error("[/api/account/org] THREW:", err);
+    return NextResponse.json({ error: "Internal error", detail: String(err) }, { status: 500 });
+  }
 }
