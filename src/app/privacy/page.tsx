@@ -92,7 +92,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">6. Data Retention</h2>
             <p>
-              We retain your personal information for as long as your account is active or as needed to provide the Service. You may request deletion of your account and associated data at any time by contacting us at <a href="mailto:privacy@go4it.live" className="text-purple-600 hover:underline">privacy@go4it.live</a>. We will delete your data within 30 days of a verified request, except where retention is required by law.
+              We retain your personal information for as long as your account is active or as needed to provide the Service. You may request deletion of your account and associated data at any time by contacting us at <a href="mailto:owenrmarr@gmail.com" className="text-purple-600 hover:underline">owenrmarr@gmail.com</a>. We will delete your data within 30 days of a verified request, except where retention is required by law.
             </p>
           </section>
 
@@ -113,7 +113,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">9. Children&apos;s Privacy</h2>
             <p>
-              The Service is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe we have collected such information, please contact us and we will promptly delete it.
+              The Service is provided for businesses and is not intended for use by any individuals under the minimum legal age of employment. We do not knowingly collect personal information from children under 13. If any such information is inadvertently collected, please contact our privacy email and we will work to ensure all associated data is deleted.
             </p>
           </section>
 
@@ -128,7 +128,7 @@ export default function PrivacyPage() {
               <li>Data portability</li>
             </ul>
             <p className="mt-3">
-              To exercise these rights, contact us at <a href="mailto:privacy@go4it.live" className="text-purple-600 hover:underline">privacy@go4it.live</a>.
+              To exercise these rights, contact us at <a href="mailto:owenrmarr@gmail.com" className="text-purple-600 hover:underline">owenrmarr@gmail.com</a>.
             </p>
           </section>
 
@@ -146,7 +146,7 @@ export default function PrivacyPage() {
             </p>
             <div className="mt-3 p-4 bg-gray-100 rounded-lg text-sm">
               <p><strong>GO4IT</strong></p>
-              <p>Email: <a href="mailto:privacy@go4it.live" className="text-purple-600 hover:underline">privacy@go4it.live</a></p>
+              <p>Email: <a href="mailto:owenrmarr@gmail.com" className="text-purple-600 hover:underline">owenrmarr@gmail.com</a></p>
               <p>Website: <a href="https://go4it.live" className="text-purple-600 hover:underline">go4it.live</a></p>
             </div>
           </section>
