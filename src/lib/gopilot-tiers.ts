@@ -44,9 +44,9 @@ export const TIER_ORDER: GoPilotTierKey[] = ["FREE", "STARTER", "PRO", "UNLIMITE
 /** Get the Stripe price ID for a paid tier */
 export function getTierPriceId(tier: GoPilotTierKey): string | null {
   const priceIds: Record<string, string | undefined> = {
-    STARTER: process.env.STRIPE_GOPILOT_STARTER_PRICE_ID,
-    PRO: process.env.STRIPE_GOPILOT_PRO_PRICE_ID,
-    UNLIMITED: process.env.STRIPE_GOPILOT_UNLIMITED_PRICE_ID,
+    STARTER: process.env.STRIPE_GO_PILOT_STARTER,
+    PRO: process.env.STRIPE_GO_PILOT_PRO,
+    UNLIMITED: process.env.STRIPE_GO_PILOT_UNLIMITED,
   };
   return priceIds[tier] || null;
 }
