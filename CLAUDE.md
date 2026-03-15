@@ -186,6 +186,7 @@ Read the relevant doc(s) from `docs/` before making changes. Each doc starts wit
 | `docs/builder-service.md` | Changing builder endpoints, redeploying builder, Docker build issues |
 | `docs/go-suite.md` | Working on Go Suite apps (GoCRM, GoChat, etc.), adding new apps, cross-app queries, GoChat iOS |
 | `docs/auth-and-teams.md` | Auth flows, SSO, invitations, team sync, roles, member onboarding, passwords, usernames |
+| `docs/gopilot.md` | GoPilot AI assistant: chat route, cross-app queries, usage tiers, Stripe subscriptions, ChatPanel UI |
 | `docs/ui-and-theming.md` | Theme colors, dark mode, CSS variables, avatars, deck, pricing page, org portal |
 | `docs/roadmap.md` | Checking what's planned next, prioritizing work |
 | `docs/completed-work.md` | Looking up how a past feature was implemented, debugging regressions |
@@ -198,6 +199,7 @@ Read the relevant doc(s) from `docs/` before making changes. Each doc starts wit
 - **Auth:** User, Account, Session, VerificationToken
 - **Marketplace:** App, UserInteraction, GeneratedApp, AppIteration
 - **Organizations:** Organization, OrganizationMember, Invitation, OrgApp, OrgAppMember
+- **GoPilot:** Conversation, ChatMessage, AIUsage
 
 ---
 
@@ -214,4 +216,5 @@ Four approaches under consideration — 1 and 2 are prioritized first to find pr
 
 ## Open Actions
 
+- [ ] Complete Google OAuth verification (consent screen submitted, awaiting Google approval — required for unlimited users; currently in Testing mode with up to 100 test users)
 - [ ] Add deploy overlay to app previews
