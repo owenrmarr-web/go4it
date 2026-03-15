@@ -146,7 +146,7 @@ function SortTh({ label, sortKey, sort, onSort, className }: {
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"users" | "organizations" | "creations" | "submissions" | "machines" | "contact" | "gosuite">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "organizations" | "creations" | "submissions" | "machines" | "contact" | "gosuite" | "insights">("users");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [orgs, setOrgs] = useState<AdminOrg[]>([]);
   const [generations, setGenerations] = useState<AdminGeneration[]>([]);
@@ -161,6 +161,14 @@ export default function AdminPage() {
   const [contactsLoading, setContactsLoading] = useState(true);
   const [goSuiteApps, setGoSuiteApps] = useState<GoSuiteApp[]>([]);
   const [goSuiteLoading, setGoSuiteLoading] = useState(true);
+  const [insights, setInsights] = useState<{
+    totalUsers: number;
+    usersWithUseCases: number;
+    useCases: { value: string; count: number }[];
+    countries: { country: string; count: number }[];
+    signupsByDay: { date: string; count: number }[];
+  } | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(true);
   const [publishModal, setPublishModal] = useState<GoSuiteApp | null>(null);
   const [historyModal, setHistoryModal] = useState<GoSuiteApp | null>(null);
   const [publishSummary, setPublishSummary] = useState("");
@@ -226,6 +234,12 @@ export default function AdminPage() {
       .then((data) => setGoSuiteApps(data))
       .catch(() => {})
       .finally(() => setGoSuiteLoading(false));
+
+    fetch("/api/admin/insights")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => setInsights(data))
+      .catch(() => {})
+      .finally(() => setInsightsLoading(false));
   }, [session, status, router]);
 
   if (status === "loading" || !session?.user?.isAdmin) {
@@ -325,6 +339,16 @@ export default function AdminPage() {
             }`}
           >
             Go Suite ({goSuiteApps.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("insights")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "insights"
+                ? "bg-white shadow-sm text-gray-900"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Insights
           </button>
         </div>
 
@@ -1527,6 +1551,134 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Insights Tab */}
+        {activeTab === "insights" && (
+          <div className="space-y-6">
+            {insightsLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+              </div>
+            ) : !insights ? (
+              <div className="text-center py-16 text-gray-400">Failed to load insights.</div>
+            ) : (
+              <>
+                {/* Summary cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="bg-white rounded-2xl shadow-sm p-5">
+                    <p className="text-sm text-gray-500">Total Users</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{insights.totalUsers}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl shadow-sm p-5">
+                    <p className="text-sm text-gray-500">Shared Use Cases</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{insights.usersWithUseCases}</p>
+                    <p className="text-xs text-gray-400 mt-1">{insights.totalUsers > 0 ? Math.round((insights.usersWithUseCases / insights.totalUsers) * 100) : 0}% of users</p>
+                  </div>
+                  <div className="bg-white rounded-2xl shadow-sm p-5">
+                    <p className="text-sm text-gray-500">Countries Represented</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{insights.countries.length}</p>
+                  </div>
+                </div>
+
+                {/* Signups last 30 days */}
+                <div className="bg-white rounded-2xl shadow-sm p-6">
+                  <h2 className="text-base font-semibold text-gray-900 mb-4">Signups — Last 30 Days</h2>
+                  {(() => {
+                    const max = Math.max(...insights.signupsByDay.map((d) => d.count), 1);
+                    return (
+                      <div className="flex items-end gap-1 h-24">
+                        {insights.signupsByDay.map((d) => (
+                          <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group relative">
+                            <div
+                              className="w-full bg-gradient-to-t from-purple-500 to-orange-400 rounded-t-sm transition-all"
+                              style={{ height: `${Math.max((d.count / max) * 88, d.count > 0 ? 4 : 0)}px` }}
+                            />
+                            {d.count > 0 && (
+                              <span className="absolute -top-5 text-xs text-gray-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">{d.count}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  <div className="flex justify-between text-xs text-gray-400 mt-2">
+                    <span>{insights.signupsByDay[0]?.date}</span>
+                    <span>{insights.signupsByDay[insights.signupsByDay.length - 1]?.date}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Use cases bar chart */}
+                  <div className="bg-white rounded-2xl shadow-sm p-6">
+                    <h2 className="text-base font-semibold text-gray-900 mb-4">What Tools Are You Looking For?</h2>
+                    {insights.useCases.length === 0 ? (
+                      <p className="text-sm text-gray-400">No data yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {(() => {
+                          const max = insights.useCases[0]?.count ?? 1;
+                          const LABELS: Record<string, string> = {
+                            crm: "CRM / Sales",
+                            "project-management": "Project Management",
+                            invoicing: "Invoicing / Finance",
+                            hr: "HR / People",
+                            inventory: "Inventory",
+                            scheduling: "Scheduling",
+                            support: "Customer Support",
+                            marketing: "Marketing",
+                            other: "Other",
+                          };
+                          return insights.useCases.map((item) => (
+                            <div key={item.value}>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-gray-700 font-medium">{LABELS[item.value] ?? item.value}</span>
+                                <span className="text-gray-500">{item.count}</span>
+                              </div>
+                              <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-orange-400 to-purple-500 rounded-full transition-all"
+                                  style={{ width: `${(item.count / max) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Country bar chart */}
+                  <div className="bg-white rounded-2xl shadow-sm p-6">
+                    <h2 className="text-base font-semibold text-gray-900 mb-4">Top Countries</h2>
+                    {insights.countries.length === 0 ? (
+                      <p className="text-sm text-gray-400">No data yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {(() => {
+                          const max = insights.countries[0]?.count ?? 1;
+                          return insights.countries.map((item) => (
+                            <div key={item.country}>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-gray-700 font-medium">{item.country}</span>
+                                <span className="text-gray-500">{item.count}</span>
+                              </div>
+                              <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-pink-400 to-purple-500 rounded-full transition-all"
+                                  style={{ width: `${(item.count / max) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </>
             )}
           </div>
