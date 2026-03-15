@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GOPILOT_TIERS, TIER_ORDER, type GoPilotTierKey } from "@/lib/gopilot-tiers";
 
 interface GoPilotTierPickerProps {
@@ -10,6 +10,15 @@ interface GoPilotTierPickerProps {
 
 export default function GoPilotTierPicker({ currentTier, orgSlug, compact }: GoPilotTierPickerProps) {
   const [loading, setLoading] = useState<GoPilotTierKey | null>(null);
+
+  // Reset loading state when user returns from Stripe
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") setLoading(null);
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
 
   const handleSelect = async (tier: GoPilotTierKey) => {
     if (tier === "FREE" || tier === currentTier) return;

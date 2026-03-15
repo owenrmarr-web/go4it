@@ -52,6 +52,19 @@ export async function POST(
     return NextResponse.json({ error: "Only owners and admins can subscribe" }, { status: 403 });
   }
 
+  // Cancel existing GoPilot subscription if switching tiers
+  if (org.gopilotStripeSubId) {
+    try {
+      await stripe.subscriptions.cancel(org.gopilotStripeSubId);
+    } catch {
+      // Subscription may already be canceled — continue
+    }
+    await prisma.organization.update({
+      where: { id: org.id },
+      data: { gopilotStripeSubId: null, gopilotTier: "FREE" },
+    });
+  }
+
   // Create Stripe customer if needed
   let customerId = org.stripeCustomerId;
   if (!customerId) {
