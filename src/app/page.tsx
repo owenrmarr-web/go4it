@@ -1,13 +1,12 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
-import { toast } from "sonner";
 import Header from "@/components/Header";
 import SearchBar from "@/components/SearchBar";
 import AppCard, { type UserOrg } from "@/components/AppCard";
-import type { MemberConfig } from "@/components/DeployConfigModal";
 import AuthModal from "@/components/AuthModal";
 import { useInteractions } from "@/hooks/useInteractions";
+import { useAddToOrg } from "@/hooks/useAddToOrg";
 import type { App } from "@/types";
 
 export default function Home() {
@@ -58,70 +57,7 @@ export default function Home() {
       .catch(() => {});
   }, [session]);
 
-  const handleAddToOrg = useCallback(
-    async (orgSlug: string, appId: string, memberConfig?: MemberConfig[]) => {
-      try {
-        // Step 1: Add app to org (creates OrgApp + assigns members)
-        const res = await fetch(`/api/organizations/${orgSlug}/apps`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            appId,
-            ...(memberConfig ? { members: memberConfig } : {}),
-          }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to add app");
-        }
-
-        const result = await res.json();
-        const orgName =
-          orgs.find((o) => o.slug === orgSlug)?.name || orgSlug;
-
-        // Update local org state so the button shows "Added"
-        setOrgs((prev) =>
-          prev.map((org) =>
-            org.slug === orgSlug
-              ? { ...org, appIds: [...org.appIds, appId] }
-              : org
-          )
-        );
-
-        // Step 2: Explicitly trigger deploy (same as "Launch" button in My Account)
-        const deployRes = await fetch(
-          `/api/organizations/${orgSlug}/apps/${appId}/deploy`,
-          { method: "POST" }
-        );
-
-        if (deployRes.ok) {
-          toast.success(
-            `Deploying ${result.app?.title || "App"} to ${orgName} — fully live in 1-2 minutes`,
-            {
-              action: {
-                label: "My Account",
-                onClick: () => (window.location.href = "/account"),
-              },
-            }
-          );
-        } else {
-          // App was added but deploy failed — user can retry from My Account
-          toast.success(`${result.app?.title || "App"} added to ${orgName}`, {
-            action: {
-              label: "Launch from My Account",
-              onClick: () => (window.location.href = "/account"),
-            },
-          });
-        }
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to add app";
-        toast.error(message);
-      }
-    },
-    [orgs]
-  );
+  const handleAddToOrg = useAddToOrg(orgs, setOrgs);
 
   // Curated featured app titles — change these to pick which 4 are featured
   const FEATURED_TITLES = ["GoCRM", "GoProject", "GoChat", "GoInvoice"];
@@ -523,6 +459,7 @@ export default function Home() {
             <a href="/developer" className="hover:text-gray-800 transition-colors">Developers</a>
             <a href="/deck" className="hover:text-gray-800 transition-colors">Investor Deck</a>
             <a href="/leaderboard" className="hover:text-gray-800 transition-colors">Leaderboard</a>
+            <a href="/privacy" className="hover:text-gray-800 transition-colors">Privacy Policy</a>
             <a href="/contact" className="hover:text-gray-800 transition-colors">Contact</a>
           </div>
         </div>
