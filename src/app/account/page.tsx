@@ -13,7 +13,7 @@ import type { App } from "@/types";
 import { extractColorsFromImage } from "@/lib/colorExtractor";
 import { useActiveOrg } from "@/contexts/ActiveOrgContext";
 import GoPilotTierPicker from "@/components/GoPilotTierPicker";
-import type { GoPilotTierKey } from "@/lib/gopilot-tiers";
+import { GOPILOT_TIERS, type GoPilotTierKey } from "@/lib/gopilot-tiers";
 
 interface OrgData {
   id: string;
@@ -218,6 +218,14 @@ function AccountPage() {
   const [savingBranding, setSavingBranding] = useState(false);
   const brandingFileRef = useRef<HTMLInputElement>(null);
   const brandingCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Show success toast after returning from Stripe upgrade
+  useEffect(() => {
+    if (searchParams.get("upgraded") === "true") {
+      toast.success("GoPilot upgraded! Your new plan is now active.");
+      router.replace("/account", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   // For AppCard — build a UserOrg array from all orgs (active org has appIds populated)
   const orgs: UserOrg[] = useMemo(() => {
@@ -1400,14 +1408,19 @@ function AccountPage() {
                       <p className="font-semibold text-gray-900 text-sm">GoPilot AI</p>
                       <p className="text-xs text-gray-500 mt-0.5">AI assistant across all your apps</p>
                     </div>
-                    {/* Upgrade CTA */}
-                    <div className="w-full mt-auto pt-2 border-t border-purple-100">
+                    {/* Current tier + CTA */}
+                    <div className="w-full mt-auto pt-2 border-t border-purple-100 flex flex-col gap-2">
+                      {org.gopilotTier && org.gopilotTier !== "FREE" && (
+                        <span className="text-xs font-medium text-purple-700 bg-purple-100 rounded-lg px-2 py-1">
+                          {GOPILOT_TIERS[(org.gopilotTier as GoPilotTierKey)]?.label || org.gopilotTier} Plan
+                        </span>
+                      )}
                       {userRole !== "MEMBER" ? (
                         <button
                           onClick={() => setShowGoPilotModal(true)}
                           className="w-full px-3 py-1.5 text-xs font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity text-center"
                         >
-                          Upgrade to Pro
+                          {org.gopilotTier && org.gopilotTier !== "FREE" ? "Manage Plan" : "Upgrade to Pro"}
                         </button>
                       ) : (
                         <Link
