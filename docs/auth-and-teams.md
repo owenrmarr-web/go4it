@@ -6,15 +6,33 @@ NextAuth setup, SSO for deployed apps, invitations, team member sync, roles, mem
 
 ## Platform Auth
 
-- **NextAuth v5 beta** with credentials provider (email + bcrypt password)
+- **NextAuth v5 beta** with credentials + Google providers
 - JWT session strategy
 - Protected routes: `/account`, `/admin`, org portal pages (`/[slug]`)
-- Public routes explicitly listed in `src/auth.config.ts`: `/create`, `/pricing`, `/deck`, `/bugs`, `/contact`, `/developer`, `/leaderboard`, `/forgot-password`, `/reset-password`, `/verify-email`, `/invite`, `/join`, `/org`
+- Public routes explicitly listed in `src/auth.config.ts`: `/create`, `/pricing`, `/deck`, `/bugs`, `/contact`, `/developer`, `/leaderboard`, `/forgot-password`, `/reset-password`, `/verify-email`, `/invite`, `/join`, `/org`, `/privacy`
 
 ### Key files
 - `src/auth.ts` — NextAuth instance export
 - `src/auth.config.ts` — Config: credentials provider, `authorized` callback, public route list
 - `src/middleware.ts` — Protects routes (uses `auth.config.ts` logic)
+
+## Google OAuth
+
+- **Provider:** `next-auth/providers/google` with `allowDangerousEmailAccountLinking: true`
+- Account linking: if a credentials user signs in with Google using the same email, PrismaAdapter merges the accounts automatically (safe because Google verifies email ownership)
+- **Profile completion sentinel:** `user.username === null` → `profileComplete: false` in JWT → middleware redirects to `/auth/complete-profile`
+- New Google users skip the signup form and land on `/auth/complete-profile` to fill in username, company, location, use cases
+- **Middleware gap:** The middleware uses `NextAuth(authConfig).auth` which has no `session` callback. Custom JWT fields (`profileComplete`) must be explicitly mapped in the `session` callback inside `authConfig` (not just `auth.ts`) so the middleware can read them from `auth.user`
+- **Session refresh after profile completion:** Client calls `update({ profileComplete: true })` from `useSession()` → `jwt` callback handles `trigger === "update"` to set `token.profileComplete = true` without re-login
+- Google OAuth is in "Testing" mode — up to 100 test users. Submit for verification via Google Cloud Console to lift the limit (requires privacy policy URL: `https://go4it.live/privacy`)
+- Env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (set in Vercel)
+- Credentials file stored at `~/go4it-secrets/google-oauth-client-secret.json` (outside repo)
+
+### Key files
+- `src/auth.ts` — Google provider config, `signIn`/`jwt`/`session` callbacks
+- `src/app/auth/page.tsx` — "Continue with Google" button (above email form with "or" divider)
+- `src/app/auth/complete-profile/page.tsx` — Profile completion form for new Google users
+- `src/app/api/auth/complete-profile/route.ts` — POST endpoint: validates username, creates org if company provided, updates User record
 
 ## Email Verification
 

@@ -69,9 +69,11 @@ src/
     create/page.tsx      — AI app creation (prompt → progress → preview → refine → publish)
     admin/page.tsx       — Platform admin dashboard
     [slug]/page.tsx      — Org portal page
+    preview/[id]/page.tsx — App preview wrapper (iframe + floating Add to Org bar)
 
     api/
       apps/route.ts              — GET /api/apps (search + category filter)
+      apps/[id]/route.ts         — GET /api/apps/[id] (single app by ID)
       interactions/route.ts      — POST/DELETE /api/interactions (heart/add)
       generate/route.ts          — POST start app generation
       generate/[id]/stream/route.ts — GET SSE progress stream
@@ -81,9 +83,13 @@ src/
 
   components/
     Header.tsx             — Top nav bar (Create, logo, generation chip, My Account)
-    AppCard.tsx            — App card with hover reveal
+    AppCard.tsx            — App card with hover reveal (exports categoryColors)
     GenerationContext.tsx   — Global generation state: SSE, localStorage persistence
     ThemeProvider.tsx      — Dynamic theme colors → CSS variables
+
+  hooks/
+    useInteractions.ts     — Heart/star interaction state
+    useAddToOrg.ts         — Shared add-to-org logic (create OrgApp + deploy + toasts)
 
   lib/
     prisma.ts            — Prisma singleton (LibSQL adapter)
@@ -217,4 +223,4 @@ Four approaches under consideration — 1 and 2 are prioritized first to find pr
 ## Open Actions
 
 - [ ] Complete Google OAuth verification (consent screen submitted, awaiting Google approval — required for unlimited users; currently in Testing mode with up to 100 test users)
-- [ ] Add deploy overlay to app previews
+- [x] Add deploy overlay to app previews

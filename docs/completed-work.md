@@ -6,6 +6,9 @@ Archive of finished features and fixes. Reference when debugging regressions or 
 
 ## Features (newest first)
 
+### Preview Page with Floating Add to Org Bar (2026-03-14)
+Added `/preview/[id]` page that wraps app previews in a full-screen iframe with a frosted-glass action bar. Users can Save and Add to Org directly from the preview without returning to the marketplace. AppCard preview links now navigate to this page instead of opening Fly.io URLs in new tabs. Extracted `handleAddToOrg` into shared `useAddToOrg` hook. Added `GET /api/apps/[id]` endpoint. See `docs/ui-and-theming.md`.
+
 ### Go Suite Marketplace — All 12 Apps (2026-03-04)
 Built, published, and deployed all 12 Go Suite apps with live preview machines. Wrote structured specs for 6 new apps (GoInvoice, GoSupport, GoMailer, GoDocs, GoForms, GoWiki) in `playbook/specs/`. Generated all 6 via Claude Code CLI with the playbook. Validated builds, created `go4it.json` manifests, published to marketplace DB via `publish-gosuite.ts`, and deployed preview machines via `deploy-gosuite-previews.ts`. Sequential deploys required after concurrent batch overwhelmed the builder. GoLedger/GoExpense remain as legacy entries but GoInvoice replaces GoLedger functionally.
 
@@ -66,8 +69,15 @@ Exponential backoff reconnection, status API fallback, manual preview button for
 ### Playbook 3-Tier Rewrite (2026-02-16)
 Restructured from prescriptive rules to Tier 1 (infrastructure), Tier 2 (design tokens), Tier 3 (creative freedom). Old playbook saved as `playbook/CLAUDE_old.md`.
 
+### Google OAuth Sign-In (2026-03-14)
+Google provider added to NextAuth v5. New users redirected to `/auth/complete-profile` to fill in username, company, and profile data that Google doesn't provide. Account merging via `allowDangerousEmailAccountLinking`. Edge-safe `session` callback added to `auth.config.ts` so middleware can read `profileComplete`. Privacy policy page at `/privacy`. See `docs/auth-and-teams.md`.
+
+### Admin Insights Tab (2026-03-14)
+New `/api/admin/insights` endpoint aggregates `useCases`, `country`, and `createdAt` from User records. Admin page Insights tab shows: summary cards, 30-day signup column chart, use case horizontal bar chart, top countries bar chart. All CSS — no charting library.
+
 ## Fixes (newest first)
 
+- **`gopilotTier` missing column (2026-03-14)** — `Organization.gopilotTier` was in Prisma schema but never migrated to Turso. `/api/account/org` was crashing silently. Fix: added `try/catch` to surface the error, then ran `ALTER TABLE Organization ADD COLUMN gopilotTier TEXT NOT NULL DEFAULT 'FREE'` directly against Turso.
 - **Public page auth fix (2026-02-26)** — `isOrgPortal` regex matched single-segment public routes, blocking unauthenticated access. Added explicit `publicRoutes` list.
 - **Seed data fixes (2026-02-16)** — Duplicate records, preview FK violation, seed bleed into production.
 - **Playbook pitfalls (2026-02-16)** — Don't redefine Prisma types, no external theme libraries, generic package.json descriptions.
