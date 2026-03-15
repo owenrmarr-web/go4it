@@ -161,3 +161,48 @@ STRIPE_GOPILOT_UNLIMITED=price_...
 - **Chat responses:** Claude Sonnet 4.5 (`claude-sonnet-4-5-20250514`)
 - **Title generation:** Claude Haiku 4.5 (`claude-haiku-4-5-20251001`)
 - **SDK:** `@anthropic-ai/sdk` — must pass `apiKey` explicitly on Vercel (auto-detection fails in serverless)
+
+---
+
+## Unit Economics
+
+### API Cost Per Query (Estimated)
+
+Sonnet 4.5 pricing: **$3/MTok input, $15/MTok output**
+
+| Query Type | Input Tokens | Output Tokens | Cost |
+|-----------|-------------|--------------|------|
+| Simple (no tools) | ~3,000 | ~500 | ~$0.017 |
+| With tool use (1-2 iterations) | ~6,000 | ~1,000 | ~$0.033 |
+| **Blended average** (~40% use tools) | — | — | **~$0.025** |
+
+Title generation via Haiku adds ~$0.0002/query (negligible).
+
+Longer conversations increase input tokens (loads last 20 messages for context). Heavy users may average $0.03-0.05/query.
+
+### Tier Margin Analysis
+
+Assumes 30 days/month. "Typical" = 30% utilization (industry average for SaaS tools).
+
+| Tier | Price | Max Queries/mo | Max Cost | Typical Queries/mo | Typical Cost | Typical Margin |
+|------|-------|---------------|----------|-------------------|-------------|----------------|
+| Free | $0 | 300 | $7.50 | 90 | $2.25 | -$2.25 (loss leader) |
+| Starter | $25 | 1,500 | $37.50 | 450 | $11.25 | **$13.75 (55%)** |
+| Pro | $45 | 3,000 | $75.00 | 900 | $22.50 | **$22.50 (50%)** |
+| Unlimited | $95 | ∞ | ∞ | ~1,350* | $33.75 | **$61.25 (64%)** |
+
+*Unlimited estimate assumes ~45 queries/day average usage.
+
+### Risk Scenarios
+
+- **Max usage on Starter/Pro:** Negative margin ($25 revenue vs $37.50 cost at 100% utilization). Mitigated by the fact that sustained max usage across all days is rare.
+- **Unlimited heavy user:** A power user doing 200+ queries/day could cost $150+/mo against $95 revenue. Monitor via `AIUsage` table; consider soft caps or usage alerts if this becomes an issue.
+- **Free tier cost:** At scale, 10 free queries/day across many orgs adds up. This is intentional — conversion to paid tiers is the goal.
+
+### Levers for Margin Improvement
+
+1. **Model switching:** Use Haiku for simple queries, Sonnet only for complex/tool-use queries
+2. **Caching:** Cache common queries (app capabilities already cached 5min)
+3. **Context pruning:** Summarize old messages instead of sending full 20-message history
+4. **Prompt optimization:** Reduce system prompt size
+5. **Batch pricing:** Anthropic offers discounted batch API rates for non-real-time workloads
