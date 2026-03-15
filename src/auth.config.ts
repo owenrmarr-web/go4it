@@ -18,9 +18,9 @@ export const authConfig = {
 
       // Public single-segment routes that are NOT org portals
       const publicRoutes = [
-        "/create", "/pricing", "/deck", "/bugs", "/contact", "/developer",
+        "/create", "/pricing", "/deck", "/strategy", "/bugs", "/contact", "/developer",
         "/leaderboard", "/forgot-password", "/reset-password", "/verify-email",
-        "/invite", "/join", "/org",
+        "/invite", "/join", "/org", "/privacy",
       ];
 
       // Protect org portal pages — single-segment slug paths like /my-org
