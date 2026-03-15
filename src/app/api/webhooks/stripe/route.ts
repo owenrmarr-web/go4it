@@ -29,9 +29,21 @@ export async function POST(request: Request) {
       const isGoPilot = session.metadata?.productType === "gopilot";
 
       if (isGoPilot && session.subscription && session.metadata?.gopilotTier) {
-        // GoPilot subscription — set tier + sub ID
+        // GoPilot subscription — cancel old sub if switching tiers, then set new
         const orgId = session.metadata.orgId;
         if (orgId) {
+          const org = await prisma.organization.findUnique({
+            where: { id: orgId },
+            select: { gopilotStripeSubId: true },
+          });
+          // Cancel previous subscription if it exists and differs from new one
+          if (org?.gopilotStripeSubId && org.gopilotStripeSubId !== session.subscription) {
+            try {
+              await stripe.subscriptions.cancel(org.gopilotStripeSubId);
+            } catch {
+              // May already be canceled
+            }
+          }
           await prisma.organization.update({
             where: { id: orgId },
             data: {
