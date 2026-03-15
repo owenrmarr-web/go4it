@@ -8,6 +8,14 @@ export const authConfig = {
     strategy: "jwt",
   },
   callbacks: {
+    session({ session, token }) {
+      // Edge-compatible: map token.profileComplete so middleware can read it
+      if (session.user) {
+        (session.user as { profileComplete?: boolean }).profileComplete =
+          (token as { profileComplete?: boolean }).profileComplete ?? true;
+      }
+      return session;
+    },
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const isOnAuth = nextUrl.pathname.startsWith("/auth");
