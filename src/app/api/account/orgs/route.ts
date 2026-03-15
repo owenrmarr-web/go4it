@@ -6,7 +6,6 @@ const ROLE_PRIORITY: Record<string, number> = { OWNER: 0, ADMIN: 1, MEMBER: 2 };
 
 export async function GET() {
   const session = await auth();
-  console.log("[/api/account/orgs] session.user.id:", session?.user?.id ?? "MISSING");
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -45,6 +44,5 @@ export async function GET() {
     role: m.role,
   }));
 
-  console.log("[/api/account/orgs] returning", orgs.length, "orgs for user", session.user.id);
   return NextResponse.json(orgs);
 }

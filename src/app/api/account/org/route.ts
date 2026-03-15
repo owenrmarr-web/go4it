@@ -52,12 +52,11 @@ const orgInclude = {
 export async function GET(request: Request) {
   try {
   const session = await auth();
-  const slug = new URL(request.url).searchParams.get("slug");
-  console.log("[/api/account/org] session.user.id:", session?.user?.id ?? "MISSING", "slug:", slug);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const slug = new URL(request.url).searchParams.get("slug");
   let membership;
 
   if (slug) {
@@ -163,7 +162,7 @@ export async function GET(request: Request) {
     })),
   });
   } catch (err) {
-    console.error("[/api/account/org] THREW:", err);
-    return NextResponse.json({ error: "Internal error", detail: String(err) }, { status: 500 });
+    console.error("[/api/account/org] error:", err);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
