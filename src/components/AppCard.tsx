@@ -23,7 +23,7 @@ interface AppCardProps {
   forceShowPreview?: boolean;
 }
 
-const categoryColors: Record<string, string> = {
+export const categoryColors: Record<string, string> = {
   "CRM / Sales": "bg-amber-100 text-amber-800",
   "Project Management": "bg-blue-100 text-blue-800",
   "Invoicing / Finance": "bg-green-100 text-green-800",
@@ -141,9 +141,7 @@ export default function AppCard({
             </div>
           ) : app.previewUrl ? (
             <a
-              href={app.previewUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`/preview/${app.id}`}
               onClick={(e) => e.stopPropagation()}
               className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${
                 forceShowPreview ? "bg-black/40" : "bg-black/0 group-hover:bg-black/40"
@@ -215,9 +213,7 @@ export default function AppCard({
             </span>
           ) : app.previewUrl && !app.screenshot ? (
             <a
-              href={app.previewUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`/preview/${app.id}`}
               onClick={(e) => e.stopPropagation()}
               className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
             >
