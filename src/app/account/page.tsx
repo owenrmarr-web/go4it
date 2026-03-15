@@ -184,6 +184,9 @@ function AccountPage() {
   const [subdomainError, setSubdomainError] = useState<string | null>(null);
   const [savingSubdomain, setSavingSubdomain] = useState(false);
 
+  // GoPilot upgrade modal
+  const [showGoPilotModal, setShowGoPilotModal] = useState(false);
+
   // Invite state
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteFirstName, setInviteFirstName] = useState("");
@@ -1397,14 +1400,15 @@ function AccountPage() {
                       <p className="font-semibold text-gray-900 text-sm">GoPilot AI</p>
                       <p className="text-xs text-gray-500 mt-0.5">AI assistant across all your apps</p>
                     </div>
-                    {/* Tier picker */}
+                    {/* Upgrade CTA */}
                     <div className="w-full mt-auto pt-2 border-t border-purple-100">
                       {userRole !== "MEMBER" ? (
-                        <GoPilotTierPicker
-                          currentTier={(org.gopilotTier || "FREE") as GoPilotTierKey}
-                          orgSlug={org.slug}
-                          compact
-                        />
+                        <button
+                          onClick={() => setShowGoPilotModal(true)}
+                          className="w-full px-3 py-1.5 text-xs font-medium gradient-brand rounded-lg hover:opacity-90 transition-opacity text-center"
+                        >
+                          Upgrade to Pro
+                        </button>
                       ) : (
                         <Link
                           href={`/${org.slug}`}
@@ -2029,6 +2033,70 @@ function AccountPage() {
           </div>
         </div>
       </footer>
+
+      {/* GoPilot Upgrade Modal */}
+      {showGoPilotModal && org && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowGoPilotModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 px-8 py-6 text-center text-white">
+              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+                  <path d="M18 14l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold">Supercharge Your Team with GoPilot</h2>
+              <p className="text-white/80 mt-1 text-sm">AI-powered assistant that works across all your GO4IT apps</p>
+            </div>
+
+            {/* Value props */}
+            <div className="px-8 py-5 border-b border-gray-100">
+              <div className="grid grid-cols-3 gap-4 text-center text-xs">
+                <div>
+                  <div className="w-8 h-8 mx-auto mb-1.5 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </div>
+                  <p className="font-semibold text-gray-900">Ask Anything</p>
+                  <p className="text-gray-500 mt-0.5">Query data across all your apps in plain English</p>
+                </div>
+                <div>
+                  <div className="w-8 h-8 mx-auto mb-1.5 rounded-lg bg-pink-50 flex items-center justify-center text-pink-600">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                  </div>
+                  <p className="font-semibold text-gray-900">Instant Insights</p>
+                  <p className="text-gray-500 mt-0.5">Get reports, summaries, and action items in seconds</p>
+                </div>
+                <div>
+                  <div className="w-8 h-8 mx-auto mb-1.5 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  </div>
+                  <p className="font-semibold text-gray-900">Secure & Private</p>
+                  <p className="text-gray-500 mt-0.5">Your data never leaves your organization</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tier picker */}
+            <div className="px-8 py-5">
+              <GoPilotTierPicker
+                currentTier={(org.gopilotTier || "FREE") as GoPilotTierKey}
+                orgSlug={org.slug}
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="px-8 pb-6 text-center">
+              <button
+                onClick={() => setShowGoPilotModal(false)}
+                className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Invite Modal */}
       {showInviteModal && (
